@@ -1,0 +1,47 @@
+.card {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    min-width: 180px;
+  }
+  
+  .cardContent {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .info {
+    flex-grow: 1;
+  }
+  
+  .title {
+    font-size: 16px;
+    color: #333;
+    margin: 0 0 8px 0;
+    font-weight: normal;
+  }
+  
+  .value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+  }
+  
+  .iconContainer {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+  

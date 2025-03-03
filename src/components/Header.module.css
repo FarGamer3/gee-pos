@@ -1,0 +1,48 @@
+.header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #fff;
+    border-bottom: 1px solid #eaeaea;
+    height: 60px;
+  }
+  
+  .notificationArea {
+    margin-right: 20px;
+  }
+  
+  .notificationBell {
+    cursor: pointer;
+  }
+  
+  .notificationBell img {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .userInfo {
+    display: flex;
+    align-items: center;
+  }
+  
+  .userName {
+    margin-right: 10px;
+    color: #333;
+  }
+  
+  .userAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .userAvatar img {
+    width: 20px;
+    height: 20px;
+  }
