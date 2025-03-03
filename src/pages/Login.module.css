@@ -3,7 +3,10 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-color: #6CBAD9;
+    background-image: url('../assets/login-bg.jpg'); /* ເພີ່ມຮູບພາບພື້ນຫຼັງ */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
   
   .loginCard {
@@ -67,3 +70,5 @@
   .loginButton:hover {
     background-color: #5ba8c7;
   }
+  
+  
