@@ -5,7 +5,7 @@ function Header() {
     <header className={styles.header}>
       <div className={styles.notificationArea}>
         <div className={styles.notificationBell}>
-          <img src="/src/assets/icons/bell.svg" alt="Notifications" />
+          <img src="/src/assets/icon/Notification.png" alt="Notifications" />
         </div>
       </div>
       <div className={styles.userInfo}>

@@ -3,13 +3,14 @@
     justify-content: flex-end;
     align-items: center;
     padding: 10px 20px;
-    background-color: #fff;
+    background-color: #ffffff;
     border-bottom: 1px solid #eaeaea;
     height: 60px;
   }
   
   .notificationArea {
-    margin-right: 20px;
+    margin-top: 13px;
+    margin-right: 60px
   }
   
   .notificationBell {
@@ -17,8 +18,8 @@
   }
   
   .notificationBell img {
-    width: 24px;
-    height: 24px;
+    width: 48px;
+    height: 48px;
   }
   
   .userInfo {
