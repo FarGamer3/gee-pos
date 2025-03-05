@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import styles from './Sidebar.module.css';
+import styles from '../pages/CSS/Sidebar.module.css';
 import logoImage from '../assets/logo.png';
 
 function Sidebar() {
@@ -17,18 +17,18 @@ function Sidebar() {
           <span>ໜ້າຫຼັກ</span>
         </NavLink>
         
-        <NavLink to="/categories" className={({ isActive }) => 
+        <NavLink to="/Manage_data" className={({ isActive }) => 
           `${styles.navItem} ${isActive ? styles.active : ''}`
         }>
           <span className={`${styles.icon} ${styles.categoryIcon}`}></span>
-          <span>ຈັດການໝວດໝູ່</span>
+          <span>ຈັດການຂໍ້ມູນຫຼັກ</span>
         </NavLink>
         
         <NavLink to="/products" className={({ isActive }) => 
           `${styles.navItem} ${isActive ? styles.active : ''}`
         }>
           <span className={`${styles.icon} ${styles.productIcon}`}></span>
-          <span>ສິນຄ້າທັງໝົດ</span>
+          <span>ສັ່ງຊື້ສິນຄ້າ</span>
         </NavLink>
         
         <NavLink to="/sales" className={({ isActive }) => 
@@ -49,7 +49,7 @@ function Sidebar() {
           `${styles.navItem} ${isActive ? styles.active : ''}`
         }>
           <span className={`${styles.icon} ${styles.stockIcon}`}></span>
-          <span>ກວດສິນຄ້າ</span>
+          <span>ນຳອອກສິນຄ້າ</span>
         </NavLink>
         
         <NavLink to="/reports" className={({ isActive }) => 

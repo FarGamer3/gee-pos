@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import styles from './Login.module.css';
+import styles from '../pages/CSS/Login.module.css';
 import logoImage from '../assets/logo.png';
 
 function Login({ onLogin }) {
