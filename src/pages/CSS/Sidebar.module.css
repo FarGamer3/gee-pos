@@ -52,29 +52,29 @@
   }
   
   .homeIcon {
-    background-image: url('../assets/icons/home.svg');
+    background-image: url('../../assets\icon\Home-icon.png');
   }
   
   .categoryIcon {
-    background-image: url('../assets/icons/category.svg');
+    background-image: url('../../assets/icon/Manage-icon.png');
   }
   
   .productIcon {
-    background-image: url('../assets/icons/product.svg');
+    background-image: url('../../assets/icon/order.png');
   }
   
   .salesIcon {
-    background-image: url('../assets/icons/sales.svg');
+    background-image: url('../../assets/icon/sell-icon.png');
   }
   
   .importIcon {
-    background-image: url('../assets/icons/import.svg');
+    background-image: url('../../assets/icon/import-icon.png');
   }
   
   .stockIcon {
-    background-image: url('../assets/icons/stock.svg');
+    background-image: url('../../assets/icon/export-icon.png');
   }
   
   .reportIcon {
-    background-image: url('../assets/icons/report.svg');
+    background-image: url('../../assets/icon/report.png');
   }
