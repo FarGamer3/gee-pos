@@ -2,17 +2,17 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import styles from '../pages/CSS/Manage_data.module.css';
-import productIcon from '../assets/icons/product.svg';
-import categoryIcon from '../assets/icons/category.svg';
-import unitIcon from '../assets/icons/unit.svg';
-import brandIcon from '../assets/icons/brand.svg';
-import supplierIcon from '../assets/icons/supplier.svg';
-import reportIcon from '../assets/icons/report.svg';
-import employeeIcon from '../assets/icons/employee.svg';
-import customerIcon from '../assets/icons/customer.svg';
-import storeIcon from '../assets/icons/store.svg';
-import locationIcon from '../assets/icons/location.svg';
-import houseIcon from '../assets/icons/house.svg';
+import productIcon from '../assets/icon/product.png';
+import categoryIcon from '../assets/icon/category.png';
+import unitIcon from '../assets/icon/unit.png';
+import brandIcon from '../assets/icon/brand.png';
+import supplierIcon from '../assets/icon/supplier.png';
+import employeeIcon from '../assets/icon/employee.png';
+import customerIcon from '../assets/icon/customer.png';
+import locationIcon from '../assets/icon/position.png';
+import villageIcon from '../assets/icon/village.png';
+import cityicon from '../assets/icon/city.png';
+import provinceicon from '../assets/icon/province.png';
 
 function Manage_data() {
     const navigate = useNavigate();
@@ -23,13 +23,13 @@ function Manage_data() {
       { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories' },
       { id: 'units', title: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: unitIcon, path: '/units' },
       { id: 'brands', title: 'ຂໍ້ມູນລຸ້ນ', icon: brandIcon, path: '/brands' },
-      { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: storeIcon, path: '/warehouse' },
-      { id: 'reports', title: 'ຂໍ້ມູນພະນັກງານ', icon: reportIcon, path: '/reports' },
+      { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: locationIcon, path: '/warehouse' },
+      { id: 'employee', title: 'ຂໍ້ມູນພະນັກງານ', icon: employeeIcon, path: '/employee' },
       { id: 'suppliers', title: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: supplierIcon, path: '/suppliers' },
       { id: 'customers', title: 'ຂໍ້ມູນລູກຄ້າ', icon: customerIcon, path: '/customers' },
-      { id: 'house', title: 'ຂໍ້ມູນບ້ານ', icon: houseIcon, path: '/house' },
-      { id: 'locations', title: 'ຂໍ້ມູນເມືອງ', icon: locationIcon, path: '/city' },
-      { id: 'locations', title: 'ຂໍ້ມູນແຂວງ', icon: locationIcon, path: '/prowin' },
+      { id: 'village', title: 'ຂໍ້ມູນບ້ານ', icon: villageIcon, path: '/village' },
+      { id: 'city', title: 'ຂໍ້ມູນເມືອງ', icon: cityicon, path: '/city' },
+      { id: 'province', title: 'ຂໍ້ມູນແຂວງ', icon: provinceicon, path: '/province' },
     ];
   
     // ຟັງຊັນເມື່ອກົດປຸ່ມ

@@ -2,12 +2,12 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import InfoCard from '../components/Dashboard/InfoCard';
 import styles from '../pages/CSS/Dashboard.module.css';
-import inventoryIcon from '../assets/icons/inventory.svg';
-import importIcon from '../assets/icons/import-icon.svg';
-import exportIcon from '../assets/icons/export-icon.svg';
-import purchaseIcon from '../assets/icons/purchase.svg';
-import salesIcon from '../assets/icons/sales-total.svg';
-import staffIcon from '../assets/icons/staff.svg';
+import inventoryIcon from '../assets/icon/product.png';
+import importIcon from '../assets/icon/import.png';
+import exportIcon from '../assets/icon/export.png';
+import purchaseIcon from '../assets/icon/purchase.png';
+import salesIcon from '../assets/icon/sell.png';
+import staffIcon from '../assets/icon/employee.png';
 
 function Dashboard() {
   return (
@@ -48,7 +48,7 @@ function Dashboard() {
                 icon={purchaseIcon} 
               />
               <InfoCard 
-                title="ລາຍຮັບຄ້າ" 
+                title="ຂາຍຮັບຄ້າ" 
                 value="100" 
                 icon={salesIcon} 
               />
