@@ -159,7 +159,7 @@ function App() {
         
         {/* ເສັ້ນທາງສຳລັບລາຍງານ */}
         <Route 
-          path="/reports" 
+          path="/Reports" 
           element={
             isLoggedIn ? 
               <Reports /> : 

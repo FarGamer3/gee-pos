@@ -4,15 +4,15 @@ import Header from '../components/Header';
 import styles from './CSS/Reports.module.css';
 
 // ນຳເຂົ້າໄອຄອນສຳລັບປຸ່ມລາຍງານ
-/*import salesReportIcon from '../assets/icon/sales-report.png';
-import purchaseReportIcon from '../assets/icon/purchase-report.png';
-import stockReportIcon from '../assets/icon/stock-report.png';
-import productReportIcon from '../assets/icon/product-report.png';
-import customerReportIcon from '../assets/icon/customer-report.png';
-import supplierReportIcon from '../assets/icon/supplier-report.png';
-import employeeReportIcon from '../assets/icon/employee-report.png';
-import profitReportIcon from '../assets/icon/profit-report.png';
-import taxReportIcon from '../assets/icon/tax-report.png';*/
+import salesReportIcon from '../assets/icon/city.png';
+import purchaseReportIcon from '../assets/icon/city.png';
+import stockReportIcon from '../assets/icon/city.png';
+import productReportIcon from '../assets/icon/city.png';
+import customerReportIcon from '../assets/icon/city.png';
+import supplierReportIcon from '../assets/icon/city.png';
+import employeeReportIcon from '../assets/icon/city.png';
+import profitReportIcon from '../assets/icon/city.png';
+import taxReportIcon from '../assets/icon/city.png';
 
 function Reports() {
   const navigate = useNavigate();
@@ -26,6 +26,12 @@ function Reports() {
     { id: 'customer', title: 'ລາຍງານລູກຄ້າ', icon: customerReportIcon, path: '/reports/customer' },
     { id: 'supplier', title: 'ລາຍງານຜູ້ສະໜອງ', icon: supplierReportIcon, path: '/reports/supplier' },
     { id: 'employee', title: 'ລາຍງານພະນັກງານ', icon: employeeReportIcon, path: '/reports/employee' },
+    { id: 'profit', title: 'ລາຍງານກຳໄລ', icon: profitReportIcon, path: '/reports/profit' },
+    { id: 'tax', title: 'ລາຍງານພາສີ', icon: taxReportIcon, path: '/reports/tax' },
+    { id: 'supplier', title: 'ລາຍງານຜູ້ສະໜອງ', icon: supplierReportIcon, path: '/reports/supplier' },
+    { id: 'employee', title: 'ລາຍງານພະນັກງານ', icon: employeeReportIcon, path: '/reports/employee' },
+    { id: 'profit', title: 'ລາຍງານກຳໄລ', icon: profitReportIcon, path: '/reports/profit' },
+    { id: 'tax', title: 'ລາຍງານພາສີ', icon: taxReportIcon, path: '/reports/tax' },
     { id: 'profit', title: 'ລາຍງານກຳໄລ', icon: profitReportIcon, path: '/reports/profit' },
     { id: 'tax', title: 'ລາຍງານພາສີ', icon: taxReportIcon, path: '/reports/tax' },
   ];
