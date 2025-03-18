@@ -17,7 +17,7 @@
   }
   
   .pageTitle {
-    font-size: 50px;
+    font-size: 32px;
     margin-bottom: 16px;
     color: #333;
     font-weight: bold;
@@ -37,8 +37,8 @@
   
   .menuGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 100px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 25px;
   }
   
   .menuItem {
@@ -60,8 +60,8 @@
   }
   
   .menuIcon {
-    background-color: white;
-    border-radius: 4px;
+    /*background-color: white;
+    border-radius: 4px;*/
     width: 60px;
     height: 60px;
     display: flex;

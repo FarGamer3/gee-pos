@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import styles from './CSS/ProductForm.module.css';
+import {
+  Box,
+  Paper,
+  Grid,
+  TextField,
+  Button,
+  Typography,
+  MenuItem,
+  FormControl,
+  FormLabel,
+  Stack,
+  IconButton
+} from '@mui/material';
+import { PhotoCamera } from '@mui/icons-material';
+import Layout from '../components/Layout';
 
 function AddProduct() {
   const navigate = useNavigate();
@@ -58,199 +70,221 @@ function AddProduct() {
   };
   
   return (
-    <div className={styles.container}>
-      <Sidebar />
-      <div className={styles.content}>
-        <Header />
-        <main className={styles.mainContent}>
-          <h1 className={styles.pageTitle}>ເພີ່ມສິນຄ້າໃໝ່</h1>
-          
-          <div className={styles.formContainer}>
-            <form onSubmit={handleSubmit} className={styles.form}>
-              <div className={styles.formGrid}>
-                <div className={styles.formImageSection}>
-                  <div className={styles.imagePreviewContainer}>
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className={styles.imagePreview} />
-                    ) : (
-                      <div className={styles.imagePlaceholder}>
-                        ບໍ່ມີຮູບພາບ
-                      </div>
-                    )}
-                  </div>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleImageChange}
-                    className={styles.fileInput}
-                    id="imageUpload"
-                  />
-                  <label htmlFor="imageUpload" className={styles.fileInputLabel}>
-                    ເລືອກຮູບພາບ
-                  </label>
-                </div>
+    <Layout title="ເພີ່ມສິນຄ້າໃໝ່">
+      <Paper sx={{ p: 3 }}>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            {/* Image upload section */}
+            <Grid item xs={12} md={3}>
+              <Stack spacing={2} alignItems="center">
+                <Box
+                  sx={{
+                    width: 180,
+                    height: 180,
+                    border: '2px dashed #ccc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{ maxWidth: '100%', maxHeight: '100%' }}
+                    />
+                  ) : (
+                    <Typography color="text.secondary">ບໍ່ມີຮູບພາບ</Typography>
+                  )}
+                </Box>
                 
-                <div className={styles.formFields}>
-                  <div className={styles.formGroup}>
-                    <label htmlFor="code">ລະຫັດສິນຄ້າ</label>
-                    <input 
-                      type="text" 
-                      id="code" 
-                      name="code" 
-                      value={product.code} 
-                      onChange={handleChange} 
-                      required 
-                    />
-                  </div>
-                  
-                  <div className={styles.formGroup}>
-                    <label htmlFor="name">ຊື່ສິນຄ້າ</label>
-                    <input 
-                      type="text" 
-                      id="name" 
-                      name="name" 
-                      value={product.name} 
-                      onChange={handleChange} 
-                      required 
-                    />
-                  </div>
-                  
-                  <div className={styles.formRow}>
-                    <div className={styles.formGroup}>
-                      <label htmlFor="quantity">ຈຳນວນ</label>
-                      <input 
-                        type="number" 
-                        id="quantity" 
-                        name="quantity" 
-                        value={product.quantity} 
-                        onChange={handleChange} 
-                        required 
-                      />
-                    </div>
-                    
-                    <div className={styles.formGroup}>
-                      <label htmlFor="minQuantity">ຈຳນວນນ້ອຍສຸດ</label>
-                      <input 
-                        type="number" 
-                        id="minQuantity" 
-                        name="minQuantity" 
-                        value={product.minQuantity} 
-                        onChange={handleChange} 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className={styles.formRow}>
-                    <div className={styles.formGroup}>
-                      <label htmlFor="purchasePrice">ລາຄາຕົ້ນທຶນ</label>
-                      <input 
-                        type="number" 
-                        id="purchasePrice" 
-                        name="purchasePrice" 
-                        value={product.purchasePrice} 
-                        onChange={handleChange} 
-                        required 
-                      />
-                    </div>
-                    
-                    <div className={styles.formGroup}>
-                      <label htmlFor="sellingPrice">ລາຄາຂາຍ</label>
-                      <input 
-                        type="number" 
-                        id="sellingPrice" 
-                        name="sellingPrice" 
-                        value={product.sellingPrice} 
-                        onChange={handleChange} 
-                        required 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className={styles.formRow}>
-                    <div className={styles.formGroup}>
-                      <label htmlFor="brand">ຍີ່ຫໍ້</label>
-                      <input 
-                        type="text" 
-                        id="brand" 
-                        name="brand" 
-                        value={product.brand} 
-                        onChange={handleChange} 
-                      />
-                    </div>
-                    
-                    <div className={styles.formGroup}>
-                      <label htmlFor="model">ລຸ້ນ</label>
-                      <input 
-                        type="text" 
-                        id="model" 
-                        name="model" 
-                        value={product.model} 
-                        onChange={handleChange} 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className={styles.formRow}>
-                    <div className={styles.formGroup}>
-                      <label htmlFor="type">ປະເພດ</label>
-                      <select 
-                        id="type" 
-                        name="type" 
-                        value={product.type} 
-                        onChange={handleChange} 
-                        required
-                      >
-                        <option value="">ເລືອກປະເພດ</option>
-                        <option value="ເຄື່ອງໃຊ້ໄຟຟ້າ">ເຄື່ອງໃຊ້ໄຟຟ້າ</option>
-                        <option value="ເຄື່ອງໃຊ້ໃນເຮືອນ">ເຄື່ອງໃຊ້ໃນເຮືອນ</option>
-                        <option value="ອຸປະກອນອິເລັກໂທຣນິກ">ອຸປະກອນອິເລັກໂທຣນິກ</option>
-                      </select>
-                    </div>
-                    
-                    <div className={styles.formGroup}>
-                      <label htmlFor="location">ບ່ອນຈັດວາງ</label>
-                      <input 
-                        type="text" 
-                        id="location" 
-                        name="location" 
-                        value={product.location} 
-                        onChange={handleChange} 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className={styles.formGroup}>
-                    <label htmlFor="status">ສະຖານະ</label>
-                    <select 
-                      id="status" 
-                      name="status" 
-                      value={product.status} 
-                      onChange={handleChange} 
-                      required
+                <Box>
+                  <input
+                    accept="image/*"
+                    id="icon-button-file"
+                    type="file"
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="icon-button-file">
+                    <Button
+                      variant="contained"
+                      component="span"
+                      startIcon={<PhotoCamera />}
+                      color="primary"
                     >
-                      <option value="">ເລືອກສະຖານະ</option>
-                      <option value="ພໍລະສາຍ">ພໍລະສາຍ</option>
-                      <option value="ໝົດສາງ">ໝົດສາງ</option>
-                      <option value="ຍົກເລີກການຂາຍ">ຍົກເລີກການຂາຍ</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              <div className={styles.formActions}>
-                <button type="button" className={styles.cancelButton} onClick={() => navigate('/products')}>
-                  ຍົກເລີກ
-                </button>
-                <button type="submit" className={styles.submitButton}>
-                  ບັນທຶກ
-                </button>
-              </div>
-            </form>
-          </div>
-        </main>
-      </div>
-    </div>
+                      ເລືອກຮູບພາບ
+                    </Button>
+                  </label>
+                </Box>
+              </Stack>
+            </Grid>
+            
+            {/* Form fields */}
+            <Grid item xs={12} md={9}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="ລະຫັດສິນຄ້າ"
+                    name="code"
+                    value={product.code}
+                    onChange={handleChange}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="ຊື່ສິນຄ້າ"
+                    name="name"
+                    value={product.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ຈຳນວນ"
+                    name="quantity"
+                    type="number"
+                    value={product.quantity}
+                    onChange={handleChange}
+                    required
+                    InputProps={{ inputProps: { min: 0 } }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ຈຳນວນນ້ອຍສຸດ"
+                    name="minQuantity"
+                    type="number"
+                    value={product.minQuantity}
+                    onChange={handleChange}
+                    required
+                    InputProps={{ inputProps: { min: 0 } }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ລາຄາຕົ້ນທຶນ"
+                    name="purchasePrice"
+                    type="number"
+                    value={product.purchasePrice}
+                    onChange={handleChange}
+                    required
+                    InputProps={{ inputProps: { min: 0 } }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ລາຄາຂາຍ"
+                    name="sellingPrice"
+                    type="number"
+                    value={product.sellingPrice}
+                    onChange={handleChange}
+                    required
+                    InputProps={{ inputProps: { min: 0 } }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ຍີ່ຫໍ້"
+                    name="brand"
+                    value={product.brand}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ລຸ້ນ"
+                    name="model"
+                    value={product.model}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="ປະເພດ"
+                    name="type"
+                    value={product.type}
+                    onChange={handleChange}
+                    required
+                  >
+                    <MenuItem value="">ເລືອກປະເພດ</MenuItem>
+                    <MenuItem value="ເຄື່ອງໃຊ້ໄຟຟ້າ">ເຄື່ອງໃຊ້ໄຟຟ້າ</MenuItem>
+                    <MenuItem value="ເຄື່ອງໃຊ້ໃນເຮືອນ">ເຄື່ອງໃຊ້ໃນເຮືອນ</MenuItem>
+                    <MenuItem value="ອຸປະກອນອິເລັກໂທຣນິກ">ອຸປະກອນອິເລັກໂທຣນິກ</MenuItem>
+                  </TextField>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="ບ່ອນຈັດວາງ"
+                    name="location"
+                    value={product.location}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="ສະຖານະ"
+                    name="status"
+                    value={product.status}
+                    onChange={handleChange}
+                    required
+                  >
+                    <MenuItem value="">ເລືອກສະຖານະ</MenuItem>
+                    <MenuItem value="ພໍລະສາຍ">ພໍລະສາຍ</MenuItem>
+                    <MenuItem value="ໝົດສາງ">ໝົດສາງ</MenuItem>
+                    <MenuItem value="ຍົກເລີກການຂາຍ">ຍົກເລີກການຂາຍ</MenuItem>
+                  </TextField>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={() => navigate('/products')}
+            >
+              ຍົກເລີກ
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="secondary"
+            >
+              ບັນທຶກ
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+    </Layout>
   );
 }
 

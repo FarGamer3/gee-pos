@@ -1,8 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import styles from './CSS/Products.module.css';
+import {
+  Box,
+  Paper,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Avatar,
+  IconButton,
+  InputAdornment,
+  Tooltip
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  Add as AddIcon
+} from '@mui/icons-material';
+import Layout from '../components/Layout';
 
 function Products() {
   const navigate = useNavigate();
@@ -57,100 +77,107 @@ function Products() {
   });
 
   return (
-    <div className={styles.container}>
-      <Sidebar />
-      <div className={styles.content}>
-        <Header />
-        <main className={styles.mainContent}>
-          <h1 className={styles.pageTitle}>ຈັດການຂໍ້ມູນສິນຄ້າ</h1>
-          
-          <div className={styles.controls}>
-            <div className={styles.searchBox}>
-              <input 
-                type="text" 
-                placeholder="ຄົ້ນຫາ..." 
-                value={searchTerm} 
-                onChange={handleSearch}
-                className={styles.searchInput}
-              />
-            </div>
-            <button 
-              className={styles.addButton}
-              onClick={handleAddProduct}
-            >
-              ເພີ່ມ
-            </button>
-          </div>
-          
-          <div className={styles.tableContainer}>
-            <table className={styles.productTable}>
-              <thead>
-                <tr>
-                  <th className={styles.numCol}>#</th>
-                  <th className={styles.imageCol}>ຮູບສິນຄ້າ</th>
-                  <th className={styles.codeCol}>ລະຫັດສິນຄ້າ</th>
-                  <th className={styles.nameCol}>ຊື່ສິນຄ້າ</th>
-                  <th className={styles.qtyCol}>ຈຳນວນ</th>
-                  <th className={styles.minQtyCol}>ຈຳນວນນ້ອຍສຸດ</th>
-                  <th className={styles.purchasePriceCol}>ລາຄາຕົ້ນທຶນ</th>
-                  <th className={styles.sellingPriceCol}>ລາຄາຂາຍ</th>
-                  <th className={styles.brandCol}>ຍີ່ຫໍ້</th>
-                  <th className={styles.typeCol}>ປະເພດ</th>
-                  <th className={styles.modelCol}>ລຸ້ນ</th>
-                  <th className={styles.locationCol}>ບ່ອນຈັດວາງ</th>
-                  <th className={styles.statusCol}>ສະຖານະ</th>
-                  <th className={styles.actionCol}>ແກ້ໄຂ</th>
-                  <th className={styles.actionCol}>ລຶບ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((product, index) => (
-                  <tr key={product.id}>
-                    <td>{index + 1}</td>
-                    <td className={styles.imageCell}>
-                      <div className={styles.productImageContainer}>
-                        <img 
-                          src={product.image} 
-                          alt={product.name} 
-                          className={styles.productImage} 
-                        />
-                      </div>
-                    </td>
-                    <td>{product.code}</td>
-                    <td>{product.name}</td>
-                    <td>{product.quantity}</td>
-                    <td>{product.minQuantity}</td>
-                    <td>{product.purchasePrice.toLocaleString()}</td>
-                    <td>{product.sellingPrice.toLocaleString()}</td>
-                    <td>{product.brand}</td>
-                    <td>{product.type}</td>
-                    <td>{product.model}</td>
-                    <td>{product.location}</td>
-                    <td>{product.status}</td>
-                    <td>
-                      <button 
-                        className={styles.editButton}
-                        onClick={() => handleEditProduct(product.id)}
-                      >
-                        ແກ້ໄຂ
-                      </button>
-                    </td>
-                    <td>
-                      <button 
-                        className={styles.deleteButton}
-                        onClick={() => handleDeleteProduct(product.id)}
-                      >
-                        ລຶບ
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </main>
-      </div>
-    </div>
+    <Layout title="ຈັດການຂໍ້ມູນສິນຄ້າ">
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between' }}>
+        <TextField
+          placeholder="ຄົ້ນຫາ..."
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={handleSearch}
+          sx={{ width: { xs: '60%', sm: '50%', md: '40%' } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<AddIcon />}
+          onClick={handleAddProduct}
+        >
+          ເພີ່ມ
+        </Button>
+      </Box>
+
+      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
+        <Table stickyHeader sx={{ minWidth: 1200 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell align="center" width={50}>#</TableCell>
+              <TableCell align="center" width={80}>ຮູບສິນຄ້າ</TableCell>
+              <TableCell align="center" width={100}>ລະຫັດສິນຄ້າ</TableCell>
+              <TableCell align="center" width={150}>ຊື່ສິນຄ້າ</TableCell>
+              <TableCell align="center" width={80}>ຈຳນວນ</TableCell>
+              <TableCell align="center" width={80}>ຈຳນວນນ້ອຍສຸດ</TableCell>
+              <TableCell align="center" width={120}>ລາຄາຕົ້ນທຶນ</TableCell>
+              <TableCell align="center" width={120}>ລາຄາຂາຍ</TableCell>
+              <TableCell align="center" width={100}>ຍີ່ຫໍ້</TableCell>
+              <TableCell align="center" width={120}>ປະເພດ</TableCell>
+              <TableCell align="center" width={80}>ລຸ້ນ</TableCell>
+              <TableCell align="center" width={80}>ບ່ອນຈັດວາງ</TableCell>
+              <TableCell align="center" width={100}>ສະຖານະ</TableCell>
+              <TableCell align="center" width={80}>ແກ້ໄຂ</TableCell>
+              <TableCell align="center" width={80}>ລຶບ</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredProducts.map((product, index) => (
+              <TableRow key={product.id} hover>
+                <TableCell align="center">{index + 1}</TableCell>
+                <TableCell align="center">
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Avatar
+                      src={product.image}
+                      alt={product.name}
+                      variant="square"
+                      sx={{ width: 40, height: 40 }}
+                    />
+                  </Box>
+                </TableCell>
+                <TableCell align="center">{product.code}</TableCell>
+                <TableCell align="center">{product.name}</TableCell>
+                <TableCell align="center">{product.quantity}</TableCell>
+                <TableCell align="center">{product.minQuantity}</TableCell>
+                <TableCell align="center">{product.purchasePrice.toLocaleString()}</TableCell>
+                <TableCell align="center">{product.sellingPrice.toLocaleString()}</TableCell>
+                <TableCell align="center">{product.brand}</TableCell>
+                <TableCell align="center">{product.type}</TableCell>
+                <TableCell align="center">{product.model}</TableCell>
+                <TableCell align="center">{product.location}</TableCell>
+                <TableCell align="center">{product.status}</TableCell>
+                <TableCell align="center">
+                  <Tooltip title="ແກ້ໄຂ">
+                    <IconButton
+                      color="primary"
+                      size="small"
+                      onClick={() => handleEditProduct(product.id)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="ລຶບ">
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={() => handleDeleteProduct(product.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Layout>
   );
 }
 
