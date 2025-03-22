@@ -12,7 +12,7 @@ import {
   IconButton
 } from '@mui/material';
 import { PhotoCamera } from '@mui/icons-material';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 
 function EditProduct() {
   const navigate = useNavigate();

@@ -143,12 +143,21 @@ function Sales() {
 
   return (
     <Layout title="ຂາຍສິນຄ້າ">
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="primary">
+      <Box sx={{ mb: 3 }}>
+        <Paper 
+          sx={{ 
+            p: 2, 
+            bgcolor: 'primary.main', 
+            color: 'white',
+            borderRadius: 1
+            
+          }}
+        >
+          <Typography variant="subtitle1" fontWeight="bold">
           ສິນຄ້າ IN STOCK
-        </Typography>
+          </Typography>
+        </Paper>
       </Box>
-
       <Grid container spacing={2}>
         {/* Left column - Product selection */}
         <Grid item xs={12} md={5}>

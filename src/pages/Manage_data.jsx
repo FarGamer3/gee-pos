@@ -53,8 +53,8 @@ function ManageData() {
             borderRadius: 1
           }}
         >
-          <Typography variant="subtitle1">
-            ຈັດການຂໍ້ມູນຫຼັກ
+          <Typography variant="subtitle1" fontWeight="bold">
+            ຈັດການຂໍ້ມູນຕ່າງໆ
           </Typography>
         </Paper>
       </Box>
