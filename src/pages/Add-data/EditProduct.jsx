@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -8,16 +8,16 @@ import {
   Button,
   Typography,
   MenuItem,
-  FormControl,
-  FormLabel,
   Stack,
   IconButton
 } from '@mui/material';
 import { PhotoCamera } from '@mui/icons-material';
 import Layout from '../components/Layout';
 
-function AddProduct() {
+function EditProduct() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  
   const [product, setProduct] = useState({
     code: '',
     name: '',
@@ -34,6 +34,36 @@ function AddProduct() {
   });
   
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // ຈຳລອງການດຶງຂໍ້ມູນຈາກ API (ໃນກໍລະນີຈິງຄວນໃຊ້ API)
+  useEffect(() => {
+    // ກໍລະນີຈິງ: ຄວນໃຊ້ fetch ຫຼື axios ເພື່ອດຶງຂໍ້ມູນຈາກ API
+    // ຕົວຢ່າງ: fetch(`/api/products/${id}`).then(res => res.json()).then(data => setProduct(data))
+    
+    // ຂໍ້ມູນຕົວຢ່າງສຳລັບການທົດສອບ
+    const mockProduct = {
+      id: parseInt(id),
+      code: '000001',
+      name: 'ຕູ້ເຢັນ',
+      quantity: 50,
+      minQuantity: 10,
+      purchasePrice: 1000000,
+      sellingPrice: 1250000,
+      brand: 'samsung',
+      type: 'ເຄື່ອງໃຊ້ໃນເຮືອນ',
+      model: 'E32-SA',
+      location: 'A-3',
+      status: 'ພໍລະສາຍ',
+      image: '/src/assets/products/refrigerator.png'
+    };
+    
+    setProduct(mockProduct);
+    
+    // ກໍລະນີທີ່ມີຮູບພາບແລ້ວ, ສະແດງຮູບພາບເດີມ
+    if (mockProduct.image) {
+      setImagePreview(mockProduct.image);
+    }
+  }, [id]);
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -62,68 +92,22 @@ function AddProduct() {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອບັນທຶກ
-    console.log('Submitting product:', product);
+    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອອັບເດດ
+    console.log('Updating product:', product);
     
     // ກັບໄປຍັງໜ້າຈັດການສິນຄ້າ
     navigate('/products');
   };
   
   return (
-    <Layout title="ເພີ່ມສິນຄ້າໃໝ່">
+    <Layout title="ແກ້ໄຂຂໍ້ມູນສິນຄ້າ">
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            {/* Image upload section */}
-            <Grid item xs={12} md={3}>
-              <Stack spacing={2} alignItems="center">
-                <Box
-                  sx={{
-                    width: 180,
-                    height: 180,
-                    border: '2px dashed #ccc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 1,
-                    overflow: 'hidden'
-                  }}
-                >
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      style={{ maxWidth: '100%', maxHeight: '100%' }}
-                    />
-                  ) : (
-                    <Typography color="text.secondary">ບໍ່ມີຮູບພາບ</Typography>
-                  )}
-                </Box>
-                
-                <Box>
-                  <input
-                    accept="image/*"
-                    id="icon-button-file"
-                    type="file"
-                    onChange={handleImageChange}
-                    style={{ display: 'none' }}
-                  />
-                  <label htmlFor="icon-button-file">
-                    <Button
-                      variant="contained"
-                      component="span"
-                      startIcon={<PhotoCamera />}
-                      color="primary"
-                    >
-                      ເລືອກຮູບພາບ
-                    </Button>
-                  </label>
-                </Box>
-              </Stack>
-            </Grid>
-            
+            {/* ຕັດອອກ Image upload section */}
+
             {/* Form fields */}
-            <Grid item xs={12} md={9}>
+            <Grid item xs={12}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField
@@ -279,7 +263,7 @@ function AddProduct() {
               variant="contained" 
               color="secondary"
             >
-              ບັນທຶກ
+              ບັນທຶກການປ່ຽນແປງ
             </Button>
           </Box>
         </Box>
@@ -288,4 +272,4 @@ function AddProduct() {
   );
 }
 
-export default AddProduct;
+export default EditProduct;

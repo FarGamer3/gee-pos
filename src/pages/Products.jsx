@@ -11,7 +11,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Avatar,
   IconButton,
   InputAdornment,
   Tooltip
@@ -30,7 +29,6 @@ function Products() {
   const [products, setProducts] = useState([
     {
       id: 1,
-      image: '/src/assets/products/refrigerator.png',
       code: '000001',
       name: 'ຕູ້ເຢັນ',
       quantity: 50,
@@ -105,11 +103,10 @@ function Products() {
       </Box>
 
       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
-        <Table stickyHeader sx={{ minWidth: 1200 }}>
+        <Table stickyHeader sx={{ minWidth: 1100 }}>
           <TableHead>
             <TableRow>
               <TableCell align="center" width={50}>#</TableCell>
-              <TableCell align="center" width={80}>ຮູບສິນຄ້າ</TableCell>
               <TableCell align="center" width={100}>ລະຫັດສິນຄ້າ</TableCell>
               <TableCell align="center" width={150}>ຊື່ສິນຄ້າ</TableCell>
               <TableCell align="center" width={80}>ຈຳນວນ</TableCell>
@@ -129,16 +126,6 @@ function Products() {
             {filteredProducts.map((product, index) => (
               <TableRow key={product.id} hover>
                 <TableCell align="center">{index + 1}</TableCell>
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <Avatar
-                      src={product.image}
-                      alt={product.name}
-                      variant="square"
-                      sx={{ width: 40, height: 40 }}
-                    />
-                  </Box>
-                </TableCell>
                 <TableCell align="center">{product.code}</TableCell>
                 <TableCell align="center">{product.name}</TableCell>
                 <TableCell align="center">{product.quantity}</TableCell>

@@ -196,16 +196,15 @@ export default function Layout({ children, title }) {
       >
         {title && (
           <Typography 
-            variant="h5" 
+            variant="h2" 
             component="h1" 
             sx={{
-              color: 'white', 
-              bgcolor: 'primary.main', 
-              px: 2, 
-              py: 1, 
-              borderRadius: 1,
-              mb: 3,
-              fontWeight: 'bold'
+              color: 'black', 
+              fontWeight: 'bold',
+              mb: 3
+            }}
+            style={{
+              marginLeft: '45px',
             }}
           >
             {title}

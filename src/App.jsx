@@ -20,8 +20,8 @@ import Village from './pages/Village';
 import City from './pages/City';
 import Province from './pages/Province';
 import Reports from './pages/Reports';
-import AddProduct from './pages/AddProduct';
-import EditProduct from './pages/EditProduct';
+import AddProduct from './pages/Add-data/AddProduct';
+import EditProduct from './pages/Add-data/EditProduct';
 import Sales from './pages/Sales';
 
 // Create MUI theme
