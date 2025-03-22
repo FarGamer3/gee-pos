@@ -31,6 +31,7 @@ import {
   Print as PrintIcon,
   Save as SaveIcon,
   Person as PersonIcon,
+  AttachMoney as MoneyIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import ReceiptModal from '../components/ReceiptModal';
@@ -42,6 +43,11 @@ const sampleProducts = [
   { id: 4, code: 'P004', name: 'ສິນຄ້າ', price: 1500000, stock: 8 },
 ];
 
+// Format number with commas for every 3 digits
+const formatNumber = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
 function Sales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [cartItems, setCartItems] = useState([]);
@@ -52,9 +58,34 @@ function Sales() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('success');
+  const [amountPaid, setAmountPaid] = useState('');
+  const [changeAmount, setChangeAmount] = useState(0);
   
   // Calculate total
   const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // Calculate change when amount paid changes
+  useEffect(() => {
+    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+    if (paid >= cartTotal && cartTotal > 0) {
+      setChangeAmount(paid - cartTotal);
+    } else {
+      setChangeAmount(0);
+    }
+  }, [amountPaid, cartTotal]);
+
+  // Handle amount paid input
+  const handleAmountPaidChange = (e) => {
+    // Remove commas first
+    let value = e.target.value.replace(/,/g, '');
+    // Allow only numbers
+    value = value.replace(/[^\d]/g, '');
+    // Format with commas
+    if (value) {
+      value = formatNumber(value);
+    }
+    setAmountPaid(value);
+  };
 
   // Filter products based on search term
   const filteredProducts = sampleProducts.filter(product =>
@@ -99,24 +130,40 @@ function Sales() {
       showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
       return;
     }
+
+    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+    if (paid < cartTotal) {
+      showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
+      return;
+    }
     
     // Here you would typically save the sale to your backend
     console.log('Saving sale:', {
       customer: selectedCustomer,
       items: cartItems,
       total: cartTotal,
+      amountPaid: paid,
+      change: changeAmount,
       date: new Date()
     });
     
     showAlert('ບັນທຶກການຂາຍສຳເລັດ', 'success');
-    // Clear cart after successful save
+    // Clear cart and payment info after successful save
     setCartItems([]);
+    setAmountPaid('');
+    setChangeAmount(0);
   };
   
   // Handle print receipt
   const handlePrintReceipt = () => {
     if (cartItems.length === 0) {
       showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນພິມໃບບິນ', 'error');
+      return;
+    }
+
+    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+    if (paid < cartTotal) {
+      showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
       return;
     }
     
@@ -143,21 +190,12 @@ function Sales() {
 
   return (
     <Layout title="ຂາຍສິນຄ້າ">
-      <Box sx={{ mb: 3 }}>
-        <Paper 
-          sx={{ 
-            p: 2, 
-            bgcolor: 'primary.main', 
-            color: 'white',
-            borderRadius: 1
-            
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight="bold">
+      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
+        <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ສິນຄ້າ IN STOCK
-          </Typography>
-        </Paper>
+        </Typography>
       </Box>
+
       <Grid container spacing={2}>
         {/* Left column - Product selection */}
         <Grid item xs={12} md={5}>
@@ -260,7 +298,7 @@ function Sales() {
                       <TableCell align="center">{index + 1}</TableCell>
                       <TableCell align="center">{item.name}</TableCell>
                       <TableCell align="center">
-                        {item.price.toLocaleString()}
+                        {formatNumber(item.price)}
                       </TableCell>
                       <TableCell align="center" width={80}>
                         <TextField
@@ -279,7 +317,7 @@ function Sales() {
                         />
                       </TableCell>
                       <TableCell align="center">
-                        {(item.price * item.quantity).toLocaleString()}
+                        {formatNumber(item.price * item.quantity)}
                       </TableCell>
                       <TableCell align="center">
                         <Button
@@ -298,11 +336,59 @@ function Sales() {
               </Table>
             </TableContainer>
 
-            {/* Cart Total */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, p: 1, bgcolor: 'action.hover' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                ລາຄາລວມ: {cartTotal.toLocaleString()} ກີບ
-              </Typography>
+            {/* Payment Section */}
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={4}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    ລາຄາລວມ:
+                  </Typography>
+                </Grid>
+                <Grid item xs={8}>
+                  <Typography variant="h6" fontWeight="bold" textAlign="right">
+                    {formatNumber(cartTotal)} ກີບ
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={4}>
+                  <Typography variant="subtitle1">
+                    ຈຳນວນເງິນທີ່ຈ່າຍ:
+                  </Typography>
+                </Grid>
+                <Grid item xs={8}>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    value={amountPaid}
+                    onChange={handleAmountPaidChange}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">ກີບ</InputAdornment>,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                         
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={4}>
+                  <Typography variant="subtitle1">
+                    ເງິນທອນ:
+                  </Typography>
+                </Grid>
+                <Grid item xs={8}>
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold" 
+                    textAlign="right"
+                    color={changeAmount > 0 ? "success.main" : "text.primary"}
+                  >
+                    {formatNumber(changeAmount)} ກີບ
+                  </Typography>
+                </Grid>
+              </Grid>
             </Box>
 
             {/* Action Buttons */}
@@ -312,6 +398,7 @@ function Sales() {
                 color="success"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveSale}
+                disabled={cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
               >
                 ບັນທຶກ
               </Button>
@@ -320,6 +407,7 @@ function Sales() {
                 color="primary"
                 startIcon={<PrintIcon />}
                 onClick={handlePrintReceipt}
+                disabled={cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
               >
                 ພິມໃບບິນ
               </Button>
@@ -335,6 +423,8 @@ function Sales() {
         items={cartItems}
         customer={selectedCustomer}
         totalAmount={cartTotal}
+        amountPaid={parseFloat(amountPaid.replace(/,/g, '')) || 0}
+        changeAmount={changeAmount}
       />
       
       {/* Customer Selection Dialog */}
