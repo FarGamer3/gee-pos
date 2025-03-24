@@ -15,7 +15,6 @@ import Layout from '../components/Layout';
 import productIcon from '../assets/icon/product.png';
 import categoryIcon from '../assets/icon/category.png';
 import unitIcon from '../assets/icon/unit.png';
-import brandIcon from '../assets/icon/brand.png';
 import supplierIcon from '../assets/icon/supplier.png';
 import employeeIcon from '../assets/icon/employee.png';
 import customerIcon from '../assets/icon/customer.png';
@@ -32,7 +31,6 @@ function ManageData() {
     { id: 'products', title: 'ຂໍ້ມູນສິນຄ້າ', icon: productIcon, path: '/products' },
     { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories' },
     { id: 'units', title: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: unitIcon, path: '/units' },
-    { id: 'brands', title: 'ຂໍ້ມູນລຸ້ນ', icon: brandIcon, path: '/brands' },
     { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: locationIcon, path: '/warehouse' },
     { id: 'employee', title: 'ຂໍ້ມູນພະນັກງານ', icon: employeeIcon, path: '/employees' },
     { id: 'suppliers', title: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: supplierIcon, path: '/suppliers' },
