@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
+import PurchaseOrderDetail from '../components/PurchaseOrderDetail';
 
 function PurchaseOrders() {
   const navigate = useNavigate();
@@ -37,6 +38,10 @@ function PurchaseOrders() {
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [actionType, setActionType] = useState('');
+  
+  // Order detail dialog
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     // Try to get saved orders from localStorage
@@ -102,6 +107,12 @@ function PurchaseOrders() {
     setApproveDialogOpen(true);
   };
   
+  // Function to open order details
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setDetailDialogOpen(true);
+  };
+  
   // Confirm delete action
   const confirmDelete = (id) => {
     const updatedOrders = orders.filter(order => order.id !== id);
@@ -145,6 +156,10 @@ function PurchaseOrders() {
   const handleCloseSuccessDialog = () => {
     setSuccessDialogOpen(false);
   };
+  
+  const handleCloseDetailDialog = () => {
+    setDetailDialogOpen(false);
+  };
 
   return (
     <Layout title="ລາຍການສັ່ງຊື້">
@@ -169,6 +184,13 @@ function PurchaseOrders() {
         open={successDialogOpen}
         onClose={handleCloseSuccessDialog}
         actionType={actionType}
+      />
+      
+      {/* Order Detail Dialog */}
+      <PurchaseOrderDetail
+        open={detailDialogOpen}
+        onClose={handleCloseDetailDialog}
+        order={selectedOrder}
       />
       
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
@@ -240,6 +262,17 @@ function PurchaseOrders() {
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="info"
+                        size="small"
+                        sx={{ borderRadius: 4 }}
+                        onClick={() => handleViewOrder(order)}
+                        startIcon={<VisibilityIcon />}
+                      >
+                        ລາຍລະອຽດ
+                      </Button>
+                      
                       <Button
                         variant="contained"
                         color="error"

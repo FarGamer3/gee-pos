@@ -1,0 +1,170 @@
+import React, { useState, useRef } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Grid,
+  Divider
+} from '@mui/material';
+import {
+  Print as PrintIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+import { useReactToPrint } from 'react-to-print';
+
+const PurchaseOrderDetail = ({ open, onClose, order }) => {
+  const printComponentRef = useRef();
+  
+  // Handle print functionality
+  const handlePrint = useReactToPrint({
+    content: () => printComponentRef.current,
+    documentTitle: `ໃບສັ່ງຊື້ເລກທີ-${order?.id || ''}`,
+  });
+  
+  // If no order, don't render
+  if (!order) return null;
+  
+  // Format number with commas
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      PaperProps={{
+        sx: { borderRadius: 2 }
+      }}
+    >
+      <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">ລາຍລະອຽດໃບສັ່ງຊື້</Typography>
+          <Box>
+            <Button 
+              variant="contained" 
+              color="success" 
+              startIcon={<PrintIcon />}
+              onClick={handlePrint}
+              sx={{ mr: 1 }}
+            >
+              ພິມໃບສັ່ງຊື້
+            </Button>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={onClose}
+            >
+              ປິດ
+            </Button>
+          </Box>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent sx={{ mt: 2 }}>
+        <div ref={printComponentRef} style={{ padding: '20px' }}>
+          {/* Printable Content */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
+              ໃບສັ່ງຊື້ສິນຄ້າ
+            </Typography>
+            <Typography variant="h6" align="center" sx={{ mb: 3 }}>
+              ເລກທີ່: {order.id}
+            </Typography>
+            
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ຜູ້ສະໜອງ:</strong> {order.supplier}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>ພະນັກງານ:</strong> {order.employee}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ວັນທີ:</strong> {order.orderDate}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>ສະຖານະ:</strong> {order.status}
+                </Typography>
+              </Grid>
+            </Grid>
+            
+            <Divider sx={{ mb: 3 }} />
+            
+            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+              <Table>
+                <TableHead sx={{ bgcolor: 'background.default' }}>
+                  <TableRow>
+                    <TableCell align="center" width="5%">#</TableCell>
+                    <TableCell>ຊື່ສິນຄ້າ</TableCell>
+                    <TableCell align="right">ລາຄາ</TableCell>
+                    <TableCell align="center">ຈຳນວນ</TableCell>
+                    <TableCell align="right">ລວມລາຄາ</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {order.items.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell align="center">{index + 1}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell align="right">{formatNumber(item.price)} ກີບ</TableCell>
+                      <TableCell align="center">{item.quantity}</TableCell>
+                      <TableCell align="right">{formatNumber(item.price * item.quantity)} ກີບ</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+              <Box sx={{ textAlign: 'right', width: '300px' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body1"><strong>ລາຄາລວມ:</strong></Typography>
+                  <Typography variant="body1">{formatNumber(order.total)} ກີບ</Typography>
+                </Box>
+              </Box>
+            </Box>
+            
+            <Grid container spacing={6} sx={{ mt: 4 }}>
+              <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
+                <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                  <Typography variant="body2">ລາຍເຊັນ</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                <Typography variant="body2">ຜູ້ກວດສອບ</Typography>
+                <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                  <Typography variant="body2">ລາຍເຊັນ</Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                <Typography variant="body2">ຜູ້ສັ່ງຊື້</Typography>
+                <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                  <Typography variant="body2">ລາຍເຊັນ</Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default PurchaseOrderDetail;
