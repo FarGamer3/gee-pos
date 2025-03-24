@@ -140,26 +140,15 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
               </Box>
             </Box>
             
-            <Grid container spacing={6} sx={{ mt: 4 }}>
-              <Grid item xs={4} sx={{ textAlign: 'center' }}>
-                <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5, mb: 2 }}>
+              <Box sx={{ textAlign: 'center', width: '200px' }}>
+                <Typography variant="body2">ເຈົ້າຂອງຮ້ານ</Typography>
                 <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
                   <Typography variant="body2">ລາຍເຊັນ</Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={4} sx={{ textAlign: 'center' }}>
-                <Typography variant="body2">ຜູ້ກວດສອບ</Typography>
-                <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                  <Typography variant="body2">ລາຍເຊັນ</Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={4} sx={{ textAlign: 'center' }}>
-                <Typography variant="body2">ຜູ້ສັ່ງຊື້</Typography>
-                <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                  <Typography variant="body2">ລາຍເຊັນ</Typography>
-                </Box>
-              </Grid>
-            </Grid>
+              </Box>
+
+            </Box>
           </Box>
         </div>
       </DialogContent>

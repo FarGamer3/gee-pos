@@ -37,21 +37,16 @@ function Buy() {
   
   // Mock products data
   const products = [
-    { id: 1, code: 'P001', name: 'ຕູ້ເຢັນ', price: 1000000, stock: 10 },
-    { id: 2, code: 'P002', name: 'ໂທລະທັດ', price: 1500000, stock: 15 },
-    { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', price: 2000000, stock: 20 },
-    { id: 4, code: 'P004', name: 'ຈັກຊັກຜ້າ', price: 800000, stock: 8 },
+    { id: 1, code: 'P001', name: 'ຕູ້ເຢັນ', stock: 10 },
+    { id: 2, code: 'P002', name: 'ໂທລະທັດ', stock: 15 },
+    { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', stock: 20 },
+    { id: 4, code: 'P004', name: 'ຈັກຊັກຜ້າ', stock: 8 },
   ];
 
   // Format date to DD/MM/YYYY
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-  };
-
-  // Format number with commas
-  const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   // Filter products based on search term
@@ -91,9 +86,6 @@ function Buy() {
     setOrderItems(orderItems.filter(item => item.id !== id));
   };
 
-  // Calculate total
-  const orderTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
   // Handle save order
   const handleSaveOrder = () => {
     if (orderItems.length === 0) {
@@ -121,8 +113,7 @@ function Buy() {
       supplier: `ບໍລິສັດ ${supplier}`,
       employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
       status: 'ລໍຖ້າອະນຸມັດ',
-      items: orderItems,
-      total: orderTotal
+      items: orderItems
     };
     
     // Add to existing orders
@@ -249,7 +240,6 @@ function Buy() {
                   <TableRow>
                     <TableCell align="center">ລະຫັດ</TableCell>
                     <TableCell align="center">ຊື່</TableCell>
-                    <TableCell align="center">ລາຄາ</TableCell>
                     <TableCell align="center"></TableCell>
                   </TableRow>
                 </TableHead>
@@ -258,7 +248,6 @@ function Buy() {
                     <TableRow key={product.id} hover>
                       <TableCell align="center">{product.code}</TableCell>
                       <TableCell align="center">{product.name}</TableCell>
-                      <TableCell align="center">{formatNumber(product.price)}</TableCell>
                       <TableCell align="center">
                         <Button
                           variant="contained"
@@ -293,9 +282,7 @@ function Buy() {
                   <TableRow>
                     <TableCell align="center">#</TableCell>
                     <TableCell align="center">ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ລາຄາ</TableCell>
                     <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="center">ລວມລາຄາ</TableCell>
                     <TableCell align="center"></TableCell>
                   </TableRow>
                 </TableHead>
@@ -311,9 +298,6 @@ function Buy() {
                     >
                       <TableCell align="center">{index + 1}</TableCell>
                       <TableCell align="center">{item.name}</TableCell>
-                      <TableCell align="center">
-                        {formatNumber(item.price)}
-                      </TableCell>
                       <TableCell align="center" width={80}>
                         <TextField
                           type="number"
@@ -331,9 +315,6 @@ function Buy() {
                         />
                       </TableCell>
                       <TableCell align="center">
-                        {formatNumber(item.price * item.quantity)}
-                      </TableCell>
-                      <TableCell align="center">
                         <IconButton
                           size="small"
                           color="error"
@@ -347,22 +328,6 @@ function Buy() {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {/* Total and Action Buttons */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={4}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    ລາຄາລວມ:
-                  </Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="h6" fontWeight="bold" textAlign="right">
-                    {formatNumber(orderTotal)} ກີບ
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>

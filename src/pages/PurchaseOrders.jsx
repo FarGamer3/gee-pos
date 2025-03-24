@@ -59,10 +59,9 @@ function PurchaseOrders() {
           employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
           status: 'ລໍຖ້າອະນຸມັດ',
           items: [
-            { name: 'ຕູ້ເຢັນ', price: 1000000, quantity: 2 },
-            { name: 'ແອຄອນດິຊັນ', price: 2000000, quantity: 1 }
-          ],
-          total: 4000000
+            { name: 'ຕູ້ເຢັນ', quantity: 2 },
+            { name: 'ແອຄອນດິຊັນ', quantity: 1 }
+          ]
         },
         { 
           id: 2, 
@@ -71,10 +70,9 @@ function PurchaseOrders() {
           employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
           status: 'ລໍຖ້າອະນຸມັດ',
           items: [
-            { name: 'ໂທລະທັດ', price: 1500000, quantity: 1 },
-            { name: 'ຈັກຊັກຜ້າ', price: 800000, quantity: 2 }
-          ],
-          total: 3100000
+            { name: 'ໂທລະທັດ', quantity: 1 },
+            { name: 'ຈັກຊັກຜ້າ', quantity: 2 }
+          ]
         }
       ];
       
@@ -89,11 +87,6 @@ function PurchaseOrders() {
     order.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.orderDate.includes(searchTerm)
   );
-
-  // Function to format number with commas
-  const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
 
   // Function to handle delete order
   const handleDeleteOrder = (id) => {
