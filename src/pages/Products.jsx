@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -13,18 +12,25 @@ import {
   TableRow,
   IconButton,
   InputAdornment,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  MenuItem
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
+import { DeleteConfirmDialog } from '../components/ConfirmationDialog';
 
 function Products() {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState([
     {
@@ -43,21 +49,131 @@ function Products() {
     }
   ]);
 
-  // ຟັງຊັນເພີ່ມສິນຄ້າໃໝ່
-  const handleAddProduct = () => {
-    navigate('/add-product');
+  // Dialog states
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  
+  // Current product for editing
+  // ໃຊ້ useRef ເພື່ອເກັບຄ່າຊົ່ວຄາວແລະປ້ອງກັນການ re-render ແຕ່ລະຄັ້ງທີ່ພິມ
+  const productFormRef = React.useRef(null);
+  
+  const [currentProduct, setCurrentProduct] = useState({
+    code: '',
+    name: '',
+    quantity: 0,
+    minQuantity: 0,
+    purchasePrice: 0,
+    sellingPrice: 0,
+    brand: '',
+    type: '',
+    model: '',
+    location: '',
+    status: '',
+  });
+
+  // ຟັງຊັນເປີດ dialog ເພີ່ມສິນຄ້າໃໝ່
+  const handleOpenAddDialog = () => {
+    const emptyProduct = {
+      code: '',
+      name: '',
+      quantity: 0,
+      minQuantity: 0,
+      purchasePrice: 0,
+      sellingPrice: 0,
+      brand: '',
+      type: '',
+      model: '',
+      location: '',
+      status: '',
+    };
+    
+    setCurrentProduct(emptyProduct);
+    productFormRef.current = emptyProduct; // ຕັ້ງຄ່າເລີ່ມຕົ້ນໃນ ref
+    setOpenAddDialog(true);
   };
 
-  // ຟັງຊັນແກ້ໄຂສິນຄ້າ
-  const handleEditProduct = (id) => {
-    navigate(`/edit-product/${id}`);
+  // ຟັງຊັນປິດ dialog ເພີ່ມສິນຄ້າ
+  const handleCloseAddDialog = () => {
+    setOpenAddDialog(false);
+    productFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref ເມື່ອປິດ dialog
+  };
+
+  // ຟັງຊັນເປີດ dialog ແກ້ໄຂສິນຄ້າ
+  const handleOpenEditDialog = (product) => {
+    setCurrentProduct({ ...product });
+    productFormRef.current = { ...product }; // ກຳນົດຄ່າເລີ່ມຕົ້ນໃນ ref ເປັນຂໍ້ມູນສິນຄ້າປັດຈຸບັນ
+    setOpenEditDialog(true);
+  };
+
+  // ຟັງຊັນປິດ dialog ແກ້ໄຂສິນຄ້າ
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    productFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref ເມື່ອປິດ dialog
+  };
+
+  // ຟັງຊັນການປ່ຽນແປງຂໍ້ມູນສິນຄ້າແບບປັບປຸງໃໝ່
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    // ແທນທີ່ຈະໃຊ້ setCurrentProduct ທຸກຄັ້ງທີ່ພິມ (ເຊິ່ງຈະ re-render)
+    // ເຮົາຈະເກັບຄ່າໄວ້ໃນ ref ກ່ອນ
+    productFormRef.current = {
+      ...(productFormRef.current || currentProduct),
+      [name]: value
+    };
+  };
+
+  // ຟັງຊັນບັນທຶກສິນຄ້າໃໝ່
+  const handleAddProduct = () => {
+    // ໃຊ້ຂໍ້ມູນຈາກ ref ເພື່ອບັນທຶກ
+    const formData = productFormRef.current || currentProduct;
+    
+    const newProduct = {
+      ...formData,
+      id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1
+    };
+    
+    setProducts([...products, newProduct]);
+    setOpenAddDialog(false);
+    productFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref
+    
+    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອບັນທຶກ
+    console.log('Adding new product:', newProduct);
+  };
+
+  // ຟັງຊັນບັນທຶກການແກ້ໄຂສິນຄ້າ
+  const handleSaveEdit = () => {
+    // ໃຊ້ຂໍ້ມູນຈາກ ref ເພື່ອບັນທຶກ
+    const formData = productFormRef.current || currentProduct;
+    
+    setProducts(products.map(p => p.id === currentProduct.id ? {...formData, id: currentProduct.id} : p));
+    setOpenEditDialog(false);
+    productFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref
+    
+    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອອັບເດດ
+    console.log('Updating product:', formData);
+  };
+
+  // ຟັງຊັນເປີດ dialog ລຶບສິນຄ້າ
+  const handleOpenDeleteDialog = (id) => {
+    setSelectedProductId(id);
+    setOpenDeleteDialog(true);
+  };
+
+  // ຟັງຊັນປິດ dialog ລຶບສິນຄ້າ
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setSelectedProductId(null);
   };
 
   // ຟັງຊັນລຶບສິນຄ້າ
   const handleDeleteProduct = (id) => {
-    if (window.confirm('ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການລຶບສິນຄ້ານີ້?')) {
-      setProducts(products.filter(product => product.id !== id));
-    }
+    setProducts(products.filter(product => product.id !== id));
+    setOpenDeleteDialog(false);
+    setSelectedProductId(null);
+    // ໃນກໍລະນີຈິງ, ສົ່ງຄຳຂໍລຶບໄປຍັງ API
+    console.log('Deleting product with ID:', id);
   };
 
   // ຟັງຊັນຄົ້ນຫາ
@@ -73,6 +189,194 @@ function Products() {
       product.brand.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  // Form dialog component for add and edit operations
+  const ProductFormDialog = ({ open, onClose, title, product, onChange, onSave }) => (
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>
+        {title}
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: (theme) => theme.palette.grey[500],
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box component="form">
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="ລະຫັດສິນຄ້າ"
+                name="code"
+                defaultValue={product.code}
+                name="code"
+                onChange={onChange}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="ຊື່ສິນຄ້າ"
+                name="name"
+                defaultValue={product.name}
+                name="name"
+                onChange={onChange}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ຈຳນວນ"
+                name="quantity"
+                type="number"
+                defaultValue={product.quantity}
+                name="quantity"
+                onChange={onChange}
+                required
+                InputProps={{ inputProps: { min: 0 } }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ຈຳນວນນ້ອຍສຸດ"
+                name="minQuantity"
+                type="number"
+                defaultValue={product.minQuantity}
+                name="minQuantity"
+                onChange={onChange}
+                required
+                InputProps={{ inputProps: { min: 0 } }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ລາຄາຕົ້ນທຶນ"
+                name="purchasePrice"
+                type="number"
+                defaultValue={product.purchasePrice}
+                name="purchasePrice"
+                onChange={onChange}
+                required
+                InputProps={{ inputProps: { min: 0 } }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ລາຄາຂາຍ"
+                name="sellingPrice"
+                type="number"
+                defaultValue={product.sellingPrice}
+                name="sellingPrice"
+                onChange={onChange}
+                required
+                InputProps={{ inputProps: { min: 0 } }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ຍີ່ຫໍ້"
+                name="brand"
+                defaultValue={product.brand}
+                name="brand"
+                onChange={onChange}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ລຸ້ນ"
+                name="model"
+                defaultValue={product.model}
+                name="model"
+                onChange={onChange}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                select
+                label="ປະເພດ"
+                name="type"
+                defaultValue={product.type}
+                name="type"
+                onChange={onChange}
+                required
+              >
+                <MenuItem value="">ເລືອກປະເພດ</MenuItem>
+                <MenuItem value="ເຄື່ອງໃຊ້ໄຟຟ້າ">ເຄື່ອງໃຊ້ໄຟຟ້າ</MenuItem>
+                <MenuItem value="ເຄື່ອງໃຊ້ໃນເຮືອນ">ເຄື່ອງໃຊ້ໃນເຮືອນ</MenuItem>
+                <MenuItem value="ອຸປະກອນອິເລັກໂທຣນິກ">ອຸປະກອນອິເລັກໂທຣນິກ</MenuItem>
+              </TextField>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="ບ່ອນຈັດວາງ"
+                name="location"
+                defaultValue={product.location}
+                name="location"
+                onChange={onChange}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="ສະຖານະ"
+                name="status"
+                defaultValue={product.status}
+                name="status"
+                onChange={onChange}
+                required
+              >
+                <MenuItem value="">ເລືອກສະຖານະ</MenuItem>
+                <MenuItem value="ພໍລະສາຍ">ພໍລະສາຍ</MenuItem>
+                <MenuItem value="ໝົດສາງ">ໝົດສາງ</MenuItem>
+                <MenuItem value="ຍົກເລີກການຂາຍ">ຍົກເລີກການຂາຍ</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="error" variant="outlined">
+          ຍົກເລີກ
+        </Button>
+        <Button onClick={onSave} color="secondary" variant="contained">
+          ບັນທຶກ
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   return (
     <Layout title="ຈັດການຂໍ້ມູນສິນຄ້າ">
@@ -96,7 +400,7 @@ function Products() {
           variant="contained"
           color="secondary"
           startIcon={<AddIcon />}
-          onClick={handleAddProduct}
+          onClick={handleOpenAddDialog}
         >
           ເພີ່ມ
         </Button>
@@ -142,7 +446,7 @@ function Products() {
                     <IconButton
                       color="primary"
                       size="small"
-                      onClick={() => handleEditProduct(product.id)}
+                      onClick={() => handleOpenEditDialog(product)}
                     >
                       <EditIcon />
                     </IconButton>
@@ -153,7 +457,7 @@ function Products() {
                     <IconButton
                       color="error"
                       size="small"
-                      onClick={() => handleDeleteProduct(product.id)}
+                      onClick={() => handleOpenDeleteDialog(product.id)}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -164,6 +468,34 @@ function Products() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Dialog for adding new product */}
+      <ProductFormDialog
+        open={openAddDialog}
+        onClose={handleCloseAddDialog}
+        title="ເພີ່ມສິນຄ້າໃໝ່"
+        product={currentProduct}
+        onChange={handleChange}
+        onSave={handleAddProduct}
+      />
+
+      {/* Dialog for editing product */}
+      <ProductFormDialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        title="ແກ້ໄຂຂໍ້ມູນສິນຄ້າ"
+        product={currentProduct}
+        onChange={handleChange}
+        onSave={handleSaveEdit}
+      />
+
+      {/* Dialog for confirming deletion */}
+      <DeleteConfirmDialog
+        open={openDeleteDialog}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleDeleteProduct}
+        itemId={selectedProductId}
+      />
     </Layout>
   );
 }
