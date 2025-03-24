@@ -26,6 +26,7 @@ import Sales from './pages/Sales';
 import Buy from './pages/Buy';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Import from './pages/Import';
+import ImportDetail from './pages/import-detail';
 
 // Create MUI theme
 const theme = createTheme({
@@ -265,6 +266,15 @@ function App() {
                 <Navigate to="/login" replace />
             } 
           />
+                    <Route 
+            path="/import-detail" 
+            element={
+              isLoggedIn ? 
+                <ImportDetail /> : 
+                <Navigate to="/login" replace />
+            } 
+          />
+          
 
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

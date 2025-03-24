@@ -1,4 +1,14 @@
-import { useState } from 'react';
+// Save import to localStorage for history tracking
+const saveImportToHistory = (newImport) => {
+    // Get existing import history
+    const existingHistory = JSON.parse(localStorage.getItem('importHistory') || '[]');
+    
+    // Add new import to history
+    const updatedHistory = [...existingHistory, newImport];
+    
+    // Save back to localStorage
+    localStorage.setItem('importHistory', JSON.stringify(updatedHistory));
+  };import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -180,6 +190,9 @@ function Import() {
     // Add to history
     setImportHistory([...importHistory, newImport]);
     
+    // Save to localStorage for history tracking
+    saveImportToHistory(newImport);
+    
     console.log('Saving import:', newImport);
     
     // Show success dialog
@@ -359,10 +372,17 @@ function Import() {
         </Dialog>
       )}
       
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
+      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ຟອມນຳເຂົ້າສິນຄ້າ
         </Typography>
+        <Button 
+          variant="contained" 
+          color="info" 
+          onClick={() => navigate('/import-detail')}
+        >
+          ເບິ່ງປະຫວັດການນຳເຂົ້າ
+        </Button>
       </Box>
 
       {/* Import Form */}
@@ -568,83 +588,6 @@ function Import() {
           </Paper>
         </Grid>
       </Grid>
-
-      {/* Import History */}
-      <Box sx={{ mt: 4, bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="primary">
-          ປະຫວັດການນຳເຂົ້າສິນຄ້າ
-        </Typography>
-      </Box>
-
-      <Paper sx={{ p: 2 }}>
-        <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'background.default' }}>
-                <TableCell align="center">#</TableCell>
-                <TableCell align="center">ເລກທີ</TableCell>
-                <TableCell align="center">ວັນທີ</TableCell>
-                <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
-                <TableCell align="center">ສາງ</TableCell>
-                <TableCell align="center">ພະນັກງານ</TableCell>
-                <TableCell align="center">ສະຖານະ</TableCell>
-                <TableCell align="center">ຄຳສັ່ງ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {importHistory.map((item, index) => (
-                <TableRow
-                  key={item.id}
-                  sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
-                >
-                  <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell align="center">{item.id}</TableCell>
-                  <TableCell align="center">{item.date}</TableCell>
-                  <TableCell align="center">{item.purchaseOrderId || "-"}</TableCell>
-                  <TableCell align="center">{item.supplier}</TableCell>
-                  <TableCell align="center">{item.warehouse}</TableCell>
-                  <TableCell align="center">{item.employee}</TableCell>
-                  <TableCell align="center">
-                    <Chip 
-                      label={item.status}
-                      color="success"
-                      sx={{ 
-                        bgcolor: '#9ACD32', 
-                        color: 'white',
-                        borderRadius: 4
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleViewImport(item)}
-                        startIcon={<VisibilityIcon />}
-                      >
-                        ລາຍລະອຽດ
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleDeleteImport(item.id)}
-                      >
-                        ລຶບ
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
     </Layout>
   );
 }
