@@ -24,6 +24,7 @@ import {
   Search as SearchIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
+import { SuccessDialog, ErrorDialog } from '../components/SuccessDialog';
 
 function Buy() {
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ function Buy() {
   const [orderItems, setOrderItems] = useState([]);
   const [supplier, setSupplier] = useState('');
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   
   // Mock products data
   const products = [
@@ -39,6 +42,12 @@ function Buy() {
     { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', price: 2000000, stock: 20 },
     { id: 4, code: 'P004', name: 'ຈັກຊັກຜ້າ', price: 800000, stock: 8 },
   ];
+
+  // Format date to DD/MM/YYYY
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  };
 
   // Format number with commas
   const formatNumber = (num) => {
@@ -97,27 +106,91 @@ function Buy() {
       return;
     }
     
-    // Here you would typically save the order to your backend
-    console.log('Saving purchase order:', {
-      supplier,
-      orderDate,
-      items: orderItems,
-      total: orderTotal,
-      date: new Date()
-    });
+    // Get existing orders or initialize new array
+    const existingOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]');
     
-    alert('ບັນທຶກການສັ່ງຊື້ສຳເລັດ');
-    // Clear form after successful save
+    // Generate a new ID (in a real app this would come from the backend)
+    const newId = existingOrders.length > 0 
+      ? Math.max(...existingOrders.map(order => order.id)) + 1 
+      : 1;
+    
+    // Create the new order object
+    const newOrder = {
+      id: newId,
+      orderDate: formatDate(orderDate),
+      supplier: `ບໍລິສັດ ${supplier}`,
+      employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
+      status: 'ລໍຖ້າອະນຸມັດ',
+      items: orderItems,
+      total: orderTotal
+    };
+    
+    // Add to existing orders
+    const updatedOrders = [...existingOrders, newOrder];
+    
+    // Save to localStorage
+    localStorage.setItem('purchaseOrders', JSON.stringify(updatedOrders));
+    
+    console.log('Saving purchase order:', newOrder);
+    
+    // Show success dialog instead of alert
+    setShowSuccessDialog(true);
+    
+    // Form is cleared when dialog is closed
+  };
+
+  // Handle dialog actions
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    // Clear form after dialog is closed
     setOrderItems([]);
     setSupplier('');
   };
 
+  const handleNavigateToPurchaseOrders = () => {
+    setShowSuccessDialog(false);
+    // Clear form and navigate
+    setOrderItems([]);
+    setSupplier('');
+    navigate('/purchase-orders');
+  };
+
+  const handleCloseErrorDialog = () => {
+    setShowErrorDialog(false);
+  };
+
+  const handleTryAgain = () => {
+    setShowErrorDialog(false);
+    // User can try to save again
+  };
+
   return (
     <Layout title="ສັ່ງຊື້ສິນຄ້າ">
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
+      {/* Success Dialog */}
+      <SuccessDialog 
+        open={showSuccessDialog} 
+        onClose={handleCloseSuccessDialog} 
+        onDashboard={handleNavigateToPurchaseOrders} 
+      />
+      
+      {/* Error Dialog */}
+      <ErrorDialog 
+        open={showErrorDialog} 
+        onClose={handleCloseErrorDialog} 
+        onTryAgain={handleTryAgain} 
+      />
+      
+      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ຟອມສັ່ງຊື້ສິນຄ້າ
         </Typography>
+        <Button 
+          variant="contained" 
+          color="info" 
+          onClick={() => navigate('/purchase-orders')}
+        >
+          ລາຍການສັ່ງຊື້ທັງໝົດ
+        </Button>
       </Box>
 
       <Grid container spacing={2}>

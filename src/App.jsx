@@ -24,6 +24,7 @@ import AddProduct from './pages/Add-data/AddProduct';
 import EditProduct from './pages/Add-data/EditProduct';
 import Sales from './pages/Sales';
 import Buy from './pages/Buy';
+import PurchaseOrders from './pages/PurchaseOrders';
 
 // Create MUI theme
 const theme = createTheme({
@@ -244,6 +245,14 @@ function App() {
             element={
               isLoggedIn ? 
                 <Buy /> : 
+                <Navigate to="/login" replace />
+            } 
+          />
+                 <Route 
+            path="/Purchase-Orders" 
+            element={
+              isLoggedIn ? 
+                <PurchaseOrders /> : 
                 <Navigate to="/login" replace />
             } 
           />
