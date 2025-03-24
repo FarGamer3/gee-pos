@@ -23,6 +23,7 @@ import Reports from './pages/Reports';
 import AddProduct from './pages/Add-data/AddProduct';
 import EditProduct from './pages/Add-data/EditProduct';
 import Sales from './pages/Sales';
+import Buy from './pages/Buy';
 
 // Create MUI theme
 const theme = createTheme({
@@ -238,6 +239,15 @@ function App() {
             } 
           />
           
+          <Route 
+            path="/Buy" 
+            element={
+              isLoggedIn ? 
+                <Buy /> : 
+                <Navigate to="/login" replace />
+            } 
+          />
+
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

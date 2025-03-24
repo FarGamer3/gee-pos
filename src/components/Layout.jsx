@@ -46,7 +46,7 @@ export default function Layout({ children, title }) {
   const menuItems = [
     { text: 'ໜ້າຫຼັກ', icon: <HomeIcon />, path: '/dashboard' },
     { text: 'ຈັດການຂໍ້ມູນຫຼັກ', icon: <CategoryIcon />, path: '/Manage_data' },
-    { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/products' },
+    { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/Buy' },
     { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales' },
     { text: 'ນຳເຂົ້າສິນຄ້າ', icon: <ImportIcon />, path: '/import' },
     { text: 'ນຳອອກສິນຄ້າ', icon: <ExportIcon />, path: '/check-stock' },
