@@ -43,7 +43,6 @@ function Import() {
   const [searchTerm, setSearchTerm] = useState('');
   const [importItems, setImportItems] = useState([]);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
-  const [selectedWarehouse, setSelectedWarehouse] = useState('');
   const [importDate, setImportDate] = useState(new Date().toISOString().split('T')[0]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -165,11 +164,6 @@ function Import() {
       alert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການນຳເຂົ້າ');
       return;
     }
-
-    if (!selectedWarehouse) {
-      alert('ກະລຸນາເລືອກສາງກ່ອນບັນທຶກການນຳເຂົ້າ');
-      return;
-    }
     
     // Calculate total
     const total = importItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -180,7 +174,7 @@ function Import() {
       date: formatDate(importDate),
       purchaseOrderId: selectedPurchaseOrder.id,
       supplier: selectedPurchaseOrder.supplier,
-      warehouse: selectedWarehouse,
+      warehouse: 'ສາງໃຫຍ່', // Default warehouse
       employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
       status: 'ນຳເຂົ້າແລ້ວ',
       items: importItems,
@@ -227,7 +221,6 @@ function Import() {
     // Clear form after dialog is closed
     setImportItems([]);
     setSelectedPurchaseOrder(null);
-    setSelectedWarehouse('');
   };
 
   const handleNavigateToImportHistory = () => {
@@ -235,8 +228,8 @@ function Import() {
     // Clear form and focus on history tab
     setImportItems([]);
     setSelectedPurchaseOrder(null);
-    setSelectedWarehouse('');
-    // Here you could navigate to a specific tab if implementing tab functionality
+    // Navigate to the import history page
+    navigate('/import-detail');
   };
 
   const handleCloseErrorDialog = () => {
@@ -388,7 +381,7 @@ function Import() {
       {/* Import Form */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               label="ວັນເວລາ"
@@ -397,19 +390,6 @@ function Import() {
               onChange={(e) => setImportDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              select
-              label="ເລືອກສາງ"
-              value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-            >
-              <MenuItem value="">ເລືອກສາງ</MenuItem>
-              <MenuItem value="ສາງໃຫຍ່">ສາງໃຫຍ່</MenuItem>
-              <MenuItem value="ສາງຍ່ອຍ">ສາງຍ່ອຍ</MenuItem>
-            </TextField>
           </Grid>
         </Grid>
       </Paper>
@@ -570,7 +550,6 @@ function Import() {
                 onClick={() => {
                   setImportItems([]);
                   setSelectedPurchaseOrder(null);
-                  setSelectedWarehouse('');
                 }}
               >
                 ຍົກເລີກ
@@ -580,7 +559,7 @@ function Import() {
                 color="success"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveImport}
-                disabled={importItems.length === 0 || !selectedPurchaseOrder || !selectedWarehouse}
+                disabled={importItems.length === 0 || !selectedPurchaseOrder}
               >
                 ບັນທຶກ
               </Button>
@@ -588,6 +567,8 @@ function Import() {
           </Paper>
         </Grid>
       </Grid>
+
+
     </Layout>
   );
 }
