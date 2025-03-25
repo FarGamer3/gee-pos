@@ -27,8 +27,8 @@ import {
   Add as AddIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import Layout from '../components/Layout';
-import { DeleteConfirmDialog } from '../components/ConfirmationDialog';
+import Layout from '../../components/Layout';
+import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
 
 function Products() {
   const [searchTerm, setSearchTerm] = useState('');

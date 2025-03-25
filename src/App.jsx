@@ -8,9 +8,9 @@ import { laoLanguage } from './theme/laoLanguage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MainMenu from './pages/Manage_data';
-import Products from './pages/Products';
-import Categories from './pages/Categories';
-import Units from './pages/Units';
+import Products from './pages/Add-data/Products';
+import Categories from './pages/Add-data/Categories';
+import Units from './pages/Add-data/Units';
 import Brands from './pages/Brands';
 import Warehouse from './pages/Warehouse';
 import Suppliers from './pages/Suppliers';
@@ -20,8 +20,6 @@ import Village from './pages/Village';
 import City from './pages/City';
 import Province from './pages/Province';
 import Reports from './pages/Reports';
-import AddProduct from './pages/Add-data/AddProduct';
-import EditProduct from './pages/Add-data/EditProduct';
 import Sales from './pages/Sales';
 import Buy from './pages/Buy';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -126,22 +124,7 @@ function App() {
                 <Navigate to="/login" replace />
             } 
           />
-          <Route 
-            path="/add-product" 
-            element={
-              isLoggedIn ? 
-                <AddProduct /> : 
-                <Navigate to="/login" replace />
-            } 
-          />
-          <Route 
-            path="/edit-product/:id" 
-            element={
-              isLoggedIn ? 
-                <EditProduct /> : 
-                <Navigate to="/login" replace />
-            } 
-          />
+     
           
           {/* ເສັ້ນທາງສຳລັບຈັດການຂໍ້ມູນອື່ນໆ */}
           <Route 

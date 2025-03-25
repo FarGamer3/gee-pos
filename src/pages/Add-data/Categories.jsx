@@ -1,5 +1,5 @@
 import { Box, Paper, Typography } from '@mui/material';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 
 function Categories() {
   return (
