@@ -31,14 +31,14 @@ import {
 import Layout from '../../components/Layout';
 import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
 
-function Categories() {
+function Units() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState([
-    { id: 1, name: 'ເຄື່ອງໃຊ້ໄຟຟ້າ' },
-    { id: 2, name: 'ເຄື່ອງໃຊ້ໃນເຮືອນ' },
-    { id: 3, name: 'ອຸປະກອນອິເລັກໂທຣນິກ' },
-    { id: 4, name: 'ເຄື່ອງອຸປະໂພກ' },
-    { id: 5, name: 'ເຄື່ອງບໍລິໂພກ' }
+    { id: 1, name: 'samsung' },
+    { id: 2, name: 'LG' },
+    { id: 3, name: 'Panasonic' },
+    { id: 4, name: 'Toshiba' },
+    { id: 5, name: 'Philips' }
   ]);
 
   // Dialog states
@@ -366,4 +366,4 @@ function Categories() {
   );
 }
 
-export default Categories;
+export default Units;
