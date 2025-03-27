@@ -23,11 +23,12 @@ import {
 import {
   Search as SearchIcon,
   Visibility as VisibilityIcon,
+  CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   Print as PrintIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { DeleteConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
+import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 
 function ExportDetail() {
   const navigate = useNavigate();
@@ -39,18 +40,18 @@ function ExportDetail() {
       id: 1, 
       date: '24/3/2025', 
       items: [
-        { id: 1, code: 'P001', name: 'ຕູ້ເຢັນ', exportQuantity: 5, exportLocation: 'A-02', exportReason: 'ສິນຄ້າເສຍຫາຍ' }
+        { id: 1, name: 'ຕູ້ເຢັນ', exportQuantity: 5, exportLocation: 'A-02', exportReason: 'ສິນຄ້າເສຍຫາຍ' }
       ],
-      status: 'ດຳເນີນການແລ້ວ'
+      status: 'ລໍຖ້າອະນຸມັດ'
     },
     { 
       id: 2, 
       date: '22/3/2025', 
       items: [
-        { id: 2, code: 'P002', name: 'ໂທລະທັດ', exportQuantity: 3, exportLocation: 'B-05', exportReason: 'ສິນຄ້າຊຳລຸດ' },
-        { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', exportQuantity: 1, exportLocation: 'C-01', exportReason: 'ໂອນຍ້າຍສາງ' }
+        { id: 2, name: 'ໂທລະທັດ', exportQuantity: 3, exportLocation: 'B-05', exportReason: 'ສິນຄ້າຊຳລຸດ' },
+        { id: 3, name: 'ແອຄອນດິຊັນ', exportQuantity: 1, exportLocation: 'C-01', exportReason: 'ໂອນຍ້າຍສາງ' }
       ],
-      status: 'ດຳເນີນການແລ້ວ'
+      status: 'ນຳອອກແລ້ວ'
     }
   ]);
 
@@ -61,6 +62,10 @@ function ExportDetail() {
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedExportId, setSelectedExportId] = useState(null);
+  
+  // Approve confirmation dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [selectedApproveId, setSelectedApproveId] = useState(null);
   
   // Success action dialog state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
@@ -105,6 +110,12 @@ function ExportDetail() {
     setDeleteDialogOpen(true);
   };
 
+  // Handle approve export
+  const handleApproveExport = (id) => {
+    setSelectedApproveId(id);
+    setApproveDialogOpen(true);
+  };
+
   // Confirm delete action
   const confirmDelete = (id) => {
     const updatedHistory = exportHistory.filter(item => item.id !== id);
@@ -119,10 +130,32 @@ function ExportDetail() {
     setSuccessDialogOpen(true);
   };
 
+  // Confirm approve action
+  const confirmApprove = (id) => {
+    const updatedHistory = exportHistory.map(item => 
+      item.id === id ? {...item, status: 'ນຳອອກແລ້ວ'} : item
+    );
+    
+    setExportHistory(updatedHistory);
+    setApproveDialogOpen(false);
+    
+    // Update localStorage
+    localStorage.setItem('exportHistory', JSON.stringify(updatedHistory));
+    
+    // Show success dialog
+    setActionType('approve');
+    setSuccessDialogOpen(true);
+  };
+
   // Dialog handlers
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
     setSelectedExportId(null);
+  };
+
+  const handleCloseApproveDialog = () => {
+    setApproveDialogOpen(false);
+    setSelectedApproveId(null);
   };
 
   const handleCloseDetailDialog = () => {
@@ -145,6 +178,18 @@ function ExportDetail() {
     setSuccessDialogOpen(false);
   };
 
+  // Get status chip color based on status
+  const getStatusChipColor = (status) => {
+    switch(status) {
+      case 'ລໍຖ້າອະນຸມັດ':
+        return '#FFA726'; // Orange for waiting
+      case 'ນຳອອກແລ້ວ':
+        return '#9ACD32'; // Green for approved
+      default:
+        return '#9E9E9E'; // Gray for other statuses
+    }
+  };
+
   return (
     <Layout title="ລາຍລະອຽດນຳອອກສິນຄ້າ">
       {/* Delete Confirmation Dialog */}
@@ -155,13 +200,21 @@ function ExportDetail() {
         itemId={selectedExportId}
       />
       
+      {/* Approve Confirmation Dialog */}
+      <ApproveConfirmDialog 
+        open={approveDialogOpen}
+        onClose={handleCloseApproveDialog}
+        onConfirm={confirmApprove}
+        itemId={selectedApproveId}
+      />
+      
       {/* Action Success Dialog */}
       <ActionSuccessDialog 
         open={successDialogOpen}
         onClose={handleCloseActionSuccessDialog}
-        title="ລຶບສຳເລັດ"
-        message="ລາຍການນຳອອກຖືກລຶບສຳເລັດແລ້ວ"
-        actionType="delete"
+        title={actionType === 'approve' ? "ອະນຸມັດສຳເລັດ" : "ລຶບສຳເລັດ"}
+        message={actionType === 'approve' ? "ການນຳອອກໄດ້ຖືກອະນຸມັດແລ້ວ" : "ລາຍການນຳອອກຖືກລຶບສຳເລັດແລ້ວ"}
+        actionType={actionType}
       />
       
       {/* Export Detail Dialog */}
@@ -191,7 +244,7 @@ function ExportDetail() {
                 ລາຍລະອຽດນຳອອກສິນຄ້າ
               </Typography>
               <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                ເລກທີ່: {selectedExport.id} | ວັນທີ: {selectedExport.date}
+                ວັນທີ: {selectedExport.date}
               </Typography>
               
               <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
@@ -199,7 +252,6 @@ function ExportDetail() {
                   <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
                       <TableCell align="center" width="5%">#</TableCell>
-                      <TableCell align="center">ລະຫັດສິນຄ້າ</TableCell>
                       <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
                       <TableCell align="center">ຈຳນວນ</TableCell>
                       <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
@@ -210,7 +262,6 @@ function ExportDetail() {
                     {selectedExport.items.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{item.code}</TableCell>
                         <TableCell align="center">{item.name}</TableCell>
                         <TableCell align="center">{item.exportQuantity}</TableCell>
                         <TableCell align="center">{item.exportLocation}</TableCell>
@@ -267,7 +318,7 @@ function ExportDetail() {
                 ໃບນຳອອກສິນຄ້າ
               </Typography>
               <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                ເລກທີ່: {selectedExport.id} | ວັນທີ: {selectedExport.date}
+                ວັນທີ: {selectedExport.date}
               </Typography>
               
               <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
@@ -275,7 +326,6 @@ function ExportDetail() {
                   <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
                       <TableCell align="center" width="5%">#</TableCell>
-                      <TableCell align="center">ລະຫັດສິນຄ້າ</TableCell>
                       <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
                       <TableCell align="center">ຈຳນວນ</TableCell>
                       <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
@@ -286,7 +336,6 @@ function ExportDetail() {
                     {selectedExport.items.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{item.code}</TableCell>
                         <TableCell align="center">{item.name}</TableCell>
                         <TableCell align="center">{item.exportQuantity}</TableCell>
                         <TableCell align="center">{item.exportLocation}</TableCell>
@@ -362,7 +411,6 @@ function ExportDetail() {
             <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
                 <TableCell align="center">#</TableCell>
-                <TableCell align="center">ເລກທີນຳອອກ</TableCell>
                 <TableCell align="center">ວັນທີ</TableCell>
                 <TableCell align="center">ຈຳນວນລາຍການ</TableCell>
                 <TableCell align="center">ສະຖານະ</TableCell>
@@ -376,15 +424,13 @@ function ExportDetail() {
                   sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
                 >
                   <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell align="center">{exportItem.id}</TableCell>
                   <TableCell align="center">{exportItem.date}</TableCell>
                   <TableCell align="center">{exportItem.items.length}</TableCell>
                   <TableCell align="center">
                     <Chip 
                       label={exportItem.status}
-                      color="success"
                       sx={{ 
-                        bgcolor: '#9ACD32', 
+                        bgcolor: getStatusChipColor(exportItem.status), 
                         color: 'white',
                         borderRadius: 4
                       }}
@@ -405,17 +451,19 @@ function ExportDetail() {
                         
                       <Button
                         variant="contained"
-                        color="warning"
+                        color="primary"
                         size="small"
                         sx={{ borderRadius: 4 }}
-                        onClick={() => handlePrintExport(exportItem)}
-                    
+                        onClick={() => handleApproveExport(exportItem.id)}
+                        startIcon={<CheckCircleIcon />}
+                        disabled={exportItem.status === 'ນຳອອກແລ້ວ'} // Disable if already approved
                       >
                         ອະນຸມັດ
                       </Button>
+                      
                       <Button
                         variant="contained"
-                        color="primary"
+                        color="success"
                         size="small"
                         sx={{ borderRadius: 4 }}
                         onClick={() => handlePrintExport(exportItem)}

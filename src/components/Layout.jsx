@@ -204,7 +204,7 @@ export default function Layout({ children, title }) {
               mb: 3
             }}
             style={{
-              marginLeft: '45px',
+              marginLeft: '0.5%',
             }}
           >
             {title}

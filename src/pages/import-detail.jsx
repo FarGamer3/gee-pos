@@ -39,7 +39,6 @@ function ImportDetail() {
       date: '22/2/2025', 
       purchaseOrderId: 1,
       supplier: 'ບໍລິສັດ Gee', 
-      warehouse: 'ສາງໃຫຍ່', 
       employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
       status: 'ລໍຖ້າອະນຸມັດ',
       items: [
@@ -53,7 +52,6 @@ function ImportDetail() {
       date: '23/2/2025', 
       purchaseOrderId: 2,
       supplier: 'ບໍລິສັດ Gee', 
-      warehouse: 'ສາງໃຫຍ່',
       employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
       status: 'ນຳເຂົ້າແລ້ວ',
       items: [
@@ -98,8 +96,7 @@ function ImportDetail() {
     item.id.toString().includes(searchTerm) ||
     item.date.includes(searchTerm) ||
     (item.purchaseOrderId && item.purchaseOrderId.toString().includes(searchTerm)) ||
-    item.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())
+    item.supplier.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Handle view import details
@@ -211,93 +208,88 @@ function ImportDetail() {
       />
       
       {/* Import Detail Dialog */}
-      {selectedImport && (
-        <Dialog
-          open={detailDialogOpen}
-          onClose={handleCloseDetailDialog}
-          fullWidth
-          maxWidth="md"
-        >
-          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">ລາຍລະອຽດການນຳເຂົ້າ</Typography>
-              <Button 
-                variant="contained" 
-                color="error" 
-                onClick={handleCloseDetailDialog}
-              >
-                ປິດ
-              </Button>
-            </Box>
-          </DialogTitle>
-          
-          <DialogContent sx={{ mt: 2 }}>
-            <Box sx={{ mb: 4 }}>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ເລກທີ່:</strong> {selectedImport.id}
-                  </Typography>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ເລກທີ່ໃບສັ່ງຊື້:</strong> {selectedImport.purchaseOrderId || "-"}
-                  </Typography>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ຜູ້ສະໜອງ:</strong> {selectedImport.supplier}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>ພະນັກງານ:</strong> {selectedImport.employee}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ວັນທີ:</strong> {selectedImport.date}
-                  </Typography>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ສາງສິນຄ້າ:</strong> {selectedImport.warehouse}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>ສະຖານະ:</strong> {selectedImport.status}
-                  </Typography>
-                </Grid>
+      <Dialog
+        open={detailDialogOpen}
+        onClose={handleCloseDetailDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">ລາຍລະອຽດການນຳເຂົ້າ</Typography>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={handleCloseDetailDialog}
+            >
+              ປິດ
+            </Button>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ mt: 2 }}>
+          <Box sx={{ mb: 4 }}>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ເລກທີ່:</strong> {selectedImport?.id}
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ເລກທີ່ໃບສັ່ງຊື້:</strong> {selectedImport?.purchaseOrderId || "-"}
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ຜູ້ສະໜອງ:</strong> {selectedImport?.supplier}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>ພະນັກງານ:</strong> {selectedImport?.employee}
+                </Typography>
               </Grid>
-              
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: 'background.default' }}>
-                    <TableRow>
-                      <TableCell align="center" width="5%">#</TableCell>
-                      <TableCell>ຊື່ສິນຄ້າ</TableCell>
-                      <TableCell align="right">ລາຄາ</TableCell>
-                      <TableCell align="center">ຈຳນວນ</TableCell>
-                      <TableCell align="right">ລວມລາຄາ</TableCell>
+              <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>ວັນທີ:</strong> {selectedImport?.date}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>ສະຖານະ:</strong> {selectedImport?.status}
+                </Typography>
+              </Grid>
+            </Grid>
+            
+            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+              <Table>
+                <TableHead sx={{ bgcolor: 'background.default' }}>
+                  <TableRow>
+                    <TableCell align="center" width="5%">#</TableCell>
+                    <TableCell>ຊື່ສິນຄ້າ</TableCell>
+                    <TableCell align="right">ລາຄາ</TableCell>
+                    <TableCell align="center">ຈຳນວນ</TableCell>
+                    <TableCell align="right">ລວມລາຄາ</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedImport?.items.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell align="center">{index + 1}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell align="right">{formatNumber(item.price)} ກີບ</TableCell>
+                      <TableCell align="center">{item.quantity}</TableCell>
+                      <TableCell align="right">{formatNumber(item.price * item.quantity)} ກີບ</TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedImport.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell align="right">{formatNumber(item.price)} ກີບ</TableCell>
-                        <TableCell align="center">{item.quantity}</TableCell>
-                        <TableCell align="right">{formatNumber(item.price * item.quantity)} ກີບ</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-                <Box sx={{ textAlign: 'right', width: '300px' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body1"><strong>ລາຄາລວມ:</strong></Typography>
-                    <Typography variant="body1">{formatNumber(selectedImport.total)} ກີບ</Typography>
-                  </Box>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+              <Box sx={{ textAlign: 'right', width: '300px' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body1"><strong>ລາຄາລວມ:</strong></Typography>
+                  <Typography variant="body1">{selectedImport?.total ? formatNumber(selectedImport.total) : 0} ກີບ</Typography>
                 </Box>
               </Box>
             </Box>
-          </DialogContent>
-        </Dialog>
-      )}
+          </Box>
+        </DialogContent>
+      </Dialog>
       
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
@@ -339,7 +331,6 @@ function ImportDetail() {
                 <TableCell align="center">ວັນທີ</TableCell>
                 <TableCell align="center">ເລກທີໃບສັ່ງຊື້</TableCell>
                 <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
-                <TableCell align="center">ສາງ</TableCell>
                 <TableCell align="center">ພະນັກງານ</TableCell>
                 <TableCell align="center">ສະຖານະ</TableCell>
                 <TableCell align="center">ຄຳສັ່ງ</TableCell>
@@ -356,12 +347,10 @@ function ImportDetail() {
                   <TableCell align="center">{item.date}</TableCell>
                   <TableCell align="center">{item.purchaseOrderId || "-"}</TableCell>
                   <TableCell align="center">{item.supplier}</TableCell>
-                  <TableCell align="center">{item.warehouse}</TableCell>
                   <TableCell align="center">{item.employee}</TableCell>
                   <TableCell align="center">
                     <Chip 
                       label={item.status}
-                      color="success"
                       sx={{ 
                         bgcolor: getStatusChipColor(item.status), 
                         color: 'white',
@@ -382,7 +371,6 @@ function ImportDetail() {
                         ລາຍລະອຽດ
                       </Button>
                       
-                      {/* Approve button - now shown for ALL items */}
                       <Button
                         variant="contained"
                         color="primary"

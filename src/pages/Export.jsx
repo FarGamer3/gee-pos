@@ -61,10 +61,10 @@ function Export() {
   
   // Mock products data
   const products = [
-    { id: 1, code: 'P001', name: 'ຕູ້ເຢັນ', stock: 10, location: 'A-02' },
-    { id: 2, code: 'P002', name: 'ໂທລະທັດ', stock: 15, location: 'B-05' },
-    { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', stock: 20, location: 'C-01' },
-    { id: 4, code: 'P004', name: 'ຈັກຊັກຜ້າ', stock: 8, location: 'A-08' },
+    { id: 1, name: 'ຕູ້ເຢັນ', stock: 10, location: 'A-02' },
+    { id: 2, name: 'ໂທລະທັດ', stock: 15, location: 'B-05' },
+    { id: 3, name: 'ແອຄອນດິຊັນ', stock: 20, location: 'C-01' },
+    { id: 4, name: 'ຈັກຊັກຜ້າ', stock: 8, location: 'A-08' },
   ];
 
   // Format date to DD/MM/YYYY
@@ -75,8 +75,7 @@ function Export() {
 
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Open form dialog to add product to export
@@ -146,7 +145,7 @@ function Export() {
       id: Date.now(), // Use timestamp as ID
       date: formatDate(exportDate),
       items: exportItems,
-      status: 'ດຳເນີນການແລ້ວ'
+      status: 'ລໍຖ້າອະນຸມັດ'
     };
     
     // Save to localStorage for history tracking
@@ -307,8 +306,9 @@ function Export() {
             </Button>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 3, mb: 4 }}>
+        
+        <DialogContent sx={{ mt: 2 }}>
+          <Box sx={{ mb: 4 }}>
             <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
               ລາຍລະອຽດນຳອອກສິນຄ້າ
             </Typography>
@@ -318,11 +318,10 @@ function Export() {
             
             <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
               <Table>
-                <TableHead>
+                <TableHead sx={{ bgcolor: 'background.default' }}>
                   <TableRow>
-                    <TableCell align="center">#</TableCell>
-                    <TableCell align="center">ເລກທີນຳອອກ</TableCell>
-                    <TableCell align="center">ສິນຄ້າ</TableCell>
+                    <TableCell align="center" width="5%">#</TableCell>
+                    <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
                     <TableCell align="center">ຈຳນວນ</TableCell>
                     <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
                     <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
@@ -330,9 +329,8 @@ function Export() {
                 </TableHead>
                 <TableBody>
                   {exportItems.map((item, index) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={index}>
                       <TableCell align="center">{index + 1}</TableCell>
-                      <TableCell align="center">{item.id}</TableCell>
                       <TableCell align="center">{item.name}</TableCell>
                       <TableCell align="center">{item.exportQuantity}</TableCell>
                       <TableCell align="center">{item.exportLocation}</TableCell>
@@ -366,7 +364,7 @@ function Export() {
             startIcon={<PrintIcon />}
             onClick={handlePrintExport}
           >
-            ພິມໃບນຳອອກ
+            ພິມ
           </Button>
         </DialogActions>
       </Dialog>
@@ -397,20 +395,6 @@ function Export() {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          {/* <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              select
-              label="ສາງສິນຄ້າ"
-              value={warehouse}
-              onChange={(e) => setWarehouse(e.target.value)}
-            >
-              <MenuItem value="">ເລືອກສາງສິນຄ້າ</MenuItem>
-              <MenuItem value="ສາງໃຫຍ່">ສາງໃຫຍ່</MenuItem>
-              <MenuItem value="ສາງຍ່ອຍ 1">ສາງຍ່ອຍ 1</MenuItem>
-              <MenuItem value="ສາງຍ່ອຍ 2">ສາງຍ່ອຍ 2</MenuItem>
-            </TextField>
-          </Grid> */}
         </Grid>
       </Paper>
 
@@ -443,7 +427,6 @@ function Export() {
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">ລະຫັດ</TableCell>
                     <TableCell align="center">ຊື່</TableCell>
                     <TableCell align="center">ຈຳນວນຄົງຄັງ</TableCell>
                     <TableCell align="center"></TableCell>
@@ -452,7 +435,6 @@ function Export() {
                 <TableBody>
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id} hover>
-                      <TableCell align="center">{product.code}</TableCell>
                       <TableCell align="center">{product.name}</TableCell>
                       <TableCell align="center">{product.stock}</TableCell>
                       <TableCell align="center">
@@ -488,7 +470,6 @@ function Export() {
                 <TableHead>
                   <TableRow>
                     <TableCell align="center">#</TableCell>
-                    <TableCell align="center">ເລກທີນຳອອກ</TableCell>
                     <TableCell align="center">ສິນຄ້າ</TableCell>
                     <TableCell align="center">ຈຳນວນ</TableCell>
                     <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
@@ -507,7 +488,6 @@ function Export() {
                       }}
                     >
                       <TableCell align="center">{index + 1}</TableCell>
-                      <TableCell align="center">{item.id}</TableCell>
                       <TableCell align="center">{item.name}</TableCell>
                       <TableCell align="center">{item.exportQuantity}</TableCell>
                       <TableCell align="center">{item.exportLocation}</TableCell>
@@ -538,15 +518,6 @@ function Export() {
               >
                 ຍົກເລີກ
               </Button>
-              {/* <Button
-                variant="contained"
-                color="primary"
-                startIcon={<PrintIcon />}
-                onClick={handleOpenPrintDialog}
-                disabled={exportItems.length === 0}
-              >
-                ພິມໃບນຳອອກ
-              </Button> */}
               <Button
                 variant="contained"
                 color="success"
