@@ -17,6 +17,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Grid
 } from '@mui/material';
 import {
@@ -164,27 +165,27 @@ function ExportDetail() {
       />
       
       {/* Export Detail Dialog */}
-      {selectedExport && (
-        <Dialog
-          open={detailDialogOpen}
-          onClose={handleCloseDetailDialog}
-          fullWidth
-          maxWidth="md"
-        >
-          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">ລາຍລະອຽດນຳອອກສິນຄ້າ</Typography>
-              <Button 
-                variant="contained" 
-                color="error" 
-                onClick={handleCloseDetailDialog}
-              >
-                ປິດ
-              </Button>
-            </Box>
-          </DialogTitle>
-          
-          <DialogContent sx={{ mt: 2 }}>
+      <Dialog
+        open={detailDialogOpen}
+        onClose={handleCloseDetailDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">ລາຍລະອຽດນຳອອກສິນຄ້າ</Typography>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={handleCloseDetailDialog}
+            >
+              ປິດ
+            </Button>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ mt: 2 }}>
+          {selectedExport && (
             <Box sx={{ mb: 4 }}>
               <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
                 ລາຍລະອຽດນຳອອກສິນຄ້າ
@@ -235,32 +236,32 @@ function ExportDetail() {
                 </Box>
               </Box>
             </Box>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
       
       {/* Print Dialog */}
-      {selectedExport && (
-        <Dialog
-          open={printDialogOpen}
-          onClose={handleClosePrintDialog}
-          fullWidth
-          maxWidth="md"
-        >
-          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">ພິມໃບນຳອອກສິນຄ້າ</Typography>
-              <Button 
-                variant="contained" 
-                color="error" 
-                onClick={handleClosePrintDialog}
-              >
-                ປິດ
-              </Button>
-            </Box>
-          </DialogTitle>
-          
-          <DialogContent sx={{ mt: 2 }}>
+      <Dialog
+        open={printDialogOpen}
+        onClose={handleClosePrintDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">ພິມໃບນຳອອກສິນຄ້າ</Typography>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={handleClosePrintDialog}
+            >
+              ປິດ
+            </Button>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ mt: 2 }}>
+          {selectedExport && (
             <Box sx={{ mb: 4 }}>
               <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
                 ໃບນຳອອກສິນຄ້າ
@@ -311,19 +312,19 @@ function ExportDetail() {
                 </Box>
               </Box>
             </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={<PrintIcon />}
-              onClick={handlePrint}
-            >
-              ພິມ
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+          >
+            ພິມ
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
@@ -332,7 +333,7 @@ function ExportDetail() {
         <Button 
           variant="contained" 
           color="primary" 
-          onClick={() => navigate('/check-stock')}
+          onClick={() => navigate('/export')}
         >
           ເພິ່ມການນຳອອກໃໝ່
         </Button>

@@ -387,7 +387,7 @@ function Export() {
       {/* Export Form */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={12}>
             <TextField
               fullWidth
               label="ວັນເວລາ"
@@ -397,7 +397,7 @@ function Export() {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          {/* <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               select
@@ -410,7 +410,7 @@ function Export() {
               <MenuItem value="ສາງຍ່ອຍ 1">ສາງຍ່ອຍ 1</MenuItem>
               <MenuItem value="ສາງຍ່ອຍ 2">ສາງຍ່ອຍ 2</MenuItem>
             </TextField>
-          </Grid>
+          </Grid> */}
         </Grid>
       </Paper>
 

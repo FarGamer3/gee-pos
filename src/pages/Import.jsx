@@ -420,7 +420,7 @@ const newImport = {
               }}
             />
 
-            <TableContainer sx={{ maxHeight: 200 }}>
+            <TableContainer sx={{ maxHeight:  300 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
