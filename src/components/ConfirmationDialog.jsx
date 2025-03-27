@@ -46,11 +46,11 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
         </Box>
         
         <Typography variant="h5" component="h2" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-          ຢືນຢັນການລົບ
+          ຢືນຢັນການລຶບ
         </Typography>
         
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການລົບລາຍການສັ່ງຊື້ນີ້? ການກະທຳນີ້ບໍ່ສາມາດຍ້ອນກັບໄດ້.
+          ທ່ານຕ້ອງການລຶບລາຍການນີ້ຫຼືບໍ່?
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
@@ -79,7 +79,7 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
               py: 1.2
             }}
           >
-            ລົບ
+            ຢືນຢັນ
           </Button>
         </Box>
       </Box>
@@ -123,7 +123,7 @@ export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
         </Typography>
         
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          ທ່ານຕ້ອງການອະນຸມັດການສັ່ງຊື້ນີ້ບໍ່?
+          ທ່ານຕ້ອງການອະນຸມັດລາຍການນີ້ຫຼືບໍ່?
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
@@ -152,7 +152,7 @@ export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
               py: 1.2
             }}
           >
-            ອະນຸມັດ
+            ຢືນຢັນ
           </Button>
         </Box>
       </Box>
@@ -194,11 +194,11 @@ export const ActionSuccessDialog = ({ open, onClose, title, message, actionType 
         </Box>
         
         <Typography variant="h5" component="h2" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-          {title || (isApprove ? 'ອະນຸມັດສຳເລັດ' : 'ລົບສຳເລັດ')}
+          {title || (isApprove ? 'ອະນຸມັດສຳເລັດ' : 'ລຶບສຳເລັດ')}
         </Typography>
         
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          {message || (isApprove ? 'ການສັ່ງຊື້ໄດ້ຖືກອະນຸມັດແລ້ວ' : 'ລາຍການສັ່ງຊື້ຖືກລົບສຳເລັດແລ້ວ')}
+          {message || (isApprove ? 'ການດຳເນີນງານໄດ້ຖືກອະນຸມັດແລ້ວ' : 'ການດຳເນີນງານໄດ້ສຳເລັດແລ້ວ')}
         </Typography>
         
         <Box sx={{ display: 'flex', width: '100%' }}>

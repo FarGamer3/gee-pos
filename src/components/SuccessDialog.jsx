@@ -48,7 +48,7 @@ export const SuccessDialog = ({ open, onClose, onDashboard }) => {
         </Typography>
         
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          ການສັ່ງຊື້ຂອງທ່ານໄດ້ຖືກບັນທຶກສຳເລັດແລ້ວ
+          ລາຍການຂອງທ່ານໄດ້ຖືກບັນທຶກສຳເລັດແລ້ວ
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
@@ -77,7 +77,7 @@ export const SuccessDialog = ({ open, onClose, onDashboard }) => {
               py: 1.2
             }}
           >
-            ລາຍການສັ່ງຊື້
+            ເບິ່ງລາຍການ
           </Button>
         </Box>
       </Box>
