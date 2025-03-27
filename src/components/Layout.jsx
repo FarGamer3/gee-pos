@@ -132,9 +132,9 @@ export default function Layout({ children, title }) {
             <Typography variant="body1" sx={{ mr: 1 }}>
               Admin_user
             </Typography>
-            <Avatar sx={{ width: 32, height: 32 }}>
+            {/* <Avatar sx={{ width: 32, height: 32 }}>
               <PersonIcon />
-            </Avatar>
+            </Avatar> */}
           </Box>
         </Toolbar>
       </AppBar>

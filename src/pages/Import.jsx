@@ -419,14 +419,14 @@ function Import() {
               }}
             />
 
-            <TableContainer sx={{ maxHeight: 400 }}>
+            <TableContainer sx={{ maxHeight: 200 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell align="center">ເລກທີ</TableCell>
                     <TableCell align="center">ວັນທີ</TableCell>
                     <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
-                    <TableCell align="center">ສະຖານະ</TableCell>
+                    {/* <TableCell align="center">ສະຖານະ</TableCell> */}
                     <TableCell align="center"></TableCell>
                   </TableRow>
                 </TableHead>
@@ -441,7 +441,7 @@ function Import() {
                       <TableCell align="center">{order.orderDate}</TableCell>
                       <TableCell align="center">{order.supplier}</TableCell>
                       <TableCell align="center">
-                        <Chip 
+                        {/* <Chip 
                           label={order.status}
                           color="success"
                           size="small"
@@ -450,7 +450,7 @@ function Import() {
                             color: 'white',
                             fontSize: '0.75rem'
                           }}
-                        />
+                        /> */}
                       </TableCell>
                       <TableCell align="center">
                         <Button

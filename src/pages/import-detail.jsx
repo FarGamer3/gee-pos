@@ -21,10 +21,12 @@ import {
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  CheckCircle as CheckCircleIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { DeleteConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
+import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 
 function ImportDetail() {
   const navigate = useNavigate();
@@ -39,7 +41,7 @@ function ImportDetail() {
       supplier: 'ບໍລິສັດ Gee', 
       warehouse: 'ສາງໃຫຍ່', 
       employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-      status: 'ນຳເຂົ້າແລ້ວ',
+      status: 'ລໍຖ້າອະນຸມັດ',
       items: [
         { name: 'ຕູ້ເຢັນ', quantity: 2, price: 5000000 },
         { name: 'ແອຄອນດິຊັນ', quantity: 1, price: 3000000 }
@@ -69,6 +71,10 @@ function ImportDetail() {
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedImportId, setSelectedImportId] = useState(null);
+  
+  // Approve confirmation dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [selectedApproveId, setSelectedApproveId] = useState(null);
   
   // Success action dialog state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
@@ -108,6 +114,12 @@ function ImportDetail() {
     setDeleteDialogOpen(true);
   };
 
+  // Handle approve import
+  const handleApproveImport = (id) => {
+    setSelectedApproveId(id);
+    setApproveDialogOpen(true);
+  };
+
   // Confirm delete action
   const confirmDelete = (id) => {
     const updatedHistory = importHistory.filter(item => item.id !== id);
@@ -122,10 +134,32 @@ function ImportDetail() {
     setSuccessDialogOpen(true);
   };
 
+  // Confirm approve action
+  const confirmApprove = (id) => {
+    const updatedHistory = importHistory.map(item => 
+      item.id === id ? {...item, status: 'ນຳເຂົ້າແລ້ວ'} : item
+    );
+    
+    setImportHistory(updatedHistory);
+    setApproveDialogOpen(false);
+    
+    // Update localStorage
+    localStorage.setItem('importHistory', JSON.stringify(updatedHistory));
+    
+    // Show success dialog
+    setActionType('approve');
+    setSuccessDialogOpen(true);
+  };
+
   // Dialog handlers
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
     setSelectedImportId(null);
+  };
+
+  const handleCloseApproveDialog = () => {
+    setApproveDialogOpen(false);
+    setSelectedApproveId(null);
   };
 
   const handleCloseDetailDialog = () => {
@@ -135,6 +169,18 @@ function ImportDetail() {
 
   const handleCloseActionSuccessDialog = () => {
     setSuccessDialogOpen(false);
+  };
+
+  // Get status chip color based on status
+  const getStatusChipColor = (status) => {
+    switch(status) {
+      case 'ລໍຖ້າອະນຸມັດ':
+        return '#FFA726'; // Orange for waiting
+      case 'ນຳເຂົ້າແລ້ວ':
+        return '#9ACD32'; // Green for approved
+      default:
+        return '#9E9E9E'; // Gray for other statuses
+    }
   };
 
   return (
@@ -147,13 +193,21 @@ function ImportDetail() {
         itemId={selectedImportId}
       />
       
+      {/* Approve Confirmation Dialog */}
+      <ApproveConfirmDialog 
+        open={approveDialogOpen}
+        onClose={handleCloseApproveDialog}
+        onConfirm={confirmApprove}
+        itemId={selectedApproveId}
+      />
+      
       {/* Action Success Dialog */}
       <ActionSuccessDialog 
         open={successDialogOpen}
         onClose={handleCloseActionSuccessDialog}
-        title="ລຶບສຳເລັດ"
-        message="ລາຍການນຳເຂົ້າຖືກລຶບສຳເລັດແລ້ວ"
-        actionType="delete"
+        title={actionType === 'approve' ? "ອະນຸມັດສຳເລັດ" : "ລຶບສຳເລັດ"}
+        message={actionType === 'approve' ? "ການນຳເຂົ້າໄດ້ຖືກອະນຸມັດແລ້ວ" : "ລາຍການນຳເຂົ້າຖືກລຶບສຳເລັດແລ້ວ"}
+        actionType={actionType}
       />
       
       {/* Import Detail Dialog */}
@@ -309,7 +363,7 @@ function ImportDetail() {
                       label={item.status}
                       color="success"
                       sx={{ 
-                        bgcolor: '#9ACD32', 
+                        bgcolor: getStatusChipColor(item.status), 
                         color: 'white',
                         borderRadius: 4
                       }}
@@ -328,12 +382,26 @@ function ImportDetail() {
                         ລາຍລະອຽດ
                       </Button>
                       
+                      {/* Approve button - now shown for ALL items */}
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        sx={{ borderRadius: 4 }}
+                        onClick={() => handleApproveImport(item.id)}
+                        startIcon={<CheckCircleIcon />}
+                        disabled={item.status === 'ນຳເຂົ້າແລ້ວ'} // Disable if already approved
+                      >
+                        ອະນຸມັດ
+                      </Button>
+                      
                       <Button
                         variant="contained"
                         color="error"
                         size="small"
                         sx={{ borderRadius: 4 }}
                         onClick={() => handleDeleteImport(item.id)}
+                        startIcon={<DeleteIcon />}
                       >
                         ລຶບ
                       </Button>

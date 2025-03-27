@@ -20,11 +20,10 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  CheckCircle as CheckCircleIcon
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
+import { DeleteConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 import PurchaseOrderDetail from '../components/PurchaseOrderDetail';
 
 function PurchaseOrders() {
@@ -34,7 +33,6 @@ function PurchaseOrders() {
   
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [actionType, setActionType] = useState('');
@@ -57,7 +55,6 @@ function PurchaseOrders() {
           orderDate: '22/2/2025', 
           supplier: 'ບໍລິສັດ Gee', 
           employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-          status: 'ລໍຖ້າອະນຸມັດ',
           items: [
             { name: 'ຕູ້ເຢັນ', quantity: 2 },
             { name: 'ແອຄອນດິຊັນ', quantity: 1 }
@@ -68,7 +65,6 @@ function PurchaseOrders() {
           orderDate: '23/2/2025', 
           supplier: 'ບໍລິສັດ Gee', 
           employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-          status: 'ລໍຖ້າອະນຸມັດ',
           items: [
             { name: 'ໂທລະທັດ', quantity: 1 },
             { name: 'ຈັກຊັກຜ້າ', quantity: 2 }
@@ -94,12 +90,6 @@ function PurchaseOrders() {
     setDeleteDialogOpen(true);
   };
   
-  // Function to handle approve order
-  const handleApproveOrder = (id) => {
-    setSelectedOrderId(id);
-    setApproveDialogOpen(true);
-  };
-  
   // Function to open order details
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
@@ -119,31 +109,9 @@ function PurchaseOrders() {
     setSuccessDialogOpen(true);
   };
   
-  // Confirm approve action
-  const confirmApprove = (id) => {
-    const updatedOrders = orders.map(order => 
-      order.id === id 
-        ? { ...order, status: 'ອະນຸມັດແລ້ວ' } 
-        : order
-    );
-    
-    setOrders(updatedOrders);
-    // Update localStorage
-    localStorage.setItem('purchaseOrders', JSON.stringify(updatedOrders));
-    
-    // Close approve dialog and show success dialog
-    setApproveDialogOpen(false);
-    setActionType('approve');
-    setSuccessDialogOpen(true);
-  };
-  
   // Close dialogs
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
-  };
-  
-  const handleCloseApproveDialog = () => {
-    setApproveDialogOpen(false);
   };
   
   const handleCloseSuccessDialog = () => {
@@ -161,14 +129,6 @@ function PurchaseOrders() {
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={confirmDelete}
-        itemId={selectedOrderId}
-      />
-      
-      {/* Approve Confirmation Dialog */}
-      <ApproveConfirmDialog 
-        open={approveDialogOpen}
-        onClose={handleCloseApproveDialog}
-        onConfirm={confirmApprove}
         itemId={selectedOrderId}
       />
       
@@ -220,14 +180,13 @@ function PurchaseOrders() {
 
         <TableContainer>
           <Table sx={{ minWidth: 650 }}>
-            <TableHead>
+                          <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
                 <TableCell align="center">#</TableCell>
                 <TableCell align="center">ເລກທີໃບສັ່ງຊື້</TableCell>
                 <TableCell align="center">ວັນທີ ຊື້ສິນຄ້າ</TableCell>
                 <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
                 <TableCell align="center">ພະນັກງານ</TableCell>
-                <TableCell align="center">ສະຖານະຂອດ</TableCell>
                 <TableCell align="center">ຄຳສັ່ງ</TableCell>
               </TableRow>
             </TableHead>
@@ -242,17 +201,6 @@ function PurchaseOrders() {
                   <TableCell align="center">{order.orderDate}</TableCell>
                   <TableCell align="center">{order.supplier}</TableCell>
                   <TableCell align="center">{order.employee}</TableCell>
-                  <TableCell align="center">
-                    <Chip 
-                      label={order.status}
-                      color="success"
-                      sx={{ 
-                        bgcolor: '#9ACD32', 
-                        color: 'white',
-                        borderRadius: 4
-                      }}
-                    />
-                  </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                       <Button
@@ -274,16 +222,6 @@ function PurchaseOrders() {
                         onClick={() => handleDeleteOrder(order.id)}
                       >
                         ລຶບ
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleApproveOrder(order.id)}
-                      >
-                        ອະນຸມັດ
                       </Button>
                     </Box>
                   </TableCell>
