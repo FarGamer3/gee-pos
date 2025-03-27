@@ -538,7 +538,7 @@ function Export() {
               >
                 ຍົກເລີກ
               </Button>
-              <Button
+              {/* <Button
                 variant="contained"
                 color="primary"
                 startIcon={<PrintIcon />}
@@ -546,7 +546,7 @@ function Export() {
                 disabled={exportItems.length === 0}
               >
                 ພິມໃບນຳອອກ
-              </Button>
+              </Button> */}
               <Button
                 variant="contained"
                 color="success"

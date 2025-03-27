@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import logoImage from '../assets/logo.png';
+import bgimg from '../assets/login-bg.jpg';
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -29,7 +30,7 @@ function Login({ onLogin }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: `url("../../assets/login-bg.jpg")`,
+        backgroundImage: `url(${bgimg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}

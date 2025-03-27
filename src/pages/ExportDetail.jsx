@@ -402,7 +402,17 @@ function ExportDetail() {
                       >
                         ລາຍລະອຽດ
                       </Button>
-                      
+                        
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        size="small"
+                        sx={{ borderRadius: 4 }}
+                        onClick={() => handlePrintExport(exportItem)}
+                    
+                      >
+                        ອະນຸມັດ
+                      </Button>
                       <Button
                         variant="contained"
                         color="primary"
