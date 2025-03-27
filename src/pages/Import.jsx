@@ -168,18 +168,19 @@ function Import() {
     // Calculate total
     const total = importItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // Create the new import object
-    const newImport = {
-      id: importHistory.length > 0 ? Math.max(...importHistory.map(imp => imp.id)) + 1 : 1,
-      date: formatDate(importDate),
-      purchaseOrderId: selectedPurchaseOrder.id,
-      supplier: selectedPurchaseOrder.supplier,
-      warehouse: 'ສາງໃຫຍ່', // Default warehouse
-      employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
-      status: 'ນຳເຂົ້າແລ້ວ',
-      items: importItems,
-      total: total
-    };
+
+  // Create the new import object
+const newImport = {
+  id: importHistory.length > 0 ? Math.max(...importHistory.map(imp => imp.id)) + 1 : 1,
+  date: formatDate(importDate),
+  purchaseOrderId: selectedPurchaseOrder.id,
+  supplier: selectedPurchaseOrder.supplier,
+  warehouse: 'ສາງໃຫຍ່', // Default warehouse
+  employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
+  status: 'ລໍຖ້າອະນຸມັດ', // Set the initial status to "waiting for approval"
+  items: importItems,
+  total: total
+};
     
     // Add to history
     setImportHistory([...importHistory, newImport]);
