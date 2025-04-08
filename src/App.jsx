@@ -11,7 +11,7 @@ import MainMenu from './pages/Manage_data';
 import Products from './pages/Add-data/Products';
 import Categories from './pages/Add-data/Categories';
 import Units from './pages/Add-data/Units';
-import Brands from './pages/Brands';
+
 import Warehouse from './pages/Add-data/Warehouse';
 import Suppliers from './pages/Add-data/Suppliers';
 import Customers from './pages/Add-data/Customers';
@@ -143,14 +143,7 @@ function App() {
                 <Navigate to="/login" replace />
             } 
           />
-          <Route 
-            path="/brands" 
-            element={
-              isLoggedIn ? 
-                <Brands /> : 
-                <Navigate to="/login" replace />
-            } 
-          />
+
           <Route 
             path="/warehouse" 
             element={
