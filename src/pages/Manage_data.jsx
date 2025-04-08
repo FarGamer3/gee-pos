@@ -19,14 +19,11 @@ import supplierIcon from '../assets/icon/supplier.png';
 import employeeIcon from '../assets/icon/employee.png';
 import customerIcon from '../assets/icon/customer.png';
 import locationIcon from '../assets/icon/position.png';
-import villageIcon from '../assets/icon/village.png';
-import cityIcon from '../assets/icon/city.png';
-import provinceIcon from '../assets/icon/province.png';
 
 function ManageData() {
   const navigate = useNavigate();
   
-  // Menu item data
+  // Menu item data - removed village, city, province items
   const menuItems = [
     { id: 'products', title: 'ຂໍ້ມູນສິນຄ້າ', icon: productIcon, path: '/products' },
     { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories' },
@@ -35,9 +32,6 @@ function ManageData() {
     { id: 'employee', title: 'ຂໍ້ມູນພະນັກງານ', icon: employeeIcon, path: '/employees' },
     { id: 'suppliers', title: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: supplierIcon, path: '/suppliers' },
     { id: 'customers', title: 'ຂໍ້ມູນລູກຄ້າ', icon: customerIcon, path: '/customers' },
-    { id: 'village', title: 'ຂໍ້ມູນບ້ານ', icon: villageIcon, path: '/village' },
-    { id: 'city', title: 'ຂໍ້ມູນເມືອງ', icon: cityIcon, path: '/city' },
-    { id: 'province', title: 'ຂໍ້ມູນແຂວງ', icon: provinceIcon, path: '/province' },
   ];
 
   return (
@@ -92,7 +86,6 @@ function ManageData() {
                   sx={{
                     width: 80,
                     height: 80,
-                  
                     p: 1.5,
                     mb: 2
                   }}

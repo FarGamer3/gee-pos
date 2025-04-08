@@ -112,9 +112,9 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
                   <TableRow>
                     <TableCell align="center" width="5%">#</TableCell>
                     <TableCell>ຊື່ສິນຄ້າ</TableCell>
-                    <TableCell align="right">ລາຄາ</TableCell>
+                    {/* Removed price column */}
                     <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="right">ລວມລາຄາ</TableCell>
+                    {/* Removed total price column */}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -122,23 +122,16 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
                     <TableRow key={index}>
                       <TableCell align="center">{index + 1}</TableCell>
                       <TableCell>{item.name}</TableCell>
-                      <TableCell align="right">{formatNumber(item.price)} ກີບ</TableCell>
+                      {/* Removed price cell */}
                       <TableCell align="center">{item.quantity}</TableCell>
-                      <TableCell align="right">{formatNumber(item.price * item.quantity)} ກີບ</TableCell>
+                      {/* Removed total price cell */}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
             
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-              <Box sx={{ textAlign: 'right', width: '300px' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body1"><strong>ລາຄາລວມ:</strong></Typography>
-                  <Typography variant="body1">{formatNumber(order.total)} ກີບ</Typography>
-                </Box>
-              </Box>
-            </Box>
+            {/* Removed total price box */}
             
             <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5, mb: 2 }}>
               <Box sx={{ textAlign: 'center', width: '200px' }}>
@@ -147,7 +140,6 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
                   <Typography variant="body2">ລາຍເຊັນ</Typography>
                 </Box>
               </Box>
-
             </Box>
           </Box>
         </div>
