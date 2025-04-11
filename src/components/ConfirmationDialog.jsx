@@ -5,7 +5,8 @@ import {
   Typography, 
   Box, 
   Button,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import { 
   DeleteForever as DeleteIcon,
@@ -15,7 +16,7 @@ import {
 } from '@mui/icons-material';
 
 // Confirmation Dialog for Delete
-export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
+export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId, loading }) => {
   return (
     <Dialog 
       open={open} 
@@ -59,6 +60,7 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
             color="inherit"
             fullWidth
             onClick={onClose}
+            disabled={loading}
             sx={{ 
               borderRadius: 2,
               py: 1.2,
@@ -74,12 +76,13 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
             color="error"
             fullWidth
             onClick={() => onConfirm(itemId)}
+            disabled={loading}
             sx={{ 
               borderRadius: 2,
               py: 1.2
             }}
           >
-            ຢືນຢັນ
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'ຢືນຢັນ'}
           </Button>
         </Box>
       </Box>
@@ -88,7 +91,7 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
 };
 
 // Confirmation Dialog for Approve
-export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
+export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId, loading }) => {
   return (
     <Dialog 
       open={open} 
@@ -132,6 +135,7 @@ export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
             color="inherit"
             fullWidth
             onClick={onClose}
+            disabled={loading}
             sx={{ 
               borderRadius: 2,
               py: 1.2,
@@ -147,12 +151,13 @@ export const ApproveConfirmDialog = ({ open, onClose, onConfirm, itemId }) => {
             color="primary"
             fullWidth
             onClick={() => onConfirm(itemId)}
+            disabled={loading}
             sx={{ 
               borderRadius: 2,
               py: 1.2
             }}
           >
-            ຢືນຢັນ
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'ຢືນຢັນ'}
           </Button>
         </Box>
       </Box>

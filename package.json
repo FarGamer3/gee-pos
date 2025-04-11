@@ -15,7 +15,7 @@
     "@mui/icons-material": "^6.4.8",
     "@mui/material": "^6.4.8",
     "@reduxjs/toolkit": "^2.6.0",
-    "axios": "^1.8.1",
+    "axios": "^1.8.4",
     "mui": "^0.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
