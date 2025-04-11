@@ -142,8 +142,16 @@ function Products() {
 
   // ຟັງຊັນເປີດ dialog ແກ້ໄຂສິນຄ້າ
   const handleOpenEditDialog = (product) => {
-    setCurrentProduct({ ...product });
-    productFormRef.current = { ...product }; // ກຳນົດຄ່າເລີ່ມຕົ້ນໃນ ref ເປັນຂໍ້ມູນສິນຄ້າປັດຈຸບັນ
+    // ແປງຄ່າ ID ໃຫ້ເປັນ string ເພື່ອໃຫ້ແນ່ໃຈວ່າມັນຕົງກັບໃນ dropdown
+    const formattedProduct = {
+      ...product,
+      brand_id: String(product.brand_id),
+      cat_id: String(product.cat_id),
+      zone_id: String(product.zone_id)
+    };
+    
+    setCurrentProduct(formattedProduct);
+    productFormRef.current = formattedProduct;
     setOpenEditDialog(true);
   };
 

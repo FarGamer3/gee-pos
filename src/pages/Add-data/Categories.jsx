@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -19,7 +19,8 @@ import {
   DialogActions,
   Typography,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -30,16 +31,18 @@ import {
 } from '@mui/icons-material';
 import Layout from '../../components/Layout';
 import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
+import {
+  getAllCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory
+} from '../../services/categoryService';
 
 function Categories() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'ເຄື່ອງໃຊ້ໄຟຟ້າ' },
-    { id: 2, name: 'ເຄື່ອງໃຊ້ໃນເຮືອນ' },
-    { id: 3, name: 'ອຸປະກອນອິເລັກໂທຣນິກ' },
-    { id: 4, name: 'ເຄື່ອງອຸປະໂພກ' },
-    { id: 5, name: 'ເຄື່ອງບໍລິໂພກ' }
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Dialog states
   const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -56,12 +59,33 @@ function Categories() {
   
   // Form state
   const [currentCategory, setCurrentCategory] = useState({
-    name: ''
+    category: '',
+    cat_id: null
   });
+
+  // ດຶງຂໍ້ມູນທັງໝົດເມື່ອໜ້າຖືກໂຫຼດ
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // ຟັງຊັນດຶງຂໍ້ມູນປະເພດສິນຄ້າ
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllCategories();
+      setCategories(data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Open add dialog
   const handleOpenAddDialog = () => {
-    setCurrentCategory({ name: '' });
+    setCurrentCategory({ category: '', cat_id: null });
     setOpenAddDialog(true);
   };
 
@@ -108,34 +132,51 @@ function Categories() {
   };
 
   // Add new category
-  const handleAddCategory = () => {
-    if (!currentCategory.name.trim()) {
+  const handleAddCategory = async () => {
+    if (!currentCategory.category.trim()) {
       showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
       return;
     }
-    
-    const newCategory = {
-      ...currentCategory,
-      id: categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1
-    };
-    
-    setCategories([...categories, newCategory]);
-    setOpenAddDialog(false);
-    showSnackbar('ເພີ່ມໝວດໝູ່ສຳເລັດແລ້ວ');
+
+    setLoading(true);
+    try {
+      const result = await addCategory(currentCategory.category);
+      
+      if (result) {
+        await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenAddDialog(false);
+        showSnackbar('ເພີ່ມໝວດໝູ່ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error adding category:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການເພີ່ມຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Save edited category
-  const handleSaveEdit = () => {
-    if (!currentCategory.name.trim()) {
+  const handleSaveEdit = async () => {
+    if (!currentCategory.category.trim()) {
       showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
       return;
     }
-    
-    setCategories(categories.map(c => 
-      c.id === currentCategory.id ? currentCategory : c
-    ));
-    setOpenEditDialog(false);
-    showSnackbar('ແກ້ໄຂໝວດໝູ່ສຳເລັດແລ້ວ');
+
+    setLoading(true);
+    try {
+      const result = await updateCategory(currentCategory.cat_id, currentCategory.category);
+      
+      if (result) {
+        await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenEditDialog(false);
+        showSnackbar('ແກ້ໄຂໝວດໝູ່ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error updating category:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Open delete confirmation
@@ -151,10 +192,23 @@ function Categories() {
   };
 
   // Delete category
-  const handleDeleteCategory = (id) => {
-    setCategories(categories.filter(category => category.id !== id));
-    setOpenDeleteDialog(false);
-    showSnackbar('ລຶບໝວດໝູ່ສຳເລັດແລ້ວ');
+  const handleDeleteCategory = async (id) => {
+    setLoading(true);
+    try {
+      const result = await deleteCategory(id);
+      
+      if (result) {
+        await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenDeleteDialog(false);
+        showSnackbar('ລຶບໝວດໝູ່ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+      setSelectedCategoryId(null);
+    }
   };
 
   // Handle search
@@ -164,11 +218,28 @@ function Categories() {
 
   // Filter categories based on search
   const filteredCategories = categories.filter(category => {
-    return category.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return category.category.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
     <Layout title="ຈັດການຂໍ້ມູນໝວດໝູ່">
+      {/* Snackbar notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between' }}>
         <TextField
           placeholder="ຄົ້ນຫາ..."
@@ -195,58 +266,64 @@ function Categories() {
         </Button>
       </Box>
 
-      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" width={80}>#</TableCell>
-              <TableCell>ຊື່ໝວດໝູ່</TableCell>
-              <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
-              <TableCell align="center" width={120}>ລຶບ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCategories.length > 0 ? (
-              filteredCategories.map((category, index) => (
-                <TableRow key={category.id} hover>
-                  <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell>{category.name}</TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="ແກ້ໄຂ">
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => handleOpenEditDialog(category)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="ລຶບ">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleOpenDeleteDialog(category.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+      {loading && !openAddDialog && !openEditDialog && !openDeleteDialog ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" width={80}>#</TableCell>
+                <TableCell>ຊື່ໝວດໝູ່</TableCell>
+                <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
+                <TableCell align="center" width={120}>ລຶບ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map((category, index) => (
+                  <TableRow key={category.cat_id} hover>
+                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell>{category.category}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ແກ້ໄຂ">
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleOpenEditDialog(category)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ລຶບ">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => handleOpenDeleteDialog(category.cat_id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    <Typography variant="body1" sx={{ py: 2, color: 'text.secondary' }}>
+                      {error ? error : 'ບໍ່ພົບຂໍ້ມູນ'}
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  <Typography variant="body1" sx={{ py: 2, color: 'text.secondary' }}>
-                    ບໍ່ພົບຂໍ້ມູນ
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Add Dialog */}
       <Dialog 
@@ -275,8 +352,8 @@ function Categories() {
             <TextField
               fullWidth
               label="ຊື່ໝວດໝູ່"
-              name="name"
-              value={currentCategory.name}
+              name="category"
+              value={currentCategory.category}
               onChange={handleChange}
               required
               autoFocus
@@ -287,8 +364,13 @@ function Categories() {
           <Button onClick={handleCloseAddDialog} color="error" variant="outlined">
             ຍົກເລີກ
           </Button>
-          <Button onClick={handleAddCategory} color="primary" variant="contained">
-            ບັນທຶກ
+          <Button 
+            onClick={handleAddCategory} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -320,8 +402,8 @@ function Categories() {
             <TextField
               fullWidth
               label="ຊື່ໝວດໝູ່"
-              name="name"
-              value={currentCategory.name}
+              name="category"
+              value={currentCategory.category}
               onChange={handleChange}
               required
               autoFocus
@@ -332,8 +414,13 @@ function Categories() {
           <Button onClick={handleCloseEditDialog} color="error" variant="outlined">
             ຍົກເລີກ
           </Button>
-          <Button onClick={handleSaveEdit} color="primary" variant="contained">
-            ບັນທຶກ
+          <Button 
+            onClick={handleSaveEdit} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -344,24 +431,8 @@ function Categories() {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleDeleteCategory}
         itemId={selectedCategoryId}
+        loading={loading}
       />
-
-      {/* Snackbar Notification */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Layout>
   );
 }
