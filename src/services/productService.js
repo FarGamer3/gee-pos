@@ -67,29 +67,65 @@ export const addProduct = async (productData) => {
 /**
  * ແກ້ໄຂຂໍ້ມູນສິນຄ້າ
  */
+/**
+ * ແກ້ໄຂຂໍ້ມູນສິນຄ້າ
+ */
+/**
+ * ແກ້ໄຂຂໍ້ມູນສິນຄ້າ - ສົ່ງສະເພາະຂໍ້ມູນທີ່ຕ້ອງການອັບເດດ
+ */
 export const updateProduct = async (productData) => {
   try {
-    const response = await axios.put(`${API_URL}/Update/Product`, productData);
+    console.log('Original update data:', productData);
     
-    if (response.data && response.data.result_code === "200") {
-      return response.data;
+    // ກວດສອບວ່າມີ proid ຫຼືບໍ່
+    if (!productData.proid) {
+      throw new Error('Missing required field: proid');
     }
+
+    // ສົ່ງສະເພາະຂໍ້ມູນທີ່ຕ້ອງການອັບເດດ (ບໍ່ຕ້ອງຄົບທຸກຟິລ)
+    const payload = {
+      proid: productData.proid
+    };
+
+    // ເພີ່ມພຽງແຕ່ຄ່າທີ່ມີຢູ່ແລ້ວໃນ productData
+    if (productData.ProductName) payload.ProductName = productData.ProductName;
+    if (productData.brand_id !== undefined) payload.brand_id = Number(productData.brand_id);
+    if (productData.cat_id !== undefined) payload.cat_id = Number(productData.cat_id);
+    if (productData.zone_id !== undefined) payload.zone_id = Number(productData.zone_id);
+    if (productData.pro_detail !== undefined) payload.pro_detail = productData.pro_detail;
+    if (productData.qty !== undefined) payload.qty = Number(productData.qty);
+    if (productData.qty_min !== undefined) payload.qty_min = Number(productData.qty_min);
+    if (productData.cost_price !== undefined) payload.cost_price = Number(productData.cost_price);
+    if (productData.retail_price !== undefined) payload.retail_price = Number(productData.retail_price);
+    if (productData.status) payload.status = productData.status;
+
+    console.log('Simplified payload for API:', payload);
     
-    throw new Error(response.data?.result || 'Failed to update product');
+    // ສົ່ງຂໍ້ມູນໄປຫາ API
+    const response = await axios.put(`${API_URL}/Update/Product`, payload);
+    
+    console.log('API response:', response.data);
+    return response.data;
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('Error in updateProduct:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+    }
     throw error;
   }
 };
-
 /**
  * ລຶບຂໍ້ມູນສິນຄ້າ
  */
 export const deleteProduct = async (productId) => {
   try {
+    console.log('Deleting product with ID:', productId);
+    
     const response = await axios.delete(`${API_URL}/Delete/Product`, { 
       data: { proid: productId } 
     });
+    
+    console.log('Delete API response:', response.data);
     
     if (response.data && response.data.result_code === "200") {
       return response.data;

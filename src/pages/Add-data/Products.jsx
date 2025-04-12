@@ -49,6 +49,7 @@ import {
 } from '../../services/zoneService';
 import Layout from '../../components/Layout';
 import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
+import axios from 'axios';
 
 function Products() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,6 +115,54 @@ function Products() {
     fetchData();
   }, []);
 
+  // ຟັງຊັນທົດສອບການອັບເດດໂດຍກົງ
+const testSimpleUpdate = async () => {
+  try {
+    // ຢືນຢັນວ່າມີການໂຫຼດສິນຄ້າ
+    if (products.length === 0) {
+      showSnackbar('ກະລຸນາລໍຖ້າໃຫ້ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດກ່ອນ', 'warning');
+      return;
+    }
+    
+    // ໃຊ້ສິນຄ້າທຳອິດໃນລາຍການເພື່ອທົດສອບ
+    const testProduct = products[0];
+    
+    // ສ້າງຂໍ້ມູນທົດສອບທີ່ມີພຽງແຕ່ ID ແລະ ຊື່
+    const minimalUpdate = {
+      proid: testProduct.proid,
+      ProductName: `${testProduct.ProductName} (ທົດສອບ ${new Date().toLocaleTimeString()})`
+    };
+    
+    console.log("Sending minimal update test:", minimalUpdate);
+    
+    // ສົ່ງຄຳຂໍໄປຫາ API ໂດຍກົງ
+    const response = await axios.put('http://localhost:4422/Update/Product', minimalUpdate);
+    
+    console.log("Test update response:", response.data);
+    
+    if (response.data.result_code === "200") {
+      // ດຶງຂໍ້ມູນສິນຄ້າຄືນໃໝ່
+      const updatedProducts = await getAllProducts();
+      setProducts(updatedProducts);
+      
+      // ແຈ້ງເຕືອນສຳເລັດ
+      showSnackbar('ທົດສອບການອັບເດດສຳເລັດ!', 'success');
+    } else {
+      showSnackbar(`ທົດສອບລົ້ມເຫຼວ: ${response.data.result}`, 'error');
+    }
+  } catch (err) {
+    console.error("Test update error:", err);
+    let errorMsg = 'ເກີດຂໍ້ຜິດພາດໃນການທົດສອບ';
+    
+    if (err.response) {
+      console.error("Response data:", err.response.data);
+      errorMsg += `: ${err.response.data.result || err.response.status}`;
+    }
+    
+    showSnackbar(errorMsg, 'error');
+  }
+};
+
   // ຟັງຊັນເປີດ dialog ເພີ່ມສິນຄ້າໃໝ່
   const handleOpenAddDialog = () => {
     const emptyProduct = {
@@ -142,19 +191,26 @@ function Products() {
 
   // ຟັງຊັນເປີດ dialog ແກ້ໄຂສິນຄ້າ
   const handleOpenEditDialog = (product) => {
-    // ແປງຄ່າ ID ໃຫ້ເປັນ string ເພື່ອໃຫ້ແນ່ໃຈວ່າມັນຕົງກັບໃນ dropdown
+    // ຕ້ອງຮັບປະກັນວ່າທຸກ field ມີຄ່າທີ່ບໍ່ແມ່ນ undefined
     const formattedProduct = {
-      ...product,
-      brand_id: String(product.brand_id),
-      cat_id: String(product.cat_id),
-      zone_id: String(product.zone_id)
+      proid: product.proid,
+      ProductName: product.ProductName || '',
+      qty: product.qty || 0,
+      qty_min: product.qty_min || 0,
+      cost_price: product.cost_price || 0,
+      retail_price: product.retail_price || 0,
+      brand_id: product.brand_id ? String(product.brand_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
+      cat_id: product.cat_id ? String(product.cat_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
+      zone_id: product.zone_id ? String(product.zone_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
+      pro_detail: product.pro_detail || '',
+      status: product.status || 'Instock'
     };
     
+    console.log("Formatted product for edit:", formattedProduct);
     setCurrentProduct(formattedProduct);
-    productFormRef.current = formattedProduct;
     setOpenEditDialog(true);
   };
-
+  
   // ຟັງຊັນປິດ dialog ແກ້ໄຂສິນຄ້າ
   const handleCloseEditDialog = () => {
     setOpenEditDialog(false);
@@ -243,37 +299,46 @@ function Products() {
   const handleSaveEdit = async () => {
     try {
       setLoading(true);
-      const formData = productFormRef.current || currentProduct;
       
-      // ກວດສອບຂໍ້ມູນກ່ອນແກ້ໄຂ
-      if (!formData.ProductName || !formData.brand_id || !formData.cat_id || !formData.zone_id) {
-        showSnackbar('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', 'error');
+      // ກວດສອບພຽງແຕ່ proid ແລະ ProductName
+      if (!currentProduct.proid) {
+        showSnackbar('ບໍ່ພົບລະຫັດສິນຄ້າ', 'error');
         setLoading(false);
         return;
       }
       
-      const result = await updateProduct(formData);
+      if (!currentProduct.ProductName) {
+        showSnackbar('ກະລຸນາປ້ອນຊື່ສິນຄ້າ', 'error');
+        setLoading(false);
+        return;
+      }
       
+      // ສົ່ງຂໍ້ມູນໄປອັບເດດໂດຍໃຊ້ຟັງຊັນທີ່ປັບປຸງໃໝ່
+      console.log("Sending update with data:", currentProduct);
+      const result = await updateProduct(currentProduct);
+      
+      // ຖ້າອັບເດດສຳເລັດ
       if (result && result.result_code === "200") {
-        // ດຶງຂໍ້ມູນອີກຄັ້ງຫຼັງຈາກບັນທຶກສຳເລັດ
+        // ດຶງຂໍ້ມູນສິນຄ້າຄືນໃໝ່
         const updatedProducts = await getAllProducts();
         setProducts(updatedProducts);
+        
+        // ປິດໜ້າຕ່າງແກ້ໄຂ
         setOpenEditDialog(false);
-        // ສະແດງຂໍ້ຄວາມສຳເລັດ
+        
+        // ແຈ້ງເຕືອນສຳເລັດ
         showSnackbar('ແກ້ໄຂສິນຄ້າສຳເລັດແລ້ວ', 'success');
       } else {
-        throw new Error(result?.result || 'Failed to update product');
+        // ຖ້າມີຂໍ້ຜິດພາດຈາກ API
+        throw new Error(result?.result || 'ການອັບເດດລົ້ມເຫຼວ');
       }
     } catch (err) {
-      setError('ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ');
-      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
-      console.error(err);
+      console.error('Error saving edit:', err);
+      showSnackbar(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
     } finally {
       setLoading(false);
-      productFormRef.current = null;
     }
   };
-
   // ຟັງຊັນເປີດ dialog ລຶບສິນຄ້າ
   const handleOpenDeleteDialog = (id) => {
     setSelectedProductId(id);
@@ -555,6 +620,12 @@ function Products() {
             ),
           }}
         />
+           <Button 
+      variant="outlined"
+      color="warning"
+      onClick={testSimpleUpdate}
+      sx={{ ml: 2 }}
+    >ທົດສອບ</Button>
         <Button
           variant="contained"
           color="primary"
