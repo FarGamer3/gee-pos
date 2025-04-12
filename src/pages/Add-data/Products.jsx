@@ -188,28 +188,27 @@ const testSimpleUpdate = async () => {
     setOpenAddDialog(false);
     productFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref ເມື່ອປິດ dialog
   };
-
+  
   // ຟັງຊັນເປີດ dialog ແກ້ໄຂສິນຄ້າ
   const handleOpenEditDialog = (product) => {
-    // ຕ້ອງຮັບປະກັນວ່າທຸກ field ມີຄ່າທີ່ບໍ່ແມ່ນ undefined
+    // ແປງຂໍ້ມູນໃຫ້ຖືກຕ້ອງກ່ອນສົ່ງເຂົ້າຟອມ
     const formattedProduct = {
       proid: product.proid,
       ProductName: product.ProductName || '',
-      qty: product.qty || 0,
-      qty_min: product.qty_min || 0,
-      cost_price: product.cost_price || 0,
-      retail_price: product.retail_price || 0,
-      brand_id: product.brand_id ? String(product.brand_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
-      cat_id: product.cat_id ? String(product.cat_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
-      zone_id: product.zone_id ? String(product.zone_id) : '1', // ໃຊ້ຄ່າເລີ່ມຕົ້ນ '1'
+      qty: parseInt(product.qty) || 0,
+      qty_min: parseInt(product.qty_min) || 0,
+      cost_price: parseInt(product.cost_price) || 0,
+      retail_price: parseInt(product.retail_price) || 0,
+      brand_id: product.brand_id ? product.brand_id.toString() : '',
+      cat_id: product.cat_id ? product.cat_id.toString() : '',
+      zone_id: product.zone_id ? product.zone_id.toString() : '',
       pro_detail: product.pro_detail || '',
       status: product.status || 'Instock'
     };
     
-    console.log("Formatted product for edit:", formattedProduct);
     setCurrentProduct(formattedProduct);
     setOpenEditDialog(true);
-  };
+  }
   
   // ຟັງຊັນປິດ dialog ແກ້ໄຂສິນຄ້າ
   const handleCloseEditDialog = () => {
@@ -220,13 +219,13 @@ const testSimpleUpdate = async () => {
   // ຟັງຊັນການປ່ຽນແປງຂໍ້ມູນສິນຄ້າແບບປັບປຸງໃໝ່
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // ແທນທີ່ຈະໃຊ້ setCurrentProduct ທຸກຄັ້ງທີ່ພິມ (ເຊິ່ງຈະ re-render)
-    // ເຮົາຈະເກັບຄ່າໄວ້ໃນ ref ກ່ອນ
-    productFormRef.current = {
-      ...(productFormRef.current || currentProduct),
+    
+    // ອັບເດດໃນ state ໂດຍກົງ
+    setCurrentProduct(prev => ({
+      ...prev,
       [name]: value
-    };
-  };
+    }));
+  }
 
   // ສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນ
   const showSnackbar = (message, severity = 'success') => {
@@ -245,6 +244,44 @@ const testSimpleUpdate = async () => {
     });
   };
 
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      // ດຶງຂໍ້ມູນພ້ອມກັນທຸກປະເພດ
+      const [productsData, categoriesData, brandsData, zonesData] = await Promise.all([
+        getAllProducts(),
+        getAllCategories(),
+        getAllBrands(), 
+        getAllZones()
+      ]);
+      
+      setProducts(productsData || []);
+      setCategories(categoriesData || []);
+      setBrands(brandsData || []);
+      setZones(zonesData || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
+      showSnackbar('ບໍ່ສາມາດດຶງຂໍ້ມູນໄດ້. ກະລຸນາລອງໃໝ່ອີກຄັ້ງ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // ສ້າງຟັງຊັນດຶງສະເພາະຂໍ້ມູນສິນຄ້າເພື່ອໃຊ້ຫຼັງຈາກແກ້ໄຂສຳເລັດ
+  const fetchProductsOnly = async () => {
+    try {
+      const result = await axios.get('http://localhost:4422/All/Product');
+      if (result.data && result.data.result_code === "200") {
+        setProducts(result.data.products || []);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      showSnackbar('ບໍ່ສາມາດອັບເດດຂໍ້ມູນໃໝ່ໄດ້', 'warning');
+    }
+  };
+  
   // ຟັງຊັນບັນທຶກສິນຄ້າໃໝ່
   const handleAddProduct = async () => {
     try {
@@ -295,50 +332,55 @@ const testSimpleUpdate = async () => {
     }
   };
 
-  // ຟັງຊັນບັນທຶກການແກ້ໄຂສິນຄ້າ
-  const handleSaveEdit = async () => {
-    try {
-      setLoading(true);
-      
-      // ກວດສອບພຽງແຕ່ proid ແລະ ProductName
-      if (!currentProduct.proid) {
-        showSnackbar('ບໍ່ພົບລະຫັດສິນຄ້າ', 'error');
-        setLoading(false);
-        return;
-      }
-      
-      if (!currentProduct.ProductName) {
-        showSnackbar('ກະລຸນາປ້ອນຊື່ສິນຄ້າ', 'error');
-        setLoading(false);
-        return;
-      }
-      
-      // ສົ່ງຂໍ້ມູນໄປອັບເດດໂດຍໃຊ້ຟັງຊັນທີ່ປັບປຸງໃໝ່
-      console.log("Sending update with data:", currentProduct);
-      const result = await updateProduct(currentProduct);
-      
-      // ຖ້າອັບເດດສຳເລັດ
-      if (result && result.result_code === "200") {
-        // ດຶງຂໍ້ມູນສິນຄ້າຄືນໃໝ່
-        const updatedProducts = await getAllProducts();
-        setProducts(updatedProducts);
-        
-        // ປິດໜ້າຕ່າງແກ້ໄຂ
-        setOpenEditDialog(false);
-        
-        // ແຈ້ງເຕືອນສຳເລັດ
-        showSnackbar('ແກ້ໄຂສິນຄ້າສຳເລັດແລ້ວ', 'success');
-      } else {
-        // ຖ້າມີຂໍ້ຜິດພາດຈາກ API
-        throw new Error(result?.result || 'ການອັບເດດລົ້ມເຫຼວ');
-      }
-    } catch (err) {
-      console.error('Error saving edit:', err);
-      showSnackbar(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
-    } finally {
+
+// ແກ້ໄຂຟັງຊັນບັນທຶກການແກ້ໄຂສິນຄ້າ
+const handleSaveEdit = async () => {
+  try {
+    setLoading(true);
+    
+    if (!currentProduct.proid || !currentProduct.ProductName) {
+      showSnackbar('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', 'error');
       setLoading(false);
+      return;
     }
-  };
+    
+    // ປັບປຸງຂໍ້ມູນໃຫ້ສົມບູນກ່ອນສົ່ງໄປຫາ API
+    const productToUpdate = {
+      proid: currentProduct.proid,
+      ProductName: currentProduct.ProductName,
+      brand_id: parseInt(currentProduct.brand_id),
+      cat_id: parseInt(currentProduct.cat_id),
+      zone_id: parseInt(currentProduct.zone_id),
+      pro_detail: currentProduct.pro_detail || '',
+      qty: parseInt(currentProduct.qty),
+      qty_min: parseInt(currentProduct.qty_min),
+      cost_price: parseInt(currentProduct.cost_price),
+      retail_price: parseInt(currentProduct.retail_price),
+      status: currentProduct.status
+    };
+    
+    console.log("Sending updated product data:", productToUpdate);
+    
+    // ສົ່ງຄຳຂໍ PUT ໄປຍັງ API
+    const response = await axios.put('http://localhost:4422/Update/Product', productToUpdate);
+    
+    if (response.data && response.data.result_code === "200") {
+      // ປິດໜ້າຕ່າງແກ້ໄຂກ່ອນ
+      setOpenEditDialog(false);
+      showSnackbar('ແກ້ໄຂສິນຄ້າສຳເລັດແລ້ວ', 'success');
+      
+      // ດຶງຂໍ້ມູນສິນຄ້າຄືນໃໝ່ເພື່ອໃຫ້ໜ້າຈໍອັບເດດໂດຍບໍ່ຕ້ອງໂຫຼດໃໝ່
+      await fetchProductsOnly();
+    } else {
+      throw new Error(response.data?.result || 'ການອັບເດດລົ້ມເຫຼວ');
+    }
+  } catch (err) {
+    console.error('Error saving edit:', err);
+    showSnackbar(err.response?.data?.result || err.message || 'ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
   // ຟັງຊັນເປີດ dialog ລຶບສິນຄ້າ
   const handleOpenDeleteDialog = (id) => {
     setSelectedProductId(id);
@@ -422,7 +464,7 @@ const testSimpleUpdate = async () => {
                 fullWidth
                 label="ຊື່ສິນຄ້າ"
                 name="ProductName"
-                defaultValue={product.ProductName}
+                value={product.ProductName}
                 onChange={onChange}
                 required
               />
@@ -434,7 +476,7 @@ const testSimpleUpdate = async () => {
                 label="ຈຳນວນ"
                 name="qty"
                 type="number"
-                defaultValue={product.qty}
+                value={product.qty}
                 onChange={onChange}
                 required
                 InputProps={{ inputProps: { min: 0 } }}
@@ -447,7 +489,7 @@ const testSimpleUpdate = async () => {
                 label="ຈຳນວນນ້ອຍສຸດ"
                 name="qty_min"
                 type="number"
-                defaultValue={product.qty_min}
+                value={product.qty_min}
                 onChange={onChange}
                 required
                 InputProps={{ inputProps: { min: 0 } }}
@@ -460,7 +502,7 @@ const testSimpleUpdate = async () => {
                 label="ລາຄາຕົ້ນທຶນ"
                 name="cost_price"
                 type="number"
-                defaultValue={product.cost_price}
+                value={product.cost_price}
                 onChange={onChange}
                 required
                 InputProps={{ inputProps: { min: 0 } }}
@@ -473,7 +515,7 @@ const testSimpleUpdate = async () => {
                 label="ລາຄາຂາຍ"
                 name="retail_price"
                 type="number"
-                defaultValue={product.retail_price}
+                value={product.retail_price}
                 onChange={onChange}
                 required
                 InputProps={{ inputProps: { min: 0 } }}
@@ -486,7 +528,7 @@ const testSimpleUpdate = async () => {
                 select
                 label="ຍີ່ຫໍ້"
                 name="brand_id"
-                defaultValue={product.brand_id}
+                value={product.brand_id}
                 onChange={onChange}
                 required
               >
@@ -505,7 +547,7 @@ const testSimpleUpdate = async () => {
                 select
                 label="ປະເພດສິນຄ້າ"
                 name="cat_id"
-                defaultValue={product.cat_id}
+                value={product.cat_id}
                 onChange={onChange}
                 required
               >
@@ -524,7 +566,7 @@ const testSimpleUpdate = async () => {
                 select
                 label="ບ່ອນຈັດວາງ"
                 name="zone_id"
-                defaultValue={product.zone_id}
+                value={product.zone_id}
                 onChange={onChange}
                 required
               >
@@ -543,7 +585,7 @@ const testSimpleUpdate = async () => {
                 select
                 label="ສະຖານະ"
                 name="status"
-                defaultValue={product.status}
+                value={product.status}
                 onChange={onChange}
                 required
               >
@@ -558,7 +600,7 @@ const testSimpleUpdate = async () => {
                 fullWidth
                 label="ລາຍລະອຽດ"
                 name="pro_detail"
-                defaultValue={product.pro_detail}
+                value={product.pro_detail}
                 onChange={onChange}
                 multiline
                 rows={2}
