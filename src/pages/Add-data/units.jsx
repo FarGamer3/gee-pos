@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -19,7 +19,8 @@ import {
   DialogActions,
   Typography,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -30,22 +31,24 @@ import {
 } from '@mui/icons-material';
 import Layout from '../../components/Layout';
 import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
+import {
+  getAllBrands,
+  addBrand,
+  updateBrand,
+  deleteBrand
+} from '../../services/brandService';
 
 function Units() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'samsung' },
-    { id: 2, name: 'LG' },
-    { id: 3, name: 'Panasonic' },
-    { id: 4, name: 'Toshiba' },
-    { id: 5, name: 'Philips' }
-  ]);
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Dialog states
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedBrandId, setSelectedBrandId] = useState(null);
   
   // Snackbar state
   const [snackbar, setSnackbar] = useState({
@@ -55,13 +58,34 @@ function Units() {
   });
   
   // Form state
-  const [currentCategory, setCurrentCategory] = useState({
-    name: ''
+  const [currentBrand, setCurrentBrand] = useState({
+    brand: '',
+    brand_id: null
   });
+
+  // ດຶງຂໍ້ມູນທັງໝົດເມື່ອໜ້າຖືກໂຫຼດ
+  useEffect(() => {
+    fetchBrands();
+  }, []);
+
+  // ຟັງຊັນດຶງຂໍ້ມູນຍີ່ຫໍ້ສິນຄ້າ
+  const fetchBrands = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllBrands();
+      setBrands(data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching brands:", err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Open add dialog
   const handleOpenAddDialog = () => {
-    setCurrentCategory({ name: '' });
+    setCurrentBrand({ brand: '', brand_id: null });
     setOpenAddDialog(true);
   };
 
@@ -71,8 +95,8 @@ function Units() {
   };
 
   // Open edit dialog
-  const handleOpenEditDialog = (category) => {
-    setCurrentCategory({ ...category });
+  const handleOpenEditDialog = (brand) => {
+    setCurrentBrand({ ...brand });
     setOpenEditDialog(true);
   };
 
@@ -84,7 +108,7 @@ function Units() {
   // Handle form change
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setCurrentCategory(prev => ({
+    setCurrentBrand(prev => ({
       ...prev,
       [name]: value
     }));
@@ -107,54 +131,84 @@ function Units() {
     });
   };
 
-  // Add new category
-  const handleAddCategory = () => {
-    if (!currentCategory.name.trim()) {
-      showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
+  // Add new brand
+  const handleAddBrand = async () => {
+    if (!currentBrand.brand.trim()) {
+      showSnackbar('ກະລຸນາປ້ອນຊື່ຍີ່ຫໍ້', 'error');
       return;
     }
-    
-    const newCategory = {
-      ...currentCategory,
-      id: categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1
-    };
-    
-    setCategories([...categories, newCategory]);
-    setOpenAddDialog(false);
-    showSnackbar('ເພີ່ມໝວດໝູ່ສຳເລັດແລ້ວ');
+
+    setLoading(true);
+    try {
+      const result = await addBrand(currentBrand.brand);
+      
+      if (result) {
+        await fetchBrands(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenAddDialog(false);
+        showSnackbar('ເພີ່ມຍີ່ຫໍ້ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error adding brand:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການເພີ່ມຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Save edited category
-  const handleSaveEdit = () => {
-    if (!currentCategory.name.trim()) {
-      showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
+  // Save edited brand
+  const handleSaveEdit = async () => {
+    if (!currentBrand.brand.trim()) {
+      showSnackbar('ກະລຸນາປ້ອນຊື່ຍີ່ຫໍ້', 'error');
       return;
     }
-    
-    setCategories(categories.map(c => 
-      c.id === currentCategory.id ? currentCategory : c
-    ));
-    setOpenEditDialog(false);
-    showSnackbar('ແກ້ໄຂໝວດໝູ່ສຳເລັດແລ້ວ');
+
+    setLoading(true);
+    try {
+      const result = await updateBrand(currentBrand.brand_id, currentBrand.brand);
+      
+      if (result) {
+        await fetchBrands(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenEditDialog(false);
+        showSnackbar('ແກ້ໄຂຍີ່ຫໍ້ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error updating brand:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Open delete confirmation
   const handleOpenDeleteDialog = (id) => {
-    setSelectedCategoryId(id);
+    setSelectedBrandId(id);
     setOpenDeleteDialog(true);
   };
 
   // Close delete dialog
   const handleCloseDeleteDialog = () => {
     setOpenDeleteDialog(false);
-    setSelectedCategoryId(null);
+    setSelectedBrandId(null);
   };
 
-  // Delete category
-  const handleDeleteCategory = (id) => {
-    setCategories(categories.filter(category => category.id !== id));
-    setOpenDeleteDialog(false);
-    showSnackbar('ລຶບໝວດໝູ່ສຳເລັດແລ້ວ');
+  // Delete brand
+  const handleDeleteBrand = async (id) => {
+    setLoading(true);
+    try {
+      const result = await deleteBrand(id);
+      
+      if (result) {
+        await fetchBrands(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenDeleteDialog(false);
+        showSnackbar('ລຶບຍີ່ຫໍ້ສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error deleting brand:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+      setSelectedBrandId(null);
+    }
   };
 
   // Handle search
@@ -162,13 +216,30 @@ function Units() {
     setSearchTerm(e.target.value);
   };
 
-  // Filter categories based on search
-  const filteredCategories = categories.filter(category => {
-    return category.name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter brands based on search
+  const filteredBrands = brands.filter(brand => {
+    return brand.brand.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
-    <Layout title="ຈັດການຂໍ້ມູນໝວດໝູ່">
+    <Layout title="ຈັດການຂໍ້ມູນຍີ່ຫໍ້">
+      {/* Snackbar notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between' }}>
         <TextField
           placeholder="ຄົ້ນຫາ..."
@@ -195,58 +266,64 @@ function Units() {
         </Button>
       </Box>
 
-      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" width={80}>#</TableCell>
-              <TableCell>ຊື່ໝວດໝູ່</TableCell>
-              <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
-              <TableCell align="center" width={120}>ລຶບ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCategories.length > 0 ? (
-              filteredCategories.map((category, index) => (
-                <TableRow key={category.id} hover>
-                  <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell>{category.name}</TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="ແກ້ໄຂ">
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => handleOpenEditDialog(category)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="ລຶບ">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleOpenDeleteDialog(category.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+      {loading && !openAddDialog && !openEditDialog && !openDeleteDialog ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" width={80}>#</TableCell>
+                <TableCell>ຊື່ຍີ່ຫໍ້</TableCell>
+                <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
+                <TableCell align="center" width={120}>ລຶບ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredBrands.length > 0 ? (
+                filteredBrands.map((brand, index) => (
+                  <TableRow key={brand.brand_id} hover>
+                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell>{brand.brand}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ແກ້ໄຂ">
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleOpenEditDialog(brand)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ລຶບ">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => handleOpenDeleteDialog(brand.brand_id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    <Typography variant="body1" sx={{ py: 2, color: 'text.secondary' }}>
+                      {error ? error : 'ບໍ່ພົບຂໍ້ມູນ'}
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  <Typography variant="body1" sx={{ py: 2, color: 'text.secondary' }}>
-                    ບໍ່ພົບຂໍ້ມູນ
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Add Dialog */}
       <Dialog 
@@ -256,7 +333,7 @@ function Units() {
         fullWidth
       >
         <DialogTitle sx={{ pb: 1 }}>
-          ເພີ່ມໝວດໝູ່ໃໝ່
+          ເພີ່ມຍີ່ຫໍ້ໃໝ່
           <IconButton
             aria-label="close"
             onClick={handleCloseAddDialog}
@@ -274,9 +351,9 @@ function Units() {
           <Box component="form" sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="ຊື່ໝວດໝູ່"
-              name="name"
-              value={currentCategory.name}
+              label="ຊື່ຍີ່ຫໍ້"
+              name="brand"
+              value={currentBrand.brand}
               onChange={handleChange}
               required
               autoFocus
@@ -287,8 +364,13 @@ function Units() {
           <Button onClick={handleCloseAddDialog} color="error" variant="outlined">
             ຍົກເລີກ
           </Button>
-          <Button onClick={handleAddCategory} color="primary" variant="contained">
-            ບັນທຶກ
+          <Button 
+            onClick={handleAddBrand} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -301,7 +383,7 @@ function Units() {
         fullWidth
       >
         <DialogTitle sx={{ pb: 1 }}>
-          ແກ້ໄຂຂໍ້ມູນໝວດໝູ່
+          ແກ້ໄຂຂໍ້ມູນຍີ່ຫໍ້
           <IconButton
             aria-label="close"
             onClick={handleCloseEditDialog}
@@ -319,9 +401,9 @@ function Units() {
           <Box component="form" sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="ຊື່ໝວດໝູ່"
-              name="name"
-              value={currentCategory.name}
+              label="ຊື່ຍີ່ຫໍ້"
+              name="brand"
+              value={currentBrand.brand}
               onChange={handleChange}
               required
               autoFocus
@@ -332,8 +414,13 @@ function Units() {
           <Button onClick={handleCloseEditDialog} color="error" variant="outlined">
             ຍົກເລີກ
           </Button>
-          <Button onClick={handleSaveEdit} color="primary" variant="contained">
-            ບັນທຶກ
+          <Button 
+            onClick={handleSaveEdit} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -342,26 +429,10 @@ function Units() {
       <DeleteConfirmDialog
         open={openDeleteDialog}
         onClose={handleCloseDeleteDialog}
-        onConfirm={handleDeleteCategory}
-        itemId={selectedCategoryId}
+        onConfirm={handleDeleteBrand}
+        itemId={selectedBrandId}
+        loading={loading}
       />
-
-      {/* Snackbar Notification */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Layout>
   );
 }

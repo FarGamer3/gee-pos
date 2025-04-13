@@ -323,6 +323,7 @@ const EditProductDialog = ({ open, onClose, onSave, product, brands, categories,
   // ເມື່ອມີການເປີດ dialog ຫຼື product ປ່ຽນ, ໃຫ້ອັບເດດ form
   useEffect(() => {
     if (product && open) {
+      console.log("Setting form data from:", product);
       setLocalForm({
         proid: product.proid,
         ProductName: product.ProductName || '',
@@ -644,7 +645,19 @@ function Products() {
 
   // ເປີດ dialog ແກ້ໄຂສິນຄ້າ
   const handleOpenEditDialog = (product) => {
-    setSelectedProduct(product);
+    // ຕ້ອງແນ່ໃຈວ່າມີຂໍ້ມູນທຸກຟິລດ໌ທີ່ຕ້ອງການ
+    console.log("Opening dialog with product:", product);
+    
+    // ກວດສອບແລະຮັບປະກັນວ່າມີທຸກຄ່າ
+    const preparedProduct = {
+      ...product,
+      // ແນ່ໃຈວ່າມີ product.brand_id, product.cat_id, product.zone_id
+      brand_id: product.brand_id || (brands.length > 0 ? brands[0].brand_id : ''),
+      cat_id: product.cat_id || (categories.length > 0 ? categories[0].cat_id : ''),
+      zone_id: product.zone_id || (zones.length > 0 ? zones[0].zone_id : '')
+    };
+    
+    setSelectedProduct(preparedProduct);
     setOpenEditDialog(true);
   };
 
@@ -732,18 +745,31 @@ function Products() {
       const result = await deleteProduct(id);
       
       if (result && result.result_code === "200") {
-        setProducts(products.filter(product => product.proid !== id));
+        // ອັບເດດລາຍການສິນຄ້າໂດຍລຶບສິນຄ້າທີ່ໄດ້ລຶບແລ້ວອອກຈາກ state
+        setProducts(prevProducts => prevProducts.filter(product => product.proid !== id));
         setOpenDeleteDialog(false);
         showSnackbar('ລຶບສິນຄ້າສຳເລັດແລ້ວ', 'success');
       } else {
+        // ໃນກໍລະນີທີ່ລຶບບໍ່ສຳເລັດໃຫ້ດຶງຂໍ້ມູນຄືນໃໝ່ເພື່ອຮັກສາຄວາມຖືກຕ້ອງຂອງຂໍ້ມູນ
+        await fetchProductsOnly();
         throw new Error(result?.result || 'Failed to delete product');
       }
     } catch (err) {
       console.error('Error deleting product:', err);
-      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ', 'error');
+      
+      // ກໍລະນີເກີດ error ແຕ່ອາດຈະລຶບສຳເລັດໃນຝັ່ງ server ໃຫ້ດຶງຂໍ້ມູນຄືນໃໝ່
+      if (err.message && err.message.includes('Delete Success')) {
+        await fetchProductsOnly();
+        showSnackbar('ລຶບສິນຄ້າສຳເລັດແລ້ວ ແຕ່ມີຂໍ້ຜິດພາດໃນການສະແດງຜົນ', 'warning');
+      } else {
+        showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ', 'error');
+        // ດຶງຂໍ້ມູນຄືນໃໝ່ເພື່ອໃຫ້ແນ່ໃຈວ່າຂໍ້ມູນທີ່ສະແດງເປັນປັດຈຸບັນທີ່ສຸດ
+        await fetchProductsOnly();
+      }
     } finally {
       setLoading(false);
       setSelectedProductId(null);
+      setOpenDeleteDialog(false);
     }
   };
 
@@ -1010,6 +1036,4 @@ function Products() {
       />
     </Layout>
   );
-};
-
-//export default Products;
+}

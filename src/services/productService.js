@@ -119,21 +119,40 @@ export const updateProduct = async (productData) => {
  */
 export const deleteProduct = async (productId) => {
   try {
-    console.log('Deleting product with ID:', productId);
+    if (!productId) {
+      throw new Error('ຕ້ອງລະບຸລະຫັດສິນຄ້າທີ່ຕ້ອງການລຶບ');
+    }
+    
+    console.log('ກຳລັງລຶບສິນຄ້າທີ່ມີລະຫັດ:', productId);
     
     const response = await axios.delete(`${API_URL}/Delete/Product`, { 
       data: { proid: productId } 
     });
     
-    console.log('Delete API response:', response.data);
+    console.log('ຜົນການລຶບສິນຄ້າ:', response.data);
     
+    // ກວດສອບວ່າການລຶບສຳເລັດຫຼືບໍ່
     if (response.data && response.data.result_code === "200") {
       return response.data;
     }
     
-    throw new Error(response.data?.result || 'Failed to delete product');
+    // ກໍລະນີທີ່ API ສົ່ງຜົນກັບມາແຕ່ບໍ່ມີລະຫັດຜົນ 200
+    if (response.data && response.data.result) {
+      throw new Error(response.data.result);
+    }
+    
+    // ກໍລະນີອື່ນໆ
+    throw new Error('ບໍ່ສາມາດລຶບສິນຄ້າໄດ້ ເນື່ອງຈາກຄຳຕອບຈາກ server ບໍ່ຖືກຕ້ອງ');
   } catch (error) {
-    console.error('Error deleting product:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການລຶບສິນຄ້າ:', error);
+    
+    // ກວດສອບວ່າ error ແມ່ນມາຈາກ API ຫຼືບໍ່
+    if (error.response && error.response.data) {
+      console.error('ຂໍ້ມູນຜິດພາດຈາກ API:', error.response.data);
+      throw new Error(error.response.data.result || 'ເກີດຂໍ້ຜິດພາດໃນການລຶບສິນຄ້າ');
+    }
+    
+    // ສົ່ງຕໍ່ error ເພື່ອໃຫ້ຈັດການຢູ່ component
     throw error;
   }
 };
