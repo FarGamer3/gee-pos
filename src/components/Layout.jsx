@@ -15,7 +15,10 @@ import {
   ListItemText,
   Avatar,
   Badge,
-  Container
+  Container,
+  Menu,
+  MenuItem,
+  Tooltip
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -27,20 +30,51 @@ import {
   Assessment as ReportIcon,
   Menu as MenuIcon,
   Notifications as NotificationIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Logout as LogoutIcon,
+  AccountCircle as AccountCircleIcon
 } from '@mui/icons-material';
+import { getCurrentUser, logout } from '../services/authService';
 import logoImage from '../assets/logo.png';
 
 // Drawer width
 const drawerWidth = 250;
 
-export default function Layout({ children, title }) {
+export default function Layout({ children, title, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  
+  // ດຶງຂໍ້ມູນຜູ້ໃຊ້ທີ່ເຂົ້າສູ່ລະບົບ
+  const currentUser = getCurrentUser();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+  
+  // ເປີດເມນູຜູ້ໃຊ້
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+  
+  // ປິດເມນູຜູ້ໃຊ້
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+  
+  // ຈັດການການອອກຈາກລະບົບ
+  const handleLogout = () => {
+    handleMenuClose();
+    logout();
+    
+    // ຖ້າມີການສົ່ງ callback onLogout, ໃຫ້ເອີ້ນໃຊ້
+    if (onLogout) {
+      onLogout();
+    } else {
+      // ຖ້າບໍ່ມີ callback, ນຳທາງກັບໄປຍັງໜ້າເຂົ້າສູ່ລະບົບ
+      navigate('/login');
+    }
   };
 
   const menuItems = [
@@ -129,12 +163,52 @@ export default function Layout({ children, title }) {
           </IconButton>
           
           <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-            <Typography variant="body1" sx={{ mr: 1 }}>
-              Admin_user
+            <Tooltip title="ຈັດການບັນຊີຜູ້ໃຊ້">
+              <IconButton
+                size="large"
+                edge="end"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenuOpen}
+                color="inherit"
+              >
+                <AccountCircleIcon />
+              </IconButton>
+            </Tooltip>
+            <Typography variant="body1" sx={{ ml: 1 }}>
+              {currentUser ? `${currentUser.emp_name || 'Admin_user'}` : 'Admin_user'}
             </Typography>
-            {/* <Avatar sx={{ width: 32, height: 32 }}>
-              <PersonIcon />
-            </Avatar> */}
+            
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon>
+                  <PersonIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="inherit">ຂໍ້ມູນຜູ້ໃຊ້</Typography>
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                <Typography variant="inherit" color="error">ອອກຈາກລະບົບ</Typography>
+              </MenuItem>
+            </Menu>
           </Box>
         </Toolbar>
       </AppBar>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -17,6 +17,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Typography,
+  Snackbar,
+  Alert,
+  CircularProgress,
   Grid
 } from '@mui/material';
 import {
@@ -28,208 +32,219 @@ import {
 } from '@mui/icons-material';
 import Layout from '../../components/Layout';
 import { DeleteConfirmDialog } from '../../components/ConfirmationDialog';
+import {
+  getAllZones,
+  addZone,
+  updateZone,
+  deleteZone
+} from '../../services/zoneService';
 
 function Warehouse() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [warehouses, setWarehouses] = useState([
-    {
-      id: 1,
-      name: 'ສາງໃຫຍ່',
-      description: 'ສາງໃຫຍ່ສຳລັບເກັບສິນຄ້າທັງໝົດຂອງຮ້ານ'
-    },
-    {
-      id: 2,
-      name: 'ສາງຍ່ອຍ 1',
-      description: 'ສາງສຳລັບເກັບເຄື່ອງໃຊ້ໄຟຟ້າ'
-    }
-  ]);
+  const [zones, setZones] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Dialog states
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
+  const [selectedZoneId, setSelectedZoneId] = useState(null);
   
-  // Current warehouse for editing
-  // ໃຊ້ useRef ເພື່ອເກັບຄ່າຊົ່ວຄາວແລະປ້ອງກັນການ re-render ແຕ່ລະຄັ້ງທີ່ພິມ
-  const warehouseFormRef = React.useRef(null);
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
-  const [currentWarehouse, setCurrentWarehouse] = useState({
-    name: '',
-    description: ''
+  // Form state
+  const [currentZone, setCurrentZone] = useState({
+    zone: '',
+    zone_detail: '',
+    zone_id: null
   });
 
-  // ຟັງຊັນເປີດ dialog ເພີ່ມບ່ອນຈັດເກັບໃໝ່
+  // ດຶງຂໍ້ມູນທັງໝົດເມື່ອໜ້າຖືກໂຫຼດ
+  useEffect(() => {
+    fetchZones();
+  }, []);
+
+  // ຟັງຊັນດຶງຂໍ້ມູນໂຊນຈັດວາງສິນຄ້າ
+  const fetchZones = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllZones();
+      setZones(data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching zones:", err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open add dialog
   const handleOpenAddDialog = () => {
-    const emptyWarehouse = {
-      name: '',
-      description: ''
-    };
-    
-    setCurrentWarehouse(emptyWarehouse);
-    warehouseFormRef.current = emptyWarehouse; // ຕັ້ງຄ່າເລີ່ມຕົ້ນໃນ ref
+    setCurrentZone({ zone: '', zone_detail: '', zone_id: null });
     setOpenAddDialog(true);
   };
 
-  // ຟັງຊັນປິດ dialog ເພີ່ມບ່ອນຈັດເກັບ
+  // Close add dialog
   const handleCloseAddDialog = () => {
     setOpenAddDialog(false);
-    warehouseFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref ເມື່ອປິດ dialog
   };
 
-  // ຟັງຊັນເປີດ dialog ແກ້ໄຂບ່ອນຈັດເກັບ
-  const handleOpenEditDialog = (warehouse) => {
-    setCurrentWarehouse({ ...warehouse });
-    warehouseFormRef.current = { ...warehouse }; // ກຳນົດຄ່າເລີ່ມຕົ້ນໃນ ref ເປັນຂໍ້ມູນບ່ອນຈັດເກັບປັດຈຸບັນ
+  // Open edit dialog
+  const handleOpenEditDialog = (zone) => {
+    setCurrentZone({ ...zone });
     setOpenEditDialog(true);
   };
 
-  // ຟັງຊັນປິດ dialog ແກ້ໄຂບ່ອນຈັດເກັບ
+  // Close edit dialog
   const handleCloseEditDialog = () => {
     setOpenEditDialog(false);
-    warehouseFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref ເມື່ອປິດ dialog
   };
 
-  // ຟັງຊັນການປ່ຽນແປງຂໍ້ມູນບ່ອນຈັດເກັບແບບປັບປຸງໃໝ່
+  // Handle form change
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // ແທນທີ່ຈະໃຊ້ setCurrentWarehouse ທຸກຄັ້ງທີ່ພິມ (ເຊິ່ງຈະ re-render)
-    // ເຮົາຈະເກັບຄ່າໄວ້ໃນ ref ກ່ອນ
-    warehouseFormRef.current = {
-      ...(warehouseFormRef.current || currentWarehouse),
+    setCurrentZone(prev => ({
+      ...prev,
       [name]: value
-    };
+    }));
   };
 
-  // ຟັງຊັນບັນທຶກບ່ອນຈັດເກັບໃໝ່
-  const handleAddWarehouse = () => {
-    // ໃຊ້ຂໍ້ມູນຈາກ ref ເພື່ອບັນທຶກ
-    const formData = warehouseFormRef.current || currentWarehouse;
-    
-    const newWarehouse = {
-      ...formData,
-      id: warehouses.length > 0 ? Math.max(...warehouses.map(w => w.id)) + 1 : 1
-    };
-    
-    setWarehouses([...warehouses, newWarehouse]);
-    setOpenAddDialog(false);
-    warehouseFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref
-    
-    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອບັນທຶກ
-    console.log('Adding new warehouse:', newWarehouse);
+  // Show snackbar notification
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
   };
 
-  // ຟັງຊັນບັນທຶກການແກ້ໄຂບ່ອນຈັດເກັບ
-  const handleSaveEdit = () => {
-    // ໃຊ້ຂໍ້ມູນຈາກ ref ເພື່ອບັນທຶກ
-    const formData = warehouseFormRef.current || currentWarehouse;
-    
-    setWarehouses(warehouses.map(w => w.id === currentWarehouse.id ? {...formData, id: currentWarehouse.id} : w));
-    setOpenEditDialog(false);
-    warehouseFormRef.current = null; // ລ້າງຂໍ້ມູນໃນ ref
-    
-    // ໃນກໍລະນີຈິງ, ສົ່ງຂໍ້ມູນໄປຍັງ API ເພື່ອອັບເດດ
-    console.log('Updating warehouse:', formData);
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
   };
 
-  // ຟັງຊັນເປີດ dialog ລຶບບ່ອນຈັດເກັບ
+  // Add new zone
+  const handleAddZone = async () => {
+    if (!currentZone.zone.trim() || !currentZone.zone_detail.trim()) {
+      showSnackbar('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await addZone(currentZone.zone, currentZone.zone_detail);
+      
+      if (result) {
+        await fetchZones(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenAddDialog(false);
+        showSnackbar('ເພີ່ມບ່ອນຈັດວາງສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error adding zone:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການເພີ່ມຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save edited zone
+  const handleSaveEdit = async () => {
+    if (!currentZone.zone.trim() || !currentZone.zone_detail.trim()) {
+      showSnackbar('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await updateZone(currentZone.zone_id, currentZone.zone, currentZone.zone_detail);
+      
+      if (result) {
+        await fetchZones(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenEditDialog(false);
+        showSnackbar('ແກ້ໄຂບ່ອນຈັດວາງສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error updating zone:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open delete confirmation
   const handleOpenDeleteDialog = (id) => {
-    setSelectedWarehouseId(id);
+    setSelectedZoneId(id);
     setOpenDeleteDialog(true);
   };
 
-  // ຟັງຊັນປິດ dialog ລຶບບ່ອນຈັດເກັບ
+  // Close delete dialog
   const handleCloseDeleteDialog = () => {
     setOpenDeleteDialog(false);
-    setSelectedWarehouseId(null);
+    setSelectedZoneId(null);
   };
 
-  // ຟັງຊັນລຶບບ່ອນຈັດເກັບ
-  const handleDeleteWarehouse = (id) => {
-    setWarehouses(warehouses.filter(warehouse => warehouse.id !== id));
-    setOpenDeleteDialog(false);
-    setSelectedWarehouseId(null);
-    // ໃນກໍລະນີຈິງ, ສົ່ງຄຳຂໍລຶບໄປຍັງ API
-    console.log('Deleting warehouse with ID:', id);
+  // Delete zone
+  const handleDeleteZone = async (id) => {
+    setLoading(true);
+    try {
+      const result = await deleteZone(id);
+      
+      if (result) {
+        await fetchZones(); // ດຶງຂໍ້ມູນໃໝ່
+        setOpenDeleteDialog(false);
+        showSnackbar('ລຶບບ່ອນຈັດວາງສຳເລັດແລ້ວ');
+      }
+    } catch (err) {
+      console.error("Error deleting zone:", err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+      setSelectedZoneId(null);
+    }
   };
 
-  // ຟັງຊັນຄົ້ນຫາ
+  // Handle search
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // ກັ່ນຕອງບ່ອນຈັດເກັບຕາມການຄົ້ນຫາ
-  const filteredWarehouses = warehouses.filter(warehouse => {
+  // Filter zones based on search
+  const filteredZones = zones.filter(zone => {
     return (
-      warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warehouse.description.toLowerCase().includes(searchTerm.toLowerCase())
+      zone.zone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      zone.zone_detail.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
-  // Form dialog component for add and edit operations
-  const WarehouseFormDialog = ({ open, onClose, title, warehouse, onChange, onSave }) => (
-    <Dialog 
-      open={open} 
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle>
-        {title}
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>
-        <Box component="form">
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="ຊື່ບ່ອນຈັດເກັບ"
-                name="name"
-                defaultValue={warehouse.name}
-                onChange={onChange}
-                required
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="ລາຍລະອຽດ"
-                name="description"
-                defaultValue={warehouse.description}
-                onChange={onChange}
-                multiline
-                rows={4}
-              />
-            </Grid>
-          </Grid>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="error" variant="outlined">
-          ຍົກເລີກ
-        </Button>
-        <Button onClick={onSave} color="secondary" variant="contained">
-          ບັນທຶກ
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-
   return (
     <Layout title="ຈັດການຂໍ້ມູນບ່ອນຈັດວາງ">
+      {/* Snackbar notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between' }}>
         <TextField
           placeholder="ຄົ້ນຫາ..."
@@ -248,7 +263,7 @@ function Warehouse() {
         />
         <Button
           variant="contained"
-          color="secondary"
+          color="primary"
           startIcon={<AddIcon />}
           onClick={handleOpenAddDialog}
         >
@@ -256,77 +271,206 @@ function Warehouse() {
         </Button>
       </Box>
 
-      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" width={50}>#</TableCell>
-              <TableCell align="center">ຊື່ບ່ອນຈັດວາງ</TableCell>
-              <TableCell align="center">ລາຍລະອຽດ</TableCell>
-              <TableCell align="center" width={80}>ແກ້ໄຂ</TableCell>
-              <TableCell align="center" width={80}>ລຶບ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredWarehouses.map((warehouse, index) => (
-              <TableRow key={warehouse.id} hover>
-                <TableCell align="center">{index + 1}</TableCell>
-                <TableCell align="center">{warehouse.name}</TableCell>
-                <TableCell align="center">{warehouse.description}</TableCell>
-                <TableCell align="center">
-                  <Tooltip title="ແກ້ໄຂ">
-                    <IconButton
-                      color="primary"
-                      size="small"
-                      onClick={() => handleOpenEditDialog(warehouse)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title="ລຶບ">
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() => handleOpenDeleteDialog(warehouse.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
+      {loading && !openAddDialog && !openEditDialog && !openDeleteDialog ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 240px)', overflow: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" width={50}>#</TableCell>
+                <TableCell align="center">ໂຊນ</TableCell>
+                <TableCell align="center">ລາຍລະອຽດ</TableCell>
+                <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
+                <TableCell align="center" width={120}>ລຶບ</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {filteredZones.length > 0 ? (
+                filteredZones.map((zone, index) => (
+                  <TableRow key={zone.zone_id} hover>
+                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell align="center">{zone.zone}</TableCell>
+                    <TableCell align="center">{zone.zone_detail}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ແກ້ໄຂ">
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          onClick={() => handleOpenEditDialog(zone)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="ລຶບ">
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => handleOpenDeleteDialog(zone.zone_id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <Typography variant="body1" sx={{ py: 2, color: 'text.secondary' }}>
+                      {error ? error : 'ບໍ່ພົບຂໍ້ມູນ'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-      {/* Dialog for adding new warehouse */}
-      <WarehouseFormDialog
-        open={openAddDialog}
+      {/* Add Dialog */}
+      <Dialog 
+        open={openAddDialog} 
         onClose={handleCloseAddDialog}
-        title="ເພີ່ມບ່ອນຈັດວາງໃໝ່"
-        warehouse={currentWarehouse}
-        onChange={handleChange}
-        onSave={handleAddWarehouse}
-      />
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          ເພີ່ມບ່ອນຈັດວາງໃໝ່
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseAddDialog}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box component="form" sx={{ pt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="ໂຊນ"
+                  name="zone"
+                  value={currentZone.zone}
+                  onChange={handleChange}
+                  required
+                  autoFocus
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="ລາຍລະອຽດ"
+                  name="zone_detail"
+                  value={currentZone.zone_detail}
+                  onChange={handleChange}
+                  required
+                  multiline
+                  rows={3}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAddDialog} color="error" variant="outlined">
+            ຍົກເລີກ
+          </Button>
+          <Button 
+            onClick={handleAddZone} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Dialog for editing warehouse */}
-      <WarehouseFormDialog
-        open={openEditDialog}
+      {/* Edit Dialog */}
+      <Dialog 
+        open={openEditDialog} 
         onClose={handleCloseEditDialog}
-        title="ແກ້ໄຂຂໍ້ມູນບ່ອນຈັດວາງ"
-        warehouse={currentWarehouse}
-        onChange={handleChange}
-        onSave={handleSaveEdit}
-      />
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          ແກ້ໄຂຂໍ້ມູນບ່ອນຈັດວາງ
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseEditDialog}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box component="form" sx={{ pt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="ໂຊນ"
+                  name="zone"
+                  value={currentZone.zone}
+                  onChange={handleChange}
+                  required
+                  autoFocus
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="ລາຍລະອຽດ"
+                  name="zone_detail"
+                  value={currentZone.zone_detail}
+                  onChange={handleChange}
+                  required
+                  multiline
+                  rows={3}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog} color="error" variant="outlined">
+            ຍົກເລີກ
+          </Button>
+          <Button 
+            onClick={handleSaveEdit} 
+            color="primary" 
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'ບັນທຶກ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Dialog for confirming deletion */}
+      {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         open={openDeleteDialog}
         onClose={handleCloseDeleteDialog}
-        onConfirm={handleDeleteWarehouse}
-        itemId={selectedWarehouseId}
+        onConfirm={handleDeleteZone}
+        itemId={selectedZoneId}
+        loading={loading}
       />
     </Layout>
   );

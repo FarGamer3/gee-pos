@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { laoLanguage } from './theme/laoLanguage';
+import { isAuthenticated, logout } from './services/authService';
 
 // Pages
 import Login from './pages/Login';
@@ -83,8 +84,36 @@ const theme = createTheme({
   },
 });
 
+// ສ້າງ component ເພື່ອກວດສອບການເຂົ້າສູ່ລະບົບກ່ອນເຂົ້າເຖິງໜ້າທີ່ຕ້ອງການ
+const ProtectedRoute = ({ children }) => {
+  // ກວດສອບວ່າຜູ້ໃຊ້ເຂົ້າສູ່ລະບົບແລ້ວຫຼືບໍ່
+  if (!isAuthenticated()) {
+    // ຖ້າຍັງບໍ່ໄດ້ເຂົ້າສູ່ລະບົບ, ສົ່ງໄປໜ້າ login
+    return <Navigate to="/login" replace />;
+  }
+  
+  // ຖ້າເຂົ້າສູ່ລະບົບແລ້ວ, ສະແດງ component ທີ່ຕ້ອງການ
+  return children;
+};
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // ກວດສອບສະຖານະການເຂົ້າສູ່ລະບົບເມື່ອແອບເລີ່ມເຮັດວຽກ
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+  }, []);
+  
+  // ຟັງຊັນຈັດການເຂົ້າສູ່ລະບົບ
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+  
+  // ຟັງຊັນຈັດການອອກຈາກລະບົບ
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -96,108 +125,118 @@ function App() {
             element={
               isLoggedIn ? 
                 <Navigate to="/dashboard" replace /> : 
-                <Login onLogin={() => setIsLoggedIn(true)} />
+                <Login onLogin={handleLogin} />
             } 
           />
+          
+          {/* ເສັ້ນທາງທັງໝົດທີ່ຕ້ອງການການກວດສອບການເຂົ້າສູ່ລະບົບ */}
           <Route 
             path="/dashboard" 
             element={
-              isLoggedIn ? 
-                <Dashboard /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Dashboard onLogout={handleLogout} />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/Manage_data" 
             element={
-              isLoggedIn ? 
-                <MainMenu /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <MainMenu />
+              </ProtectedRoute>
             } 
           />
+          
           {/* ເສັ້ນທາງສຳລັບຈັດການຂໍ້ມູນສິນຄ້າ */}
           <Route 
             path="/products" 
             element={
-              isLoggedIn ? 
-                <Products /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
             } 
           />
-     
           
           {/* ເສັ້ນທາງສຳລັບຈັດການຂໍ້ມູນອື່ນໆ */}
           <Route 
             path="/categories" 
             element={
-              isLoggedIn ? 
-                <Categories /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Categories />
+              </ProtectedRoute>
             } 
           />
-             <Route 
+          
+          <Route 
             path="/Units" 
             element={
-              isLoggedIn ? 
-                <Units /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Units />
+              </ProtectedRoute>
             } 
           />
 
           <Route 
             path="/warehouse" 
             element={
-              isLoggedIn ? 
-                <Warehouse /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Warehouse />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/suppliers" 
             element={
-              isLoggedIn ? 
-                <Suppliers /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Suppliers />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/customers" 
             element={
-              isLoggedIn ? 
-                <Customers /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/employees" 
             element={
-              isLoggedIn ? 
-                <Employees /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Employees />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/village" 
             element={
-              isLoggedIn ? 
-                <Village /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Village />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/city" 
             element={
-              isLoggedIn ? 
-                <City /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <City />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/province" 
             element={
-              isLoggedIn ? 
-                <Province /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Province />
+              </ProtectedRoute>
             } 
           />
           
@@ -205,71 +244,84 @@ function App() {
           <Route 
             path="/Reports" 
             element={
-              isLoggedIn ? 
-                <Reports /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
             } 
           />
 
           <Route 
             path="/Sales" 
             element={
-              isLoggedIn ? 
-                <Sales /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Sales />
+              </ProtectedRoute>
             } 
           />
           
           <Route 
             path="/Buy" 
             element={
-              isLoggedIn ? 
-                <Buy /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Buy />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/Purchase-Orders" 
             element={
-              isLoggedIn ? 
-                <PurchaseOrders /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <PurchaseOrders />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/Import" 
             element={
-              isLoggedIn ? 
-                <Import /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Import />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/import-detail" 
             element={
-              isLoggedIn ? 
-                <ImportDetail /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <ImportDetail />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/export" 
             element={
-              isLoggedIn ? 
-                <Export /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <Export />
+              </ProtectedRoute>
             } 
           />
+          
           <Route 
             path="/export-detail" 
             element={
-              isLoggedIn ? 
-                <ExportDetail /> : 
-                <Navigate to="/login" replace />
+              <ProtectedRoute>
+                <ExportDetail />
+              </ProtectedRoute>
             } 
           />
 
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* ເສັ້ນທາງເລີ່ມຕົ້ນ ແມ່ນນຳໄປສູ່ໜ້າເຂົ້າສູ່ລະບົບຫຼືໜ້າຫຼັກ */}
+          <Route 
+            path="/" 
+            element={
+              isLoggedIn ? 
+                <Navigate to="/dashboard" replace /> : 
+                <Navigate to="/login" replace />
+            } 
+          />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
