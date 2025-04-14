@@ -55,7 +55,15 @@ function PurchaseOrders() {
     try {
       setLoading(true);
       const data = await getAllOrders();
-      setOrders(data || []);
+      
+      // Process dates in the received data
+      const processedData = Array.isArray(data) ? data.map(order => ({
+        ...order,
+        // Format the date properly if it exists
+        formattedDate: formatDate(order.order_date || order.orderDate)
+      })) : [];
+      
+      setOrders(processedData);
       setError(null);
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -65,10 +73,39 @@ function PurchaseOrders() {
     }
   };
 
+  // ຈັດຮູບແບບວັນທີເປັນ DD/MM/YYYY
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    
+    try {
+      // Check if it's ISO format
+      if (dateStr.includes('T')) {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+        
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      }
+      
+      // If it's already in DD/MM/YYYY format, return as is
+      if (dateStr.includes('/')) {
+        return dateStr;
+      }
+      
+      // Try to convert other string formats
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+      
+      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return dateStr; // Return original on error
+    }
+  };
+
   // ຄົ້ນຫາລາຍການສັ່ງຊື້ຕາມຄຳຄົ້ນຫາ
   const filteredOrders = orders.filter(order => 
     (order.supplier && order.supplier.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (order.orderDate && order.orderDate.includes(searchTerm)) ||
+    (order.formattedDate && order.formattedDate.includes(searchTerm)) ||
     (order.order_id && order.order_id.toString().includes(searchTerm))
   );
 
@@ -201,7 +238,7 @@ function PurchaseOrders() {
                     >
                       <TableCell align="center">{index + 1}</TableCell>
                       <TableCell align="center">{order.order_id}</TableCell>
-                      <TableCell align="center">{order.order_date || order.orderDate}</TableCell>
+                      <TableCell align="center">{order.formattedDate || '-'}</TableCell>
                       <TableCell align="center">{order.supplier}</TableCell>
                       <TableCell align="center">{order.employee}</TableCell>
                       <TableCell align="center">

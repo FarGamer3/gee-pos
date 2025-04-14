@@ -16,11 +16,13 @@ import {
   Paper,
   Grid,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Print as PrintIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useReactToPrint } from 'react-to-print';
 import { getOrderDetails } from '../services/orderService';
@@ -30,6 +32,36 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
   const [loading, setLoading] = useState(false);
   const [orderItems, setOrderItems] = useState([]);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Format date function
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    
+    try {
+      // Check if it's ISO format
+      if (dateStr.includes('T')) {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+        
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      }
+      
+      // If it's already in DD/MM/YYYY format, return as is
+      if (dateStr.includes('/')) {
+        return dateStr;
+      }
+      
+      // Try to convert other string formats
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+      
+      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return dateStr; // Return original on error
+    }
+  };
   
   // ດຶງຂໍ້ມູນລາຍລະອຽດເມື່ອເປີດ dialog
   useEffect(() => {
@@ -38,12 +70,29 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
         try {
           setLoading(true);
           setError(null);
+          
+          console.log(`Attempting to fetch details for order ID: ${order.order_id} (Attempt ${retryCount + 1})`);
           const details = await getOrderDetails(order.order_id);
-          console.log("Order details received:", details);
-          setOrderItems(details || []);
+          
+          if (Array.isArray(details) && details.length > 0) {
+            console.log("Successfully received order details:", details);
+            setOrderItems(details);
+            setError(null);
+          } else {
+            console.log("Received empty order details");
+            
+            // If no items but it's not considered an error
+            if (Array.isArray(details)) {
+              setOrderItems([]);
+              setError("ບໍ່ພົບຂໍ້ມູນລາຍການໃນໃບສັ່ງຊື້ນີ້");
+            } else {
+              throw new Error("Invalid data format received");
+            }
+          }
         } catch (err) {
           console.error("Error fetching order details:", err);
           setError("ບໍ່ສາມາດດຶງຂໍ້ມູນລາຍລະອຽດໄດ້");
+          setOrderItems([]);
         } finally {
           setLoading(false);
         }
@@ -51,7 +100,12 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
     };
 
     fetchOrderDetails();
-  }, [order, open]);
+  }, [order, open, retryCount]);
+  
+  // Handle retry functionality
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
   
   // Handle print functionality
   const handlePrint = useReactToPrint({
@@ -61,6 +115,9 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
   
   // If no order, don't render
   if (!order) return null;
+  
+  // Get formatted date for display
+  const formattedDate = formatDate(order.order_date || order.orderDate);
   
   // Format number with commas
   const formatNumber = (num) => {
@@ -87,6 +144,7 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
               startIcon={<PrintIcon />}
               onClick={handlePrint}
               sx={{ mr: 1 }}
+              disabled={loading || orderItems.length === 0}
             >
               ພິມໃບສັ່ງຊື້
             </Button>
@@ -107,8 +165,20 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Box sx={{ textAlign: 'center', my: 4, color: 'error.main' }}>
-            <Typography>{error}</Typography>
+          <Box sx={{ my: 4 }}>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<RefreshIcon />}
+                onClick={handleRetry}
+              >
+                ລອງໃໝ່ອີກຄັ້ງ
+              </Button>
+            </Box>
           </Box>
         ) : (
           <div ref={printComponentRef} style={{ padding: '20px' }}>
@@ -132,7 +202,7 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
                 </Grid>
                 <Grid item xs={6} sx={{ textAlign: 'right' }}>
                   <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ວັນທີ:</strong> {order.order_date}
+                    <strong>ວັນທີ:</strong> {formattedDate}
                   </Typography>
                 </Grid>
               </Grid>
@@ -153,8 +223,8 @@ const PurchaseOrderDetail = ({ open, onClose, order }) => {
                       orderItems.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell align="center">{index + 1}</TableCell>
-                          <TableCell>{item.ProductName}</TableCell>
-                          <TableCell align="center">{item.qty}</TableCell>
+                          <TableCell>{item.ProductName || item.name}</TableCell>
+                          <TableCell align="center">{item.qty || item.quantity}</TableCell>
                         </TableRow>
                       ))
                     ) : (
