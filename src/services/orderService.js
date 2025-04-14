@@ -34,18 +34,31 @@ export const getAllOrders = async () => {
 // In your orderService.js
 export const addOrder = async (orderData) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/order/Insert/Order`, orderData);
+    console.log('Sending order data to API:', orderData);
     
-    if (response.data && response.data.result_code === "200") {
+    const response = await axios.post(`${API_BASE_URL}/order/Insert/Order`, orderData, {
+      // ເພີ່ມຕົວເລືອກເພື່ອປ້ອງກັນການສົ່ງຊໍ້າ
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    console.log('API Response:', response.data);
+    
+    if (response.data && (response.data.result_code === "200" || response.data.result_code === "201")) {
       return response.data;
     }
     
     throw new Error(response.data?.result || 'Failed to add order');
   } catch (error) {
-    console.error('Error adding order:', error);
+    console.error('Error in addOrder:', error);
+    if (error.response) {
+      console.error('Error details:', error.response.data);
+    }
     throw error;
   }
-};
+}
 /**
  * ອັບເດດລາຍການສັ່ງຊື້
  * @param {Object} orderData - ຂໍ້ມູນລາຍການສັ່ງຊື້ທີ່ຕ້ອງການອັບເດດ
@@ -102,9 +115,7 @@ export const deleteOrder = async (orderId) => {
  */
 export const getOrderDetails = async (orderId) => {
   try {
-    // Debugging
-    console.log(`Making POST request to: ${API_BASE_URL}/order/Order_Detail/With/OrderID`);
-    
+    console.log("Fetching details for order ID:", orderId);
     const response = await axios.post(`${API_BASE_URL}/order/Order_Detail/With/OrderID`, {
       order_id: orderId
     });
@@ -119,7 +130,6 @@ export const getOrderDetails = async (orderId) => {
     throw error;
   }
 };
-
 /**
  * ດຶງຂໍ້ມູນຜູ້ສະໜອງທັງໝົດສຳລັບການສະແດງຢູ່ໃນຟອມການສັ່ງຊື້
  */

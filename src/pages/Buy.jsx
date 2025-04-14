@@ -40,6 +40,7 @@ function Buy() {
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // ຂໍ້ມູນສິນຄ້າແລະຜູ້ສະໜອງ
   const [products, setProducts] = useState([]);
@@ -117,6 +118,7 @@ function Buy() {
 
   // ບັນທຶກລາຍການສັ່ງຊື້
   const handleSaveOrder = async () => {
+    // ກວດສອບເງື່ອນໄຂຕ່າງໆກ່ອນ
     if (orderItems.length === 0) {
       alert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການສັ່ງຊື້');
       return;
@@ -127,6 +129,14 @@ function Buy() {
       return;
     }
     
+    // ປ້ອງກັນການສົ່ງຊໍ້າ - ຈຸດສຳຄັນທີ່ສຸດ!
+    if (isSubmitting) {
+      console.log('ກຳລັງດຳເນີນການ, ກະລຸນາລໍຖ້າ...');
+      return;
+    }
+    
+    // ກຳນົດສະຖານະການສົ່ງເປັນ true ກ່ອນເລີ່ມການສົ່ງ
+    setIsSubmitting(true);
     setLoading(true);
     
     try {
@@ -135,43 +145,23 @@ function Buy() {
         throw new Error("ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້. ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່.");
       }
       
-      // Validate item data
-      const validItems = orderItems.map(item => {
-        return {
-          proid: parseInt(item.id), // Make sure this is a number
-          qty: parseInt(item.quantity) // Make sure this is a number
-        };
-      }).filter(item => !isNaN(item.proid) && !isNaN(item.qty) && item.qty > 0);
-      
-      if (validItems.length === 0) {
-        throw new Error("ບໍ່ມີລາຍການສິນຄ້າທີ່ຖືກຕ້ອງສຳລັບການສັ່ງຊື້");
-      }
-      
-      // ປັບໂຄງສ້າງຂໍ້ມູນສຳລັບ API - Convert all data to proper types
+      // ກະກຽມຂໍ້ມູນສຳລັບສົ່ງ - ຮັບປະກັນວ່າຂໍ້ມູນຖືກຕ້ອງ
       const orderData = {
-        sup_id: parseInt(supplier, 10), // Make sure it's a number
-        emp_id: parseInt(currentUser.emp_id, 10), // Make sure it's a number
+        sup_id: parseInt(supplier),
+        emp_id: parseInt(currentUser.emp_id),
         order_date: orderDate,
         items: orderItems.map(item => ({
-          proid: parseInt(item.id, 10), // Make sure it's a number
-          qty: parseInt(item.quantity, 10) // Make sure it's a number
+          proid: parseInt(item.id),
+          qty: parseInt(item.quantity)
         }))
       };
       
-      try {
-        await addOrder(orderData);
-        // Success handling
-      } catch (error) {
-        console.error("Order creation failed:", error);
-        // Error handling
-      }
-      
-      console.log('Sending order data to server:', JSON.stringify(orderData));
+      console.log('ກຳລັງສົ່ງຂໍ້ມູນການສັ່ງຊື້:', orderData);
       
       // ສົ່ງຂໍ້ມູນໄປຫາ API
       const result = await addOrder(orderData);
       
-      console.log('Order saved successfully:', result);
+      console.log('ບັນທຶກການສັ່ງຊື້ສຳເລັດ:', result);
       
       // ສະແດງກ່ອງຂໍ້ຄວາມສຳເລັດ
       setShowSuccessDialog(true);
@@ -181,28 +171,13 @@ function Buy() {
       setSupplier('');
       
     } catch (err) {
-      console.error("Error saving order:", err);
-      let errorMsg = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້";
-      
-      if (err.response) {
-        console.error("Response status:", err.response.status);
-        console.error("Response data:", err.response.data);
-        
-        if (err.response.data) {
-          if (err.response.data.result) {
-            errorMsg = err.response.data.result;
-          } else if (err.response.data.error) {
-            errorMsg = err.response.data.error;
-          }
-        }
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      
-      setErrorMessage(errorMsg);
+      console.error("ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້:", err);
+      setErrorMessage(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້');
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
+      // ສຳຄັນ: ຕ້ອງຮັບປະກັນວ່າລະບົບຕັ້ງຄ່າກັບຄືນສູ່ສະຖານະປົກກະຕິເມື່ອສຳເລັດ ຫຼື ເກີດຂໍ້ຜິດພາດ
+      setIsSubmitting(false);
     }
   };
 
