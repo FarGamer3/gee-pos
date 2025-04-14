@@ -1,4 +1,4 @@
-// src/services/orderService.js
+// src/services/orderService.js - Updated fix
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
@@ -7,7 +7,12 @@ import API_BASE_URL from '../config/api';
  */
 export const getAllOrders = async () => {
   try {
+    // Debugging
+    console.log(`Making GET request to: ${API_BASE_URL}/order/All/Order`);
+    
     const response = await axios.get(`${API_BASE_URL}/order/All/Order`);
+    
+    console.log('Response from getAllOrders:', response.data);
     
     if (response.data && response.data.result_code === "200") {
       return response.data.user_info;
@@ -26,10 +31,12 @@ export const getAllOrders = async () => {
  */
 export const addOrder = async (orderData) => {
   try {
+    // Debugging
     console.log('Sending order data:', orderData);
+    console.log(`Making POST request to: ${API_BASE_URL}/order/Insert/Order`);
     
-    // ແກ້ໄຂເສັ້ນທາງໃຫ້ຖືກຕ້ອງ
-    const response = await axios.post(`${API_BASE_URL}/order/All/Order`, orderData);
+    // IMPORTANT: Changed endpoint from "Orders" to "Order" - matches the backend route
+    const response = await axios.post(`${API_BASE_URL}/order/Insert/Order`, orderData);
     
     console.log('API Response:', response.data);
     
@@ -58,7 +65,10 @@ export const updateOrder = async (orderData) => {
       throw new Error('Missing order ID');
     }
     
-    const response = await axios.put(`${API_BASE_URL}/order/Update/Orders`, orderData);
+    // Debugging
+    console.log(`Making PUT request to: ${API_BASE_URL}/order/Update/Order`);
+    
+    const response = await axios.put(`${API_BASE_URL}/order/Update/Order`, orderData);
     
     if (response.data && response.data.result_code === "200") {
       return response.data;
@@ -77,7 +87,10 @@ export const updateOrder = async (orderData) => {
  */
 export const deleteOrder = async (orderId) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/order/Delete/Orders`, {
+    // Debugging
+    console.log(`Making DELETE request to: ${API_BASE_URL}/order/Delete/Order`);
+    
+    const response = await axios.delete(`${API_BASE_URL}/order/Delete/Order`, {
       data: { order_id: orderId }
     });
     
@@ -98,6 +111,9 @@ export const deleteOrder = async (orderId) => {
  */
 export const getOrderDetails = async (orderId) => {
   try {
+    // Debugging
+    console.log(`Making POST request to: ${API_BASE_URL}/order/Order_Detail/With/OrderID`);
+    
     const response = await axios.post(`${API_BASE_URL}/order/Order_Detail/With/OrderID`, {
       order_id: orderId
     });
@@ -118,6 +134,9 @@ export const getOrderDetails = async (orderId) => {
  */
 export const getAllSuppliers = async () => {
   try {
+    // Debugging
+    console.log(`Making GET request to: ${API_BASE_URL}/users/All/Supplier`);
+    
     const response = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
     
     if (response.data && response.data.result_code === "200") {

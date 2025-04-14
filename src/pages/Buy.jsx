@@ -121,7 +121,7 @@ function Buy() {
       alert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການສັ່ງຊື້');
       return;
     }
-
+  
     if (!supplier) {
       alert('ກະລຸນາເລືອກຜູ້ສະໜອງກ່ອນບັນທຶກການສັ່ງຊື້');
       return;
@@ -135,16 +135,27 @@ function Buy() {
         throw new Error("ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້. ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່.");
       }
       
-      // ປັບໂຄງສ້າງຂໍ້ມູນສຳລັບ API
+      // Validate item data
+      const validItems = orderItems.map(item => {
+        return {
+          proid: parseInt(item.id), // Make sure this is a number
+          qty: parseInt(item.quantity) // Make sure this is a number
+        };
+      }).filter(item => !isNaN(item.proid) && !isNaN(item.qty) && item.qty > 0);
+      
+      if (validItems.length === 0) {
+        throw new Error("ບໍ່ມີລາຍການສິນຄ້າທີ່ຖືກຕ້ອງສຳລັບການສັ່ງຊື້");
+      }
+      
+      // ປັບໂຄງສ້າງຂໍ້ມູນສຳລັບ API - Convert all data to proper types
       const orderData = {
         sup_id: parseInt(supplier),
         emp_id: parseInt(currentUser.emp_id),
-        order_date: orderDate,
-        items: orderItems.map(item => ({
-          proid: item.id,
-          qty: item.quantity
-        }))
+        order_date: orderDate, // Make sure this is formatted correctly (YYYY-MM-DD)
+        items: validItems
       };
+      
+      console.log('Sending order data to server:', JSON.stringify(orderData));
       
       // ສົ່ງຂໍ້ມູນໄປຫາ API
       const result = await addOrder(orderData);
@@ -160,7 +171,24 @@ function Buy() {
       
     } catch (err) {
       console.error("Error saving order:", err);
-      setErrorMessage(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້');
+      let errorMsg = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້";
+      
+      if (err.response) {
+        console.error("Response status:", err.response.status);
+        console.error("Response data:", err.response.data);
+        
+        if (err.response.data) {
+          if (err.response.data.result) {
+            errorMsg = err.response.data.result;
+          } else if (err.response.data.error) {
+            errorMsg = err.response.data.error;
+          }
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
