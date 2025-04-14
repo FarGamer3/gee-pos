@@ -149,11 +149,22 @@ function Buy() {
       
       // ປັບໂຄງສ້າງຂໍ້ມູນສຳລັບ API - Convert all data to proper types
       const orderData = {
-        sup_id: parseInt(supplier),
-        emp_id: parseInt(currentUser.emp_id),
-        order_date: orderDate, // Make sure this is formatted correctly (YYYY-MM-DD)
-        items: validItems
+        sup_id: parseInt(supplier, 10), // Make sure it's a number
+        emp_id: parseInt(currentUser.emp_id, 10), // Make sure it's a number
+        order_date: orderDate,
+        items: orderItems.map(item => ({
+          proid: parseInt(item.id, 10), // Make sure it's a number
+          qty: parseInt(item.quantity, 10) // Make sure it's a number
+        }))
       };
+      
+      try {
+        await addOrder(orderData);
+        // Success handling
+      } catch (error) {
+        console.error("Order creation failed:", error);
+        // Error handling
+      }
       
       console.log('Sending order data to server:', JSON.stringify(orderData));
       

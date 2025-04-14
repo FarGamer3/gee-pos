@@ -2,9 +2,11 @@
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
+
 /**
  * ດຶງຂໍ້ມູນລາຍການສັ່ງຊື້ທັງໝົດ
  */
+const API_URL = 'http://localhost:4422';
 export const getAllOrders = async () => {
   try {
     // Debugging
@@ -29,32 +31,21 @@ export const getAllOrders = async () => {
  * ເພີ່ມລາຍການສັ່ງຊື້ໃໝ່
  * @param {Object} orderData - ຂໍ້ມູນລາຍການສັ່ງຊື້
  */
+// In your orderService.js
 export const addOrder = async (orderData) => {
   try {
-    // Debugging
-    console.log('Sending order data:', orderData);
-    console.log(`Making POST request to: ${API_BASE_URL}/order/Insert/Order`);
-    
-    // IMPORTANT: Changed endpoint from "Orders" to "Order" - matches the backend route
     const response = await axios.post(`${API_BASE_URL}/order/Insert/Order`, orderData);
     
-    console.log('API Response:', response.data);
-    
-    if (response.data && (response.data.result_code === "200" || response.data.result_code === "201")) {
+    if (response.data && response.data.result_code === "200") {
       return response.data;
     }
     
     throw new Error(response.data?.result || 'Failed to add order');
   } catch (error) {
     console.error('Error adding order:', error);
-    if (error.response) {
-      console.error('Error response:', error.response.data);
-      console.error('Status code:', error.response.status);
-    }
     throw error;
   }
 };
-
 /**
  * ອັບເດດລາຍການສັ່ງຊື້
  * @param {Object} orderData - ຂໍ້ມູນລາຍການສັ່ງຊື້ທີ່ຕ້ອງການອັບເດດ
