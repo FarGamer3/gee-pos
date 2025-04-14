@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,7 +15,8 @@ import {
   IconButton,
   Grid,
   MenuItem,
-  InputAdornment
+  InputAdornment,
+  CircularProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -25,6 +26,9 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { SuccessDialog, ErrorDialog } from '../components/SuccessDialog';
+import { addOrder, getAllSuppliers } from '../services/orderService';
+import { getCurrentUser } from '../services/authService';
+import { getAllProducts } from '../services/productService';
 
 function Buy() {
   const navigate = useNavigate();
@@ -34,43 +38,68 @@ function Buy() {
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   
-  // Mock products data
-  const products = [
-    { id: 1, code: 'P001', name: 'ຕູ້ເຢັນ', stock: 10 },
-    { id: 2, code: 'P002', name: 'ໂທລະທັດ', stock: 15 },
-    { id: 3, code: 'P003', name: 'ແອຄອນດິຊັນ', stock: 20 },
-    { id: 4, code: 'P004', name: 'ຈັກຊັກຜ້າ', stock: 8 },
-  ];
+  // ຂໍ້ມູນສິນຄ້າແລະຜູ້ສະໜອງ
+  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  
+  // ດຶງຂໍ້ມູນເມື່ອໜ້າຖືກໂຫຼດ
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // ດຶງຂໍ້ມູນສິນຄ້າ
+        const productsData = await getAllProducts();
+        setProducts(productsData || []);
+        
+        // ດຶງຂໍ້ມູນຜູ້ສະໜອງ
+        const suppliersData = await getAllSuppliers();
+        setSuppliers(suppliersData || []);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
-  // Format date to DD/MM/YYYY
+  // ຈັດຮູບແບບວັນທີເປັນ DD/MM/YYYY
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   };
 
-  // Filter products based on search term
+  // ຄົ້ນຫາສິນຄ້າຕາມຄຳຄົ້ນຫາ
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchTerm.toLowerCase())
+    product.ProductName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.code && product.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Add product to order
+  // ເພີ່ມສິນຄ້າເຂົ້າລາຍການສັ່ງຊື້
   const addToOrder = (product) => {
-    const existingItemIndex = orderItems.findIndex(item => item.id === product.id);
+    const existingItemIndex = orderItems.findIndex(item => item.id === product.proid);
     
     if (existingItemIndex >= 0) {
-      // Item already in order, increase quantity
+      // ສິນຄ້າມີຢູ່ແລ້ວໃນລາຍການສັ່ງຊື້, ເພີ່ມຈຳນວນ
       const updatedItems = [...orderItems];
       updatedItems[existingItemIndex].quantity += 1;
       setOrderItems(updatedItems);
     } else {
-      // Add new item to order
-      setOrderItems([...orderItems, { ...product, quantity: 1 }]);
+      // ເພີ່ມສິນຄ້າໃໝ່ເຂົ້າລາຍການສັ່ງຊື້
+      setOrderItems([...orderItems, {
+        id: product.proid,
+        code: product.code || '',
+        name: product.ProductName,
+        quantity: 1
+      }]);
     }
   };
 
-  // Update item quantity in order
+  // ອັບເດດຈຳນວນສິນຄ້າໃນລາຍການສັ່ງຊື້
   const updateQuantity = (id, quantity) => {
     if (quantity <= 0) return;
     
@@ -81,13 +110,13 @@ function Buy() {
     setOrderItems(updatedItems);
   };
 
-  // Remove item from order
+  // ລຶບສິນຄ້າອອກຈາກລາຍການສັ່ງຊື້
   const removeFromOrder = (id) => {
     setOrderItems(orderItems.filter(item => item.id !== id));
   };
 
-  // Handle save order
-  const handleSaveOrder = () => {
+  // ບັນທຶກລາຍການສັ່ງຊື້
+  const handleSaveOrder = async () => {
     if (orderItems.length === 0) {
       alert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການສັ່ງຊື້');
       return;
@@ -98,49 +127,55 @@ function Buy() {
       return;
     }
     
-    // Get existing orders or initialize new array
-    const existingOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]');
+    setLoading(true);
     
-    // Generate a new ID (in a real app this would come from the backend)
-    const newId = existingOrders.length > 0 
-      ? Math.max(...existingOrders.map(order => order.id)) + 1 
-      : 1;
-    
-    // Create the new order object
-    const newOrder = {
-      id: newId,
-      orderDate: formatDate(orderDate),
-      supplier: `ບໍລິສັດ ${supplier}`,
-      employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', // Hardcoded for demo
-      status: 'ລໍຖ້າອະນຸມັດ',
-      items: orderItems
-    };
-    
-    // Add to existing orders
-    const updatedOrders = [...existingOrders, newOrder];
-    
-    // Save to localStorage
-    localStorage.setItem('purchaseOrders', JSON.stringify(updatedOrders));
-    
-    console.log('Saving purchase order:', newOrder);
-    
-    // Show success dialog instead of alert
-    setShowSuccessDialog(true);
-    
-    // Form is cleared when dialog is closed
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.emp_id) {
+        throw new Error("ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້. ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່.");
+      }
+      
+      // ປັບໂຄງສ້າງຂໍ້ມູນສຳລັບ API
+      const orderData = {
+        sup_id: parseInt(supplier),
+        emp_id: parseInt(currentUser.emp_id),
+        order_date: orderDate,
+        items: orderItems.map(item => ({
+          proid: item.id,
+          qty: item.quantity
+        }))
+      };
+      
+      // ສົ່ງຂໍ້ມູນໄປຫາ API
+      const result = await addOrder(orderData);
+      
+      console.log('Order saved successfully:', result);
+      
+      // ສະແດງກ່ອງຂໍ້ຄວາມສຳເລັດ
+      setShowSuccessDialog(true);
+      
+      // ລ້າງຟອມຫຼັງຈາກບັນທຶກສຳເລັດ
+      setOrderItems([]);
+      setSupplier('');
+      
+    } catch (err) {
+      console.error("Error saving order:", err);
+      setErrorMessage(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການສັ່ງຊື້');
+      setShowErrorDialog(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Handle dialog actions
+  // ຈັດການກ່ອງຂໍ້ຄວາມ dialog
   const handleCloseSuccessDialog = () => {
     setShowSuccessDialog(false);
-    // Clear form after dialog is closed
-    setOrderItems([]);
-    setSupplier('');
+    // ຟອມຖືກລ້າງແລ້ວຫຼັງຈາກ dialog ປິດ
   };
 
   const handleNavigateToPurchaseOrders = () => {
     setShowSuccessDialog(false);
-    // Clear form and navigate
+    // ລ້າງຟອມແລະນຳທາງໄປຍັງໜ້າລາຍການສັ່ງຊື້
     setOrderItems([]);
     setSupplier('');
     navigate('/purchase-orders');
@@ -152,7 +187,7 @@ function Buy() {
 
   const handleTryAgain = () => {
     setShowErrorDialog(false);
-    // User can try to save again
+    // ຜູ້ໃຊ້ສາມາດພະຍາຍາມບັນທຶກອີກຄັ້ງ
   };
 
   return (
@@ -203,13 +238,16 @@ function Buy() {
                 <TextField
                   fullWidth
                   select
-                  label="ເລືອກສະໜອງ"
+                  label="ເລືອກຜູ້ສະໜອງ"
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
                 >
                   <MenuItem value="">ເລືອກຜູ້ສະໜອງ</MenuItem>
-                  <MenuItem value="Gee">Gee</MenuItem>
-                  <MenuItem value="ທ້າວກ້າ">ທ້າວກ້າ</MenuItem>
+                  {suppliers.map((sup) => (
+                    <MenuItem key={sup.sup_id} value={sup.sup_id}>
+                      {sup.sup_name}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
             </Grid>
@@ -234,36 +272,42 @@ function Buy() {
               }}
             />
 
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center">ລະຫັດ</TableCell>
-                    <TableCell align="center">ຊື່</TableCell>
-                    <TableCell align="center"></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id} hover>
-                      <TableCell align="center">{product.code}</TableCell>
-                      <TableCell align="center">{product.name}</TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          color="primary"
-                          onClick={() => addToOrder(product)}
-                          sx={{ fontSize: '0.7rem', py: 0.5 }}
-                        >
-                          ເລືອກ
-                        </Button>
-                      </TableCell>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer sx={{ maxHeight: 400 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center">ລະຫັດ</TableCell>
+                      <TableCell align="center">ຊື່</TableCell>
+                      <TableCell align="center"></TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow key={product.proid} hover>
+                        <TableCell align="center">{product.proid}</TableCell>
+                        <TableCell align="center">{product.ProductName}</TableCell>
+                        <TableCell align="center">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="primary"
+                            onClick={() => addToOrder(product)}
+                            sx={{ fontSize: '0.7rem', py: 0.5 }}
+                          >
+                            ເລືອກ
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
         </Grid>
 
@@ -344,9 +388,9 @@ function Buy() {
               <Button
                 variant="contained"
                 color="success"
-                startIcon={<SaveIcon />}
+                startIcon={loading ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
                 onClick={handleSaveOrder}
-                disabled={orderItems.length === 0 || !supplier}
+                disabled={orderItems.length === 0 || !supplier || loading}
               >
                 ບັນທຶກ
               </Button>

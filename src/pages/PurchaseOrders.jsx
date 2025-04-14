@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -14,7 +14,8 @@ import {
   Chip,
   IconButton,
   TextField,
-  InputAdornment
+  InputAdornment,
+  CircularProgress
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -25,11 +26,14 @@ import {
 import Layout from '../components/Layout';
 import { DeleteConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 import PurchaseOrderDetail from '../components/PurchaseOrderDetail';
+import { getAllOrders, deleteOrder } from '../services/orderService';
 
 function PurchaseOrders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -41,75 +45,67 @@ function PurchaseOrders() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  // ດຶງຂໍ້ມູນລາຍການສັ່ງຊື້ເມື່ອໜ້າຖືກໂຫຼດ
   useEffect(() => {
-    // Try to get saved orders from localStorage
-    const savedOrders = localStorage.getItem('purchaseOrders');
-    
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    } else {
-      // Use mock data as fallback
-      const mockOrders = [
-        { 
-          id: 1, 
-          orderDate: '22/2/2025', 
-          supplier: 'ບໍລິສັດ Gee', 
-          employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-          items: [
-            { name: 'ຕູ້ເຢັນ', quantity: 2 },
-            { name: 'ແອຄອນດິຊັນ', quantity: 1 }
-          ]
-        },
-        { 
-          id: 2, 
-          orderDate: '23/2/2025', 
-          supplier: 'ບໍລິສັດ Gee', 
-          employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-          items: [
-            { name: 'ໂທລະທັດ', quantity: 1 },
-            { name: 'ຈັກຊັກຜ້າ', quantity: 2 }
-          ]
-        }
-      ];
-      
-      setOrders(mockOrders);
-      // Save mock data to localStorage
-      localStorage.setItem('purchaseOrders', JSON.stringify(mockOrders));
-    }
+    fetchOrders();
   }, []);
 
-  // Function to filter orders based on search term
+  // ຟັງຊັນດຶງຂໍ້ມູນລາຍການສັ່ງຊື້ທັງໝົດ
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllOrders();
+      setOrders(data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ຄົ້ນຫາລາຍການສັ່ງຊື້ຕາມຄຳຄົ້ນຫາ
   const filteredOrders = orders.filter(order => 
-    order.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.orderDate.includes(searchTerm)
+    (order.supplier && order.supplier.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (order.orderDate && order.orderDate.includes(searchTerm)) ||
+    (order.order_id && order.order_id.toString().includes(searchTerm))
   );
 
-  // Function to handle delete order
+  // ຟັງຊັນຈັດການການລຶບລາຍການສັ່ງຊື້
   const handleDeleteOrder = (id) => {
     setSelectedOrderId(id);
     setDeleteDialogOpen(true);
   };
   
-  // Function to open order details
+  // ຟັງຊັນເປີດລາຍລະອຽດລາຍການສັ່ງຊື້
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setDetailDialogOpen(true);
   };
   
-  // Confirm delete action
-  const confirmDelete = (id) => {
-    const updatedOrders = orders.filter(order => order.id !== id);
-    setOrders(updatedOrders);
-    // Update localStorage
-    localStorage.setItem('purchaseOrders', JSON.stringify(updatedOrders));
-    
-    // Close delete dialog and show success dialog
-    setDeleteDialogOpen(false);
-    setActionType('delete');
-    setSuccessDialogOpen(true);
+  // ຢືນຢັນການລຶບລາຍການສັ່ງຊື້
+  const confirmDelete = async (id) => {
+    try {
+      setLoading(true);
+      await deleteOrder(id);
+      
+      // ອັບເດດລາຍການໃນ state
+      setOrders(prevOrders => prevOrders.filter(order => order.order_id !== id));
+      
+      // ປິດກ່ອງຂໍ້ຄວາມຢືນຢັນການລຶບແລະສະແດງກ່ອງຂໍ້ຄວາມສຳເລັດ
+      setDeleteDialogOpen(false);
+      setActionType('delete');
+      setSuccessDialogOpen(true);
+    } catch (err) {
+      console.error("Error deleting order:", err);
+      alert('ເກີດຂໍ້ຜິດພາດໃນການລຶບລາຍການສັ່ງຊື້');
+    } finally {
+      setLoading(false);
+    }
   };
   
-  // Close dialogs
+  // ປິດກ່ອງຂໍ້ຄວາມ dialog
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
   };
@@ -130,6 +126,7 @@ function PurchaseOrders() {
         onClose={handleCloseDeleteDialog}
         onConfirm={confirmDelete}
         itemId={selectedOrderId}
+        loading={loading}
       />
       
       {/* Success Dialog */}
@@ -178,58 +175,76 @@ function PurchaseOrders() {
           </Button>
         </Box>
 
-        <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
-                          <TableHead>
-              <TableRow sx={{ bgcolor: 'background.default' }}>
-                <TableCell align="center">#</TableCell>
-                <TableCell align="center">ເລກທີໃບສັ່ງຊື້</TableCell>
-                <TableCell align="center">ວັນທີ ຊື້ສິນຄ້າ</TableCell>
-                <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
-                <TableCell align="center">ພະນັກງານ</TableCell>
-                <TableCell align="center">ຄຳສັ່ງ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredOrders.map((order, index) => (
-                <TableRow
-                  key={order.id}
-                  sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
-                >
-                  <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell align="center">{order.id}</TableCell>
-                  <TableCell align="center">{order.orderDate}</TableCell>
-                  <TableCell align="center">{order.supplier}</TableCell>
-                  <TableCell align="center">{order.employee}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleViewOrder(order)}
-                        startIcon={<VisibilityIcon />}
-                      >
-                        ລາຍລະອຽດ
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleDeleteOrder(order.id)}
-                      >
-                        ລຶບ
-                      </Button>
-                    </Box>
-                  </TableCell>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'background.default' }}>
+                  <TableCell align="center">#</TableCell>
+                  <TableCell align="center">ເລກທີໃບສັ່ງຊື້</TableCell>
+                  <TableCell align="center">ວັນທີ ຊື້ສິນຄ້າ</TableCell>
+                  <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
+                  <TableCell align="center">ພະນັກງານ</TableCell>
+                  <TableCell align="center">ຄຳສັ່ງ</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map((order, index) => (
+                    <TableRow
+                      key={order.order_id}
+                      sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
+                    >
+                      <TableCell align="center">{index + 1}</TableCell>
+                      <TableCell align="center">{order.order_id}</TableCell>
+                      <TableCell align="center">{order.order_date || order.orderDate}</TableCell>
+                      <TableCell align="center">{order.supplier}</TableCell>
+                      <TableCell align="center">{order.employee}</TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <Button
+                            variant="contained"
+                            color="info"
+                            size="small"
+                            sx={{ borderRadius: 4 }}
+                            onClick={() => handleViewOrder(order)}
+                            startIcon={<VisibilityIcon />}
+                          >
+                            ລາຍລະອຽດ
+                          </Button>
+                          
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            sx={{ borderRadius: 4 }}
+                            onClick={() => handleDeleteOrder(order.order_id)}
+                          >
+                            ລຶບ
+                          </Button>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      {error ? (
+                        <Typography color="error">{error}</Typography>
+                      ) : (
+                        <Typography>ບໍ່ພົບຂໍ້ມູນລາຍການສັ່ງຊື້</Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
     </Layout>
   );
