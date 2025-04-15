@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -11,396 +11,301 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Grid
+  CircularProgress,
+  Alert,
+  Divider,
+  Grid,
+  Snackbar,
+  IconButton
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  Visibility as VisibilityIcon,
-  CheckCircle as CheckCircleIcon,
-  Delete as DeleteIcon
+  ArrowBack as ArrowBackIcon,
+  Print as PrintIcon,
+  Sync as SyncIcon
 } from '@mui/icons-material';
+import { format } from 'date-fns';
+import { useReactToPrint } from 'react-to-print';
 import Layout from '../components/Layout';
-import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
+import { getImportDetails } from '../services/importService';
 
 function ImportDetail() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [importData, setImportData] = useState(null);
+  const [importDetails, setImportDetails] = useState([]);
   
-  // Import history state
-  const [importHistory, setImportHistory] = useState([
-    { 
-      id: 1, 
-      date: '22/2/2025', 
-      purchaseOrderId: 1,
-      supplier: 'ບໍລິສັດ Gee', 
-      employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-      status: 'ລໍຖ້າອະນຸມັດ',
-      items: [
-        { name: 'ຕູ້ເຢັນ', quantity: 2, price: 5000000 },
-        { name: 'ແອຄອນດິຊັນ', quantity: 1, price: 3000000 }
-      ],
-      total: 13000000
-    },
-    { 
-      id: 2, 
-      date: '23/2/2025', 
-      purchaseOrderId: 2,
-      supplier: 'ບໍລິສັດ Gee', 
-      employee: 'ເປັນຕຸ້ຍ (ພະນັກງານ)', 
-      status: 'ນຳເຂົ້າແລ້ວ',
-      items: [
-        { name: 'ໂທລະທັດ', quantity: 2, price: 5000000 },
-        { name: 'ຈັກຊັກຜ້າ', quantity: 5, price: 5000000 }
-      ],
-      total: 35000000
-    }
-  ]);
-
-  // Selected import for viewing details
-  const [selectedImport, setSelectedImport] = useState(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  // Print reference
+  const printRef = useRef();
   
-  // Delete confirmation dialog state
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedImportId, setSelectedImportId] = useState(null);
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
-  // Approve confirmation dialog state
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [selectedApproveId, setSelectedApproveId] = useState(null);
+  // Get import ID from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const importId = queryParams.get('id');
   
-  // Success action dialog state
-  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState('');
-
-  // Load import history from localStorage on mount (if available)
   useEffect(() => {
-    const savedImports = localStorage.getItem('importHistory');
-    if (savedImports) {
-      setImportHistory(JSON.parse(savedImports));
+    if (importId) {
+      fetchImportDetails(importId);
+    } else {
+      setError('ບໍ່ພົບລະຫັດການນຳເຂົ້າສິນຄ້າ');
     }
-  }, []);
-
-  // Format number with commas for every 3 digits
+  }, [importId]);
+  
+  const fetchImportDetails = async (id) => {
+    setLoading(true);
+    try {
+      const details = await getImportDetails(id);
+      
+      if (details && details.length > 0) {
+        // Get import header information from the first detail record
+        const headerInfo = {
+          imp_id: details[0].imp_id,
+          imp_date: details[0].imp_date,
+          order_id: details[0].order_id,
+          emp_name: details[0].emp_name,
+          status: details[0].status,
+          total_price: details.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+        };
+        
+        setImportData(headerInfo);
+        setImportDetails(details);
+        setError(null);
+      } else {
+        setError('ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດການນຳເຂົ້າສິນຄ້ານີ້');
+        setImportData(null);
+        setImportDetails([]);
+      }
+    } catch (err) {
+      console.error('Error fetching import details:', err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການນຳເຂົ້າສິນຄ້າ');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle the print functionality
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `ໃບນຳເຂົ້າສິນຄ້າ-${importId}`,
+  });
+  
+  // Handle back button click
+  const handleBack = () => {
+    navigate('/import');
+  };
+  
+  // Show snackbar
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+  
+  // Handle closing snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
+  };
+  
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    
+    try {
+      const date = new Date(dateString);
+      return format(date, 'dd/MM/yyyy');
+    } catch (error) {
+      return dateString;
+    }
+  };
+  
+  // Format number with commas for currency display
   const formatNumber = (num) => {
+    if (num === undefined || num === null) return '0';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
-
-  // Filter imports based on search term
-  const filteredImports = importHistory.filter(item =>
-    item.id.toString().includes(searchTerm) ||
-    item.date.includes(searchTerm) ||
-    (item.purchaseOrderId && item.purchaseOrderId.toString().includes(searchTerm)) ||
-    item.supplier.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Handle view import details
-  const handleViewImport = (importData) => {
-    setSelectedImport(importData);
-    setDetailDialogOpen(true);
+  
+  // Get the status text in Lao language
+  const getStatusText = (status) => {
+    if (!status) return '-';
+    return status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ';
   };
-
-  // Handle delete import
-  const handleDeleteImport = (id) => {
-    setSelectedImportId(id);
-    setDeleteDialogOpen(true);
-  };
-
-  // Handle approve import
-  const handleApproveImport = (id) => {
-    setSelectedApproveId(id);
-    setApproveDialogOpen(true);
-  };
-
-  // Confirm delete action
-  const confirmDelete = (id) => {
-    const updatedHistory = importHistory.filter(item => item.id !== id);
-    setImportHistory(updatedHistory);
-    setDeleteDialogOpen(false);
-    
-    // Update localStorage
-    localStorage.setItem('importHistory', JSON.stringify(updatedHistory));
-    
-    // Show success dialog
-    setActionType('delete');
-    setSuccessDialogOpen(true);
-  };
-
-  // Confirm approve action
-  const confirmApprove = (id) => {
-    const updatedHistory = importHistory.map(item => 
-      item.id === id ? {...item, status: 'ນຳເຂົ້າແລ້ວ'} : item
-    );
-    
-    setImportHistory(updatedHistory);
-    setApproveDialogOpen(false);
-    
-    // Update localStorage
-    localStorage.setItem('importHistory', JSON.stringify(updatedHistory));
-    
-    // Show success dialog
-    setActionType('approve');
-    setSuccessDialogOpen(true);
-  };
-
-  // Dialog handlers
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setSelectedImportId(null);
-  };
-
-  const handleCloseApproveDialog = () => {
-    setApproveDialogOpen(false);
-    setSelectedApproveId(null);
-  };
-
-  const handleCloseDetailDialog = () => {
-    setDetailDialogOpen(false);
-    setSelectedImport(null);
-  };
-
-  const handleCloseActionSuccessDialog = () => {
-    setSuccessDialogOpen(false);
-  };
-
-  // Get status chip color based on status
-  const getStatusChipColor = (status) => {
-    switch(status) {
-      case 'ລໍຖ້າອະນຸມັດ':
-        return '#FFA726'; // Orange for waiting
-      case 'ນຳເຂົ້າແລ້ວ':
-        return '#9ACD32'; // Green for approved
-      default:
-        return '#9E9E9E'; // Gray for other statuses
-    }
-  };
-
+  
   return (
-    <Layout title="ປະຫວັດການນຳເຂົ້າສິນຄ້າ">
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmDialog 
-        open={deleteDialogOpen}
-        onClose={handleCloseDeleteDialog}
-        onConfirm={confirmDelete}
-        itemId={selectedImportId}
-      />
-      
-      {/* Approve Confirmation Dialog */}
-      <ApproveConfirmDialog 
-        open={approveDialogOpen}
-        onClose={handleCloseApproveDialog}
-        onConfirm={confirmApprove}
-        itemId={selectedApproveId}
-      />
-      
-      {/* Action Success Dialog */}
-      <ActionSuccessDialog 
-        open={successDialogOpen}
-        onClose={handleCloseActionSuccessDialog}
-        title={actionType === 'approve' ? "ອະນຸມັດສຳເລັດ" : "ລຶບສຳເລັດ"}
-        message={actionType === 'approve' ? "ການນຳເຂົ້າໄດ້ຖືກອະນຸມັດແລ້ວ" : "ລາຍການນຳເຂົ້າຖືກລຶບສຳເລັດແລ້ວ"}
-        actionType={actionType}
-      />
-      
-      {/* Import Detail Dialog */}
-      <Dialog
-        open={detailDialogOpen}
-        onClose={handleCloseDetailDialog}
-        fullWidth
-        maxWidth="md"
+    <Layout title="ລາຍລະອຽດການນຳເຂົ້າສິນຄ້າ">
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">ລາຍລະອຽດການນຳເຂົ້າ</Typography>
-            <Button 
-              variant="contained" 
-              color="error" 
-              onClick={handleCloseDetailDialog}
-            >
-              ປິດ
-            </Button>
-          </Box>
-        </DialogTitle>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBack}
+        >
+          ກັບຄືນ
+        </Button>
         
-        <DialogContent sx={{ mt: 2 }}>
-          <Box sx={{ mb: 4 }}>
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  <strong>ເລກທີ່:</strong> {selectedImport?.id}
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  <strong>ເລກທີ່ໃບສັ່ງຊື້:</strong> {selectedImport?.purchaseOrderId || "-"}
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  <strong>ຜູ້ສະໜອງ:</strong> {selectedImport?.supplier}
-                </Typography>
-                <Typography variant="body1">
-                  <strong>ພະນັກງານ:</strong> {selectedImport?.employee}
-                </Typography>
+        <Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<SyncIcon />}
+            onClick={() => fetchImportDetails(importId)}
+            sx={{ mr: 2 }}
+            disabled={loading}
+          >
+            ໂຫຼດຄືນໃໝ່
+          </Button>
+          
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            disabled={loading || !importData}
+          >
+            ພິມໃບນຳເຂົ້າສິນຄ້າ
+          </Button>
+        </Box>
+      </Box>
+      
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+      ) : (
+        <div ref={printRef} style={{ padding: '15px' }}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                ໃບນຳເຂົ້າສິນຄ້າ
+              </Typography>
+            </Box>
+            
+            {importData && (
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>ລະຫັດນຳເຂົ້າ:</strong> {importData.imp_id}
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>ວັນທີ່ນຳເຂົ້າ:</strong> {formatDate(importData.imp_date)}
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>ລະຫັດສັ່ງຊື້:</strong> {importData.order_id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>ພະນັກງານ:</strong> {importData.emp_name}
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>ສະຖານະ:</strong> {getStatusText(importData.status)}
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  <strong>ວັນທີ:</strong> {selectedImport?.date}
-                </Typography>
-                <Typography variant="body1">
-                  <strong>ສະຖານະ:</strong> {selectedImport?.status}
-                </Typography>
-              </Grid>
-            </Grid>
+            )}
+            
+            <Divider sx={{ mb: 3 }} />
+            
+            <Typography variant="h6" gutterBottom>
+              ລາຍການສິນຄ້າທີ່ນຳເຂົ້າ
+            </Typography>
             
             <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
               <Table>
-                <TableHead sx={{ bgcolor: 'background.default' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell align="center" width="5%">#</TableCell>
+                    <TableCell align="center" width={50}>ລຳດັບ</TableCell>
                     <TableCell>ຊື່ສິນຄ້າ</TableCell>
-                    <TableCell align="right">ລາຄາ</TableCell>
                     <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="right">ລວມລາຄາ</TableCell>
+                    <TableCell align="right">ລາຄາຕົ້ນທຶນ</TableCell>
+                    <TableCell align="right">ລວມເປັນເງິນ</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {selectedImport?.items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell align="center">{index + 1}</TableCell>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell align="right">{formatNumber(item.price)} ກີບ</TableCell>
-                      <TableCell align="center">{item.quantity}</TableCell>
-                      <TableCell align="right">{formatNumber(item.price * item.quantity)} ກີບ</TableCell>
+                  {importDetails.length > 0 ? (
+                    importDetails.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell align="center">{index + 1}</TableCell>
+                        <TableCell>{item.ProductName}</TableCell>
+                        <TableCell align="center">{item.qty}</TableCell>
+                        <TableCell align="right">{formatNumber(item.cost_price)} ກີບ</TableCell>
+                        <TableCell align="right">{formatNumber(item.subtotal)} ກີບ</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">ບໍ່ພົບຂໍ້ມູນ</TableCell>
                     </TableRow>
-                  ))}
+                  )}
+                  
+                  {importData && (
+                    <TableRow>
+                      <TableCell colSpan={4} align="right" sx={{ fontWeight: 'bold' }}>
+                        ລວມທັງໝົດ:
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                        {formatNumber(importData.total_price)} ກີບ
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
             
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-              <Box sx={{ textAlign: 'right', width: '300px' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body1"><strong>ລາຄາລວມ:</strong></Typography>
-                  <Typography variant="body1">{selectedImport?.total ? formatNumber(selectedImport.total) : 0} ກີບ</Typography>
-                </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Box sx={{ width: '30%', textAlign: 'center' }}>
+                <Typography variant="body2" gutterBottom>ຜູ້ອະນຸມັດ</Typography>
+                <Box sx={{ height: 60 }}></Box>
+                <Divider />
+                <Typography variant="body2">ລາຍເຊັນ</Typography>
+              </Box>
+              
+              <Box sx={{ width: '30%', textAlign: 'center' }}>
+                <Typography variant="body2" gutterBottom>ຜູ້ກວດກາ</Typography>
+                <Box sx={{ height: 60 }}></Box>
+                <Divider />
+                <Typography variant="body2">ລາຍເຊັນ</Typography>
+              </Box>
+              
+              <Box sx={{ width: '30%', textAlign: 'center' }}>
+                <Typography variant="body2" gutterBottom>ພະນັກງານບັນທຶກ</Typography>
+                <Box sx={{ height: 60 }}></Box>
+                <Divider />
+                <Typography variant="body2">ລາຍເຊັນ</Typography>
               </Box>
             </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
-      
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="primary">
-          ປະຫວັດການນຳເຂົ້າສິນຄ້າ
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => navigate('/import')}
-        >
-          ເພິ່ມການນຳເຂົ້າໃໝ່
-        </Button>
-      </Box>
-
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <TextField
-            placeholder="ຄົ້ນຫາ..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            sx={{ width: 300 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
-
-        <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'background.default' }}>
-                <TableCell align="center">#</TableCell>
-                <TableCell align="center">ເລກທີ</TableCell>
-                <TableCell align="center">ວັນທີ</TableCell>
-                <TableCell align="center">ເລກທີໃບສັ່ງຊື້</TableCell>
-                <TableCell align="center">ຜູ້ສະໜອງ</TableCell>
-                <TableCell align="center">ພະນັກງານ</TableCell>
-                <TableCell align="center">ສະຖານະ</TableCell>
-                <TableCell align="center">ຄຳສັ່ງ</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredImports.map((item, index) => (
-                <TableRow
-                  key={item.id}
-                  sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
-                >
-                  <TableCell align="center">{index + 1}</TableCell>
-                  <TableCell align="center">{item.id}</TableCell>
-                  <TableCell align="center">{item.date}</TableCell>
-                  <TableCell align="center">{item.purchaseOrderId || "-"}</TableCell>
-                  <TableCell align="center">{item.supplier}</TableCell>
-                  <TableCell align="center">{item.employee}</TableCell>
-                  <TableCell align="center">
-                    <Chip 
-                      label={item.status}
-                      sx={{ 
-                        bgcolor: getStatusChipColor(item.status), 
-                        color: 'white',
-                        borderRadius: 4
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleViewImport(item)}
-                        startIcon={<VisibilityIcon />}
-                      >
-                        ລາຍລະອຽດ
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleApproveImport(item.id)}
-                        startIcon={<CheckCircleIcon />}
-                        disabled={item.status === 'ນຳເຂົ້າແລ້ວ'} // Disable if already approved
-                      >
-                        ອະນຸມັດ
-                      </Button>
-                      
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        sx={{ borderRadius: 4 }}
-                        onClick={() => handleDeleteImport(item.id)}
-                        startIcon={<DeleteIcon />}
-                      >
-                        ລຶບ
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+          </Paper>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -24,6 +24,8 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  CircularProgress,
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -35,31 +37,39 @@ import {
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import ReceiptModal from '../components/ReceiptModal';
-
-const sampleProducts = [
-  { id: 1, code: 'P001', name: 'ສິນຄ້າ', price: 1500000, stock: 10 },
-  { id: 2, code: 'P002', name: 'ສິນຄ້າ', price: 1500000, stock: 15 },
-  { id: 3, code: 'P003', name: 'ສິນຄ້າ', price: 1500000, stock: 20 },
-  { id: 4, code: 'P004', name: 'ສິນຄ້າ', price: 1500000, stock: 8 },
-];
+import { getAllCustomers, getAllProducts, searchProducts, createSale } from '../services/salesService';
+import { getCurrentUser } from '../services/authService';
 
 // Format number with commas for every 3 digits
 const formatNumber = (num) => {
+  if (!num) return "0";
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
 function Sales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [cartItems, setCartItems] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState('@customer');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  
+  // Alerts
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('success');
+  
+  // Payment variables
   const [amountPaid, setAmountPaid] = useState('');
   const [changeAmount, setChangeAmount] = useState(0);
+  
+  // Get the current user from auth service
+  const currentUser = getCurrentUser();
   
   // Calculate total
   const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -73,6 +83,38 @@ function Sales() {
       setChangeAmount(0);
     }
   }, [amountPaid, cartTotal]);
+
+  // Load products and customers on component mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        const [productsData, customersData] = await Promise.all([
+          getAllProducts(),
+          getAllCustomers()
+        ]);
+        
+        setProducts(productsData || []);
+        setFilteredProducts(productsData || []);
+        setCustomers(customersData || []);
+        setFilteredCustomers(customersData || []);
+        
+        // Set a default customer (first one or a generic one)
+        if (customersData && customersData.length > 0) {
+          setSelectedCustomer(customersData[0]);
+        } else {
+          setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
+        }
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        showAlert('ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນ', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
+  }, []);
 
   // Handle amount paid input
   const handleAmountPaidChange = (e) => {
@@ -88,14 +130,35 @@ function Sales() {
   };
 
   // Filter products based on search term
-  const filteredProducts = sampleProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(product =>
+        product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.proid?.toString().includes(searchTerm)
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchTerm, products]);
+
+  // Filter customers based on search term
+  useEffect(() => {
+    if (customerSearch.trim() === '') {
+      setFilteredCustomers(customers);
+    } else {
+      const filtered = customers.filter(customer =>
+        customer.cus_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.cus_lname?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.tel?.includes(customerSearch)
+      );
+      setFilteredCustomers(filtered);
+    }
+  }, [customerSearch, customers]);
 
   // Add item to cart
   const addToCart = (product) => {
-    const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
+    const existingItemIndex = cartItems.findIndex(item => item.id === product.proid);
     
     if (existingItemIndex >= 0) {
       // Item already in cart, increase quantity
@@ -104,16 +167,38 @@ function Sales() {
       setCartItems(updatedItems);
     } else {
       // Add new item to cart
-      setCartItems([...cartItems, { ...product, quantity: 1 }]);
+      const newItem = {
+        id: product.proid,
+        name: product.ProductName,
+        price: parseFloat(product.retail_price) || 0,
+        quantity: 1,
+        stock: product.qty || 0
+      };
+      setCartItems([...cartItems, newItem]);
     }
   };
 
   // Update item quantity in cart
   const updateQuantity = (id, quantity) => {
-    if (quantity <= 0) return;
+    // Find the product to check stock
+    const cartItem = cartItems.find(item => item.id === id);
+    if (!cartItem) return;
+    
+    // Validate quantity against stock
+    const newQuantity = parseInt(quantity);
+    if (isNaN(newQuantity) || newQuantity <= 0) return;
+    
+    if (newQuantity > cartItem.stock) {
+      showAlert(`ສິນຄ້າໃນສາງມີພຽງ ${cartItem.stock} ອັນ`, 'warning');
+      const updatedItems = cartItems.map(item => 
+        item.id === id ? { ...item, quantity: cartItem.stock } : item
+      );
+      setCartItems(updatedItems);
+      return;
+    }
     
     const updatedItems = cartItems.map(item => 
-      item.id === id ? { ...item, quantity: parseInt(quantity) } : item
+      item.id === id ? { ...item, quantity: newQuantity } : item
     );
     
     setCartItems(updatedItems);
@@ -125,7 +210,7 @@ function Sales() {
   };
   
   // Handle save sale
-  const handleSaveSale = () => {
+  const handleSaveSale = async () => {
     if (cartItems.length === 0) {
       showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
       return;
@@ -137,21 +222,38 @@ function Sales() {
       return;
     }
     
-    // Here you would typically save the sale to your backend
-    console.log('Saving sale:', {
-      customer: selectedCustomer,
-      items: cartItems,
-      total: cartTotal,
-      amountPaid: paid,
-      change: changeAmount,
-      date: new Date()
-    });
-    
-    showAlert('ບັນທຶກການຂາຍສຳເລັດ', 'success');
-    // Clear cart and payment info after successful save
-    setCartItems([]);
-    setAmountPaid('');
-    setChangeAmount(0);
+    try {
+      setLoading(true);
+      
+      // Create the sale data to send to API
+      const saleData = {
+        cus_id: selectedCustomer?.cus_id || 1,
+        emp_id: currentUser?.emp_id || 1,
+        subtotal: cartTotal,
+        pay: paid,
+        money_change: changeAmount,
+        products: cartItems.map(item => ({
+          proid: item.id,
+          qty: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        }))
+      };
+      
+      // Call the API
+      const result = await createSale(saleData);
+      
+      // Clear cart and payment info after successful save
+      setCartItems([]);
+      setAmountPaid('');
+      setChangeAmount(0);
+      showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
+    } catch (error) {
+      console.error('Error saving sale:', error);
+      showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
   
   // Handle print receipt
@@ -190,9 +292,45 @@ function Sales() {
 
   return (
     <Layout title="ຂາຍສິນຄ້າ">
+      {/* Loading indicator */}
+      {loading && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 9999
+          }}
+        >
+          <CircularProgress color="primary" size={60} />
+        </Box>
+      )}
+      
+      <Snackbar 
+        open={alertOpen} 
+        autoHideDuration={6000} 
+        onClose={handleAlertClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleAlertClose} 
+          severity={alertSeverity} 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {alertMessage}
+        </Alert>
+      </Snackbar>
+      
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2 }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
-          ສິນຄ້າ IN STOCK
+          ສິນຄ້າໃນສາງ
         </Typography>
       </Box>
 
@@ -221,31 +359,40 @@ function Sales() {
                   <TableRow>
                     <TableCell align="center">ລະຫັດ</TableCell>
                     <TableCell align="center">ຊື່</TableCell>
-                    <TableCell align="center">ລຸ້ນ</TableCell>
-                    <TableCell align="center">ໄລເບີ</TableCell>
+                    <TableCell align="center">ລາຄາ</TableCell>
+                    <TableCell align="center">ຄົງເຫຼືອ</TableCell>
                     <TableCell align="center"></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id} hover>
-                      <TableCell align="center">{product.code}</TableCell>
-                      <TableCell align="center">{product.name}</TableCell>
-                      <TableCell align="center">-</TableCell>
-                      <TableCell align="center">-</TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          color="error"
-                          onClick={() => addToCart(product)}
-                          sx={{ fontSize: '0.7rem', py: 0.5 }}
-                        >
-                          ເລືອກ
-                        </Button>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <TableRow key={product.proid} hover>
+                        <TableCell align="center">{product.proid}</TableCell>
+                        <TableCell align="center">{product.ProductName}</TableCell>
+                        <TableCell align="center">{formatNumber(product.retail_price)}</TableCell>
+                        <TableCell align="center">{product.qty}</TableCell>
+                        <TableCell align="center">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            onClick={() => addToCart(product)}
+                            sx={{ fontSize: '0.7rem', py: 0.5 }}
+                            disabled={product.qty <= 0}
+                          >
+                            ເລືອກ
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        {searchTerm ? 'ບໍ່ພົບສິນຄ້າ' : 'ກຳລັງໂຫຼດຂໍ້ມູນ...'}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -259,7 +406,7 @@ function Sales() {
               <Typography variant="h6" fontWeight="bold">
                 ລາຍການສັ່ງຊື້
                 <Box component="span" sx={{ ml: 2, color: 'text.secondary' }}>
-                  {selectedCustomer}
+                  {selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}` : 'ລູກຄ້າທົ່ວໄປ'}
                 </Box>
               </Typography>
               <Button 
@@ -286,52 +433,60 @@ function Sales() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {cartItems.map((item, index) => (
-                    <TableRow 
-                      key={item.id} 
-                      sx={{ 
-                        "&:nth-of-type(odd)": { 
-                          bgcolor: 'action.hover' 
-                        } 
-                      }}
-                    >
-                      <TableCell align="center">{index + 1}</TableCell>
-                      <TableCell align="center">{item.name}</TableCell>
-                      <TableCell align="center">
-                        {formatNumber(item.price)}
-                      </TableCell>
-                      <TableCell align="center" width={80}>
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={item.quantity}
-                          onChange={(e) => updateQuantity(item.id, e.target.value)}
-                          sx={{ 
-                            width: 60,
-                            '& input': { 
-                              textAlign: 'center',
-                              p: 1
-                            }
-                          }}
-                          inputProps={{ min: 1 }}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        {formatNumber(item.price * item.quantity)}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          color="error"
-                          onClick={() => removeFromCart(item.id)}
-                          sx={{ fontSize: '0.7rem', py: 0.5 }}
-                        >
-                          ລຶບ
-                        </Button>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                      <TableRow 
+                        key={item.id} 
+                        sx={{ 
+                          "&:nth-of-type(odd)": { 
+                            bgcolor: 'action.hover' 
+                          } 
+                        }}
+                      >
+                        <TableCell align="center">{index + 1}</TableCell>
+                        <TableCell align="center">{item.name}</TableCell>
+                        <TableCell align="center">
+                          {formatNumber(item.price)}
+                        </TableCell>
+                        <TableCell align="center" width={80}>
+                          <TextField
+                            type="number"
+                            size="small"
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(item.id, e.target.value)}
+                            sx={{ 
+                              width: 60,
+                              '& input': { 
+                                textAlign: 'center',
+                                p: 1
+                              }
+                            }}
+                            inputProps={{ min: 1, max: item.stock }}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          {formatNumber(item.price * item.quantity)}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            onClick={() => removeFromCart(item.id)}
+                            sx={{ fontSize: '0.7rem', py: 0.5 }}
+                          >
+                            ລຶບ
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        ບໍ່ມີສິນຄ້າໃນກະຕ່າ
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -364,11 +519,6 @@ function Sales() {
                     onChange={handleAmountPaidChange}
                     InputProps={{
                       endAdornment: <InputAdornment position="end">ກີບ</InputAdornment>,
-                      startAdornment: (
-                        <InputAdornment position="start">
-                         
-                        </InputAdornment>
-                      ),
                     }}
                   />
                 </Grid>
@@ -398,16 +548,16 @@ function Sales() {
                 color="success"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveSale}
-                disabled={cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                disabled={loading || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
               >
-                ບັນທຶກ
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'ບັນທຶກ'}
               </Button>
               <Button
                 variant="contained"
                 color="primary"
                 startIcon={<PrintIcon />}
                 onClick={handlePrintReceipt}
-                disabled={cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                disabled={loading || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
               >
                 ພິມໃບບິນ
               </Button>
@@ -421,7 +571,7 @@ function Sales() {
         open={receiptOpen}
         onClose={() => setReceiptOpen(false)}
         items={cartItems}
-        customer={selectedCustomer}
+        customer={selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}` : 'ລູກຄ້າທົ່ວໄປ'}
         totalAmount={cartTotal}
         amountPaid={parseFloat(amountPaid.replace(/,/g, '')) || 0}
         changeAmount={changeAmount}
@@ -460,15 +610,15 @@ function Sales() {
                 <TableRow>
                   <TableCell>ລະຫັດ</TableCell>
                   <TableCell>ຊື່</TableCell>
+                  <TableCell>ນາມສະກຸນ</TableCell>
                   <TableCell>ເບີໂທ</TableCell>
-                  <TableCell>ທີ່ຢູ່</TableCell>
                   <TableCell></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Sample customer data - in a real app, this would be filtered based on customerSearch */}
+                {/* Default customer option */}
                 <TableRow hover>
-                  <TableCell>C001</TableCell>
+                  <TableCell>0</TableCell>
                   <TableCell>ລູກຄ້າທົ່ວໄປ</TableCell>
                   <TableCell>-</TableCell>
                   <TableCell>-</TableCell>
@@ -476,27 +626,39 @@ function Sales() {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => handleSelectCustomer('ລູກຄ້າທົ່ວໄປ')}
+                      onClick={() => handleSelectCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' })}
                     >
                       ເລືອກ
                     </Button>
                   </TableCell>
                 </TableRow>
-                <TableRow hover>
-                  <TableCell>C002</TableCell>
-                  <TableCell>@customer</TableCell>
-                  <TableCell>02012345678</TableCell>
-                  <TableCell>ນະຄອນຫຼວງວຽງຈັນ</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleSelectCustomer('@customer')}
-                    >
-                      ເລືອກ
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                
+                {/* Filtered customer list */}
+                {filteredCustomers.map((customer) => (
+                  <TableRow key={customer.cus_id} hover>
+                    <TableCell>{customer.cus_id}</TableCell>
+                    <TableCell>{customer.cus_name}</TableCell>
+                    <TableCell>{customer.cus_lname}</TableCell>
+                    <TableCell>{customer.tel}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => handleSelectCustomer(customer)}
+                      >
+                        ເລືອກ
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                
+                {filteredCustomers.length === 0 && customerSearch && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      ບໍ່ພົບຂໍ້ມູນລູກຄ້າ
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -505,23 +667,6 @@ function Sales() {
           <Button onClick={() => setCustomerDialogOpen(false)}>ຍົກເລີກ</Button>
         </DialogActions>
       </Dialog>
-      
-      {/* Alert Snackbar */}
-      <Snackbar 
-        open={alertOpen} 
-        autoHideDuration={6000} 
-        onClose={handleAlertClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={handleAlertClose} 
-          severity={alertSeverity} 
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {alertMessage}
-        </Alert>
-      </Snackbar>
     </Layout>
   );
 }

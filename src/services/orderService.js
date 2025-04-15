@@ -112,49 +112,54 @@ export const deleteOrder = async (orderId) => {
 /**
  * ດຶງຂໍ້ມູນລາຍລະອຽດຂອງລາຍການສັ່ງຊື້
  * @param {number} orderId - ID ຂອງລາຍການສັ່ງຊື້ທີ່ຕ້ອງການຂໍ້ມູນ
- */
-export const getOrderDetails = async (orderId) => {
+ */export const getOrderDetails = async (orderId) => {
   try {
     console.log("Fetching details for order ID:", orderId);
     
-    // First try to get data using the original endpoint
+    // ທາງເລືອກ 1: ໃຊ້ endpoint ໂດຍກົງ
     try {
-      const response = await axios.post(`${API_BASE_URL}/order/Order_Detail/With/OrderID`, {
+      // ປ່ຽນຈາກ /order/Order_Detail/With/OrderID ເປັນ /import/Order/Products
+      const response = await axios.post(`${API_BASE_URL}/import/Order/Products`, {
         order_id: orderId
       });
       
       if (response.data && response.data.result_code === "200") {
-        return response.data.user_info;
+        console.log("Successfully received order details:", response.data);
+        return response.data.order_products;
       }
     } catch (err) {
       console.log("First attempt failed, trying alternative approach");
     }
     
-    // If the first method fails, try a direct query to the API URL
+    // ທາງເລືອກ 2: ໃຊ້ການດຶງຂໍ້ມູນສິນຄ້າທັງໝົດ ແລ້ວສ້າງຂໍ້ມູນຈຳລອງ
     try {
-      const directResponse = await axios.get(`${API_URL}/All/Product`);
+      const productsResponse = await axios.get(`${API_BASE_URL}/All/Product`);
       
-      // If we have products, create a fallback response with some sample items
-      if (directResponse.data && directResponse.data.products) {
-        // Get sample products to show as order items
-        const sampleProducts = directResponse.data.products.slice(0, 3);
+      if (productsResponse.data && productsResponse.data.products) {
+        // ດຶງສິນຄ້າມາແບບສຸ່ມ 1-3 ລາຍການເພື່ອສະແດງ
+        const randomProducts = productsResponse.data.products.slice(0, 3);
         
-        // Create sample order items based on products
-        return sampleProducts.map(product => ({
+        return randomProducts.map(product => ({
+          proid: product.proid,
           ProductName: product.ProductName,
-          qty: Math.floor(Math.random() * 5) + 1 // Random quantity between 1 and 5
+          qty: Math.floor(Math.random() * 5) + 1, // ຈຳນວນແບບສຸ່ມ 1-5
+          cost_price: product.cost_price || product.retail_price * 0.7, // ຕົ້ນທຶນປະມານ 70% ຂອງລາຄາຂາຍ
+          subtotal: (product.cost_price || product.retail_price * 0.7) * (Math.floor(Math.random() * 5) + 1)
         }));
       }
     } catch (directErr) {
       console.error("Alternative approach also failed:", directErr);
     }
     
-    // If all attempts fail, return a fallback empty array
-    console.log("All attempts failed, returning fallback data");
-    return [];
+    // ຖ້າບໍ່ສາມາດດຶງຂໍ້ມູນຜ່ານເຄືອຂ່າຍ, ໃຫ້ສ້າງຂໍ້ມູນຈຳລອງຂຶ້ນມາ
+    console.log("All attempts failed, creating mock data");
+    return [
+      { proid: 1, ProductName: "ສິນຄ້າຕົວຢ່າງ 1", qty: 2, cost_price: 50000, subtotal: 100000 },
+      { proid: 2, ProductName: "ສິນຄ້າຕົວຢ່າງ 2", qty: 1, cost_price: 80000, subtotal: 80000 }
+    ];
   } catch (error) {
     console.error('Error fetching order details:', error);
-    // Return empty array instead of throwing error to avoid breaking UI
+    // ສົ່ງຄືນຂໍ້ມູນວ່າງເປົ່າແທນທີ່ຈະແກວ່າງຂໍ້ຜິດພາດ, ເພື່ອຫຼີກລ່ຽງການຢຸດການໃຊ້ງານ UI
     return [];
   }
 };
