@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // Add this line
+import API_BASE_URL from '../config/api';
 import {
   Box,
   Paper,
@@ -25,23 +28,27 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  Snackbar
+  Snackbar,
+  Link
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Info as InfoIcon,
   CheckCircle as CheckCircleIcon,
   RemoveRedEye as ViewIcon,
   Sync as SyncIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  ErrorOutline as ErrorIcon,
+  ArrowForward as ArrowForwardIcon,
+  ImportExport as ImportExportIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { getPendingOrders, createImport, getAllImports, getImportDetails } from '../services/importService';
+import { getPendingOrders, createImport, getAllImports, getImportDetails, testServerConnection } from '../services/importService';
 import { getOrderDetails } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
 
-
 function Import() {
+  const navigate = useNavigate();
+  
   // States for managing imports
   const [imports, setImports] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -49,12 +56,15 @@ function Import() {
   const [orderDetails, setOrderDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState(null);
   
   // Dialog states
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+  const [openErrorDialog, setOpenErrorDialog] = useState(false);
   const [selectedImport, setSelectedImport] = useState(null);
   const [importDetails, setImportDetails] = useState([]);
+  const [errorDetails, setErrorDetails] = useState({title: '', message: '', suggestion: ''});
   
   // Form states
   const [importData, setImportData] = useState({
@@ -75,9 +85,61 @@ function Import() {
   
   // Fetch all imports and pending orders on component mount
   useEffect(() => {
+    testConnection();
     fetchImports();
     fetchPendingOrders();
   }, []);
+  
+  // ທົດສອບໂຫຼດຂໍ້ມູນປະຫວັດການນຳເຂົ້າ
+const testImportHistory = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/import/All/Import`);
+    console.log("ຜົນການທົດສອບຂໍ້ມູນປະຫວັດການນຳເຂົ້າ:", response.data);
+    return true;
+  } catch (err) {
+    console.error("ບໍ່ສາມາດດຶງຂໍ້ມູນປະຫວັດການນຳເຂົ້າໄດ້:", err);
+    return false;
+  }
+}
+// ຟັງຊັນຈຳລອງການບັນທຶກການນຳເຂົ້າ
+const simulateImportRecord = async (importData) => {
+  try {
+    // ສ້າງຂໍ້ມູລການນຳເຂົ້າຈຳລອງ
+    const importRecord = {
+      emp_id: importData.emp_id,
+      order_id: importData.order_id,
+      imp_date: importData.imp_date,
+      status: 'Completed',
+      total_price: calculateTotalPrice()
+    };
+    
+    // ບັນທຶກຂໍ້ມູລການນຳເຂົ້າ
+    const response = await axios.post(`${API_BASE_URL}/import/Create/Import`, importRecord);
+    console.log("ຜົນການບັນທຶກການນຳເຂົ້າຈຳລອງ:", response.data);
+    return true;
+  } catch (err) {
+    console.error("ບໍ່ສາມາດບັນທຶກການນຳເຂົ້າຈຳລອງໄດ້:", err);
+    return false;
+  }
+}
+  // Test server connection
+  const testConnection = async () => {
+    try {
+      const result = await testServerConnection();
+      setConnectionStatus(result);
+      
+      if (!result.success) {
+        setErrorDetails({
+          title: 'ການເຊື່ອມຕໍ່ກັບເຊີບເວີມີບັນຫາ',
+          message: result.error || 'ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບເຊີບເວີໄດ້. ກະລຸນາກວດສອບການຕັ້ງຄ່າເຊີບເວີ.',
+          suggestion: 'ກວດສອບວ່າ backend server ກຳລັງເຮັດວຽກຢູ່ຫຼືບໍ່ ແລະ ລອງໂຫຼດຄືນໃໝ່.'
+        });
+        setOpenErrorDialog(true);
+      }
+    } catch (err) {
+      console.error('Error testing connection:', err);
+    }
+  };
   
   // Fetch list of imports
   const fetchImports = async () => {
@@ -153,13 +215,11 @@ function Import() {
       setLoading(true);
       setSelectedImport(importItem);
       
-      const details = await getImportDetails(importItem.imp_id);
-      setImportDetails(details || []);
-      
-      setOpenDetailsDialog(true);
+      // Navigate to detail page instead of opening dialog
+      navigate(`/import-detail?id=${importItem.imp_id}`);
     } catch (err) {
-      console.error('Error fetching import details:', err);
-      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການນຳເຂົ້າ', 'error');
+      console.error('Error navigating to import details:', err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການເຂົ້າເບິ່ງລາຍລະອຽດການນຳເຂົ້າ', 'error');
     } finally {
       setLoading(false);
     }
@@ -182,7 +242,7 @@ function Import() {
     });
   };
   
-  // Handle quantity change for an item - เพิ่มฟังก์ชั่นนี้
+  // Handle quantity change for an item
   const handleQuantityChange = (index, value) => {
     const numValue = parseInt(value) || 0;
     if (numValue < 0) return; // ບໍ່ຮັບຈຳນວນຕິດລົບ
@@ -206,50 +266,119 @@ function Import() {
     return importData.items.reduce((total, item) => total + (item.subtotal || 0), 0);
   };
   
-  // Handle submit import
-  const handleSubmitImport = async () => {
-    // Validate if all items have cost prices
-    const invalidItems = importData.items.filter(item => !item.cost_price);
+
+
+// Handle submit import
+// Handle submit import
+const handleSubmitImport = async () => {
+  // Validate if all items have cost prices
+  const invalidItems = importData.items.filter(item => !item.cost_price);
+  
+  if (invalidItems.length > 0) {
+    showSnackbar('ກະລຸນາລະບຸລາຄາຕົ້ນທຶນຂອງທຸກລາຍການ', 'error');
+    return;
+  }
+  
+  try {
+    setLoading(true);
     
-    if (invalidItems.length > 0) {
-      showSnackbar('ກະລຸນາລະບຸລາຄາຕົ້ນທຶນຂອງທຸກລາຍການ', 'error');
-      return;
-    }
+    const importPayload = {
+      ...importData,
+      total_price: calculateTotalPrice(),
+      imp_date: importData.imp_date || new Date().toISOString().split('T')[0]
+    };
     
-    try {
-      setLoading(true);
-      
-      const importPayload = {
-        ...importData,
-        total_price: calculateTotalPrice(),
-        imp_date: importData.imp_date || new Date().toISOString().split('T')[0]
-      };
-      
-      const result = await createImport(importPayload);
-      
-      if (result) {
-        setOpenImportDialog(false);
-        showSnackbar('ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດ', 'success');
+    // ວິທີການອັບເດດສິນຄ້າໂດຍກົງ
+    let successCount = 0;
+    const totalItems = importPayload.items.length;
+    
+    // ວົນລູບຜ່ານແຕ່ລະລາຍການສິນຄ້າແລ້ວອັບເດດຈໍານວນເຂົ້າສາງ
+    for (const item of importPayload.items) {
+      try {
+        // ດຶງຂໍ້ມູນສິນຄ້າປັດຈຸບັນ
+        const productResponse = await axios.get(`${API_BASE_URL}/All/Product`);
         
-        // Refresh data
-        await Promise.all([fetchImports(), fetchPendingOrders()]);
-        
-        // Reset states
-        setSelectedOrder(null);
-        setOrderDetails([]);
-        setImportData({
-          imp_date: new Date().toISOString().split('T')[0],
-          status: 'Completed',
-          items: []
-        });
+        if (productResponse.data && productResponse.data.products) {
+          // ຊອກຫາສິນຄ້າໃນລາຍການທັງໝົດ
+          const product = productResponse.data.products.find(p => p.proid === item.proid);
+          
+          if (product) {
+            // ຄຳນວນຈຳນວນສິນຄ້າໃໝ່ (ເພີ່ມຈາກຈຳນວນທີ່ມີຢູ່ແລ້ວ)
+            const currentQty = parseInt(product.qty) || 0;
+            const newQty = currentQty + parseInt(item.qty);
+            
+            // ອັບເດດສິນຄ້າ
+            await axios.put(`${API_BASE_URL}/Update/Product`, {
+              proid: item.proid,
+              qty: newQty
+            });
+            
+            successCount++;
+          }
+        }
+      } catch (updateError) {
+        console.error(`ບໍ່ສາມາດອັບເດດສິນຄ້າລະຫັດ ${item.proid} ໄດ້:`, updateError.message);
       }
-    } catch (err) {
-      console.error('Error creating import:', err);
-      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳເຂົ້າສິນຄ້າ', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+    
+    // ຖ້າອັບເດດໄດ້ຢ່າງໜ້ອຍ 1 ລາຍການ, ຖືວ່າສຳເລັດບາງສ່ວນ
+    if (successCount > 0) {
+      // ລຶບລາຍການສັ່ງຊື້ອອກຈາກຖານຂໍ້ມູນ
+      try {
+        await axios.delete(`${API_BASE_URL}/order/Delete/Order`, {
+          data: { order_id: selectedOrder.order_id }
+        });
+        console.log(`ລຶບລາຍການສັ່ງຊື້ເລກທີ ${selectedOrder.order_id} ສຳເລັດແລ້ວ`);
+      } catch (deleteError) {
+        console.error(`ບໍ່ສາມາດລຶບລາຍການສັ່ງຊື້ເລກທີ ${selectedOrder.order_id} ໄດ້:`, deleteError.message);
+      }
+      
+      // ປິດກ່ອງໂຕ້ຕອບທັນທີຫຼັງຈາກສຳເລັດ
+      setOpenImportDialog(false);
+      
+      if (successCount === totalItems) {
+        showSnackbar('ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດ', 'success');
+      } else {
+        showSnackbar(`ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດບາງສ່ວນ (${successCount}/${totalItems} ລາຍການ)`, 'warning');
+      }
+      
+      // ລຶບລາຍການໃນໜ້າຈໍເຊັ່ນກັນ
+      const updatedPendingOrders = pendingOrders.filter(order => 
+        order.order_id !== selectedOrder.order_id
+      );
+      setPendingOrders(updatedPendingOrders);
+      
+      // ຣີເຊັດສະຖານະ
+      setSelectedOrder(null);
+      setOrderDetails([]);
+      setImportData({
+        imp_date: new Date().toISOString().split('T')[0],
+        status: 'Completed',
+        items: []
+      });
+      
+      // ໃຊ້ການໂຫຼດໜ້າຄືນໃໝ່ທັນທີເພື່ອໃຫ້ເຫັນຂໍ້ມູນທີ່ຖືກຕ້ອງ
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      // ຖ້າບໍ່ມີລາຍການໃດສຳເລັດເລີຍ
+      throw new Error('ບໍ່ສາມາດອັບເດດສິນຄ້າໄດ້ເລີຍ');
+    }
+  } catch (err) {
+    console.error('Error creating import:', err);
+    
+    // ສະແດງກ່ອງແຈ້ງເຕືອນຂໍ້ຜິດພາດ
+    setErrorDetails({
+      title: 'ບໍ່ສາມາດບັນທຶກການນຳເຂົ້າສິນຄ້າໄດ້',
+      message: err.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳເຂົ້າສິນຄ້າ',
+      suggestion: 'ກະລຸນາກວດສອບການເຊື່ອມຕໍ່ເຊີບເວີ ຫຼື ລາຍລະອຽດຂອງສິນຄ້າ ແລ້ວລອງໃໝ່ອີກຄັ້ງ.'
+    });
+    setOpenErrorDialog(true);
+  } finally {
+    setLoading(false);
+  }
+};
   
   // Handle closing the import dialog
   const handleCloseImportDialog = () => {
@@ -263,6 +392,11 @@ function Import() {
     setOpenDetailsDialog(false);
     setSelectedImport(null);
     setImportDetails([]);
+  };
+  
+  // Handle closing the error dialog
+  const handleCloseErrorDialog = () => {
+    setOpenErrorDialog(false);
   };
   
   // Show snackbar
@@ -320,6 +454,21 @@ function Import() {
         </Alert>
       </Snackbar>
       
+      {/* Connection status warning if needed */}
+      {connectionStatus && !connectionStatus.success && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={testConnection}>
+              ລອງອີກຄັ້ງ
+            </Button>
+          }
+        >
+          ການເຊື່ອມຕໍ່ເຊີບເວີມີບັນຫາ. ບາງຄຸນລັກສະນະອາດບໍ່ສາມາດໃຊ້ງານໄດ້.
+        </Alert>
+      )}
+      
       {/* Pending Orders Section */}
       <Box sx={{ mb: 4 }}>
         <Paper sx={{ p: 2 }}>
@@ -367,7 +516,7 @@ function Import() {
                           variant="contained"
                           color="primary"
                           size="small"
-                          startIcon={<AddIcon />}
+                          startIcon={<ImportExportIcon />}
                           onClick={() => handleSelectOrder(order)}
                           disabled={loading}
                         >
@@ -444,15 +593,15 @@ function Import() {
                         </Box>
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="ເບິ່ງລາຍລະອຽດ">
-                          <IconButton
-                            color="info"
-                            size="small"
-                            onClick={() => handleViewImportDetails(importItem)}
-                          >
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <Button
+                          variant="outlined"
+                          color="info"
+                          size="small"
+                          endIcon={<ArrowForwardIcon />}
+                          onClick={() => handleViewImportDetails(importItem)}
+                        >
+                          ເບິ່ງ
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -584,103 +733,47 @@ function Import() {
         </DialogActions>
       </Dialog>
       
-      {/* Import Details Dialog */}
+      {/* Error Dialog */}
       <Dialog
-        open={openDetailsDialog}
-        onClose={handleCloseDetailsDialog}
+        open={openErrorDialog}
+        onClose={handleCloseErrorDialog}
         fullWidth
-        maxWidth="md"
+        maxWidth="sm"
       >
-        <DialogTitle>
-          ລາຍລະອຽດການນຳເຂົ້າສິນຄ້າ - ລະຫັດ: {selectedImport?.imp_id}
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDetailsDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ErrorIcon sx={{ mr: 1 }} />
+            {errorDetails.title || 'ເກີດຂໍ້ຜິດພາດ'}
+          </Box>
         </DialogTitle>
         <DialogContent>
-          {selectedImport && (
-            <Grid container spacing={2} sx={{ mt: 1, mb: 3 }}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body1">
-                  <strong>ວັນທີ່ນຳເຂົ້າ:</strong> {formatDate(selectedImport.imp_date)}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body1" paragraph>
+              {errorDetails.message}
+            </Typography>
+            
+            {errorDetails.suggestion && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  {errorDetails.suggestion}
                 </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body1">
-                  <strong>ພະນັກງານ:</strong> {selectedImport.emp_name}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body1">
-                  <strong>ລະຫັດການສັ່ງຊື້:</strong> {selectedImport.order_id}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body1">
-                  <strong>ສະຖານະ:</strong> {selectedImport.status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ'}
-                </Typography>
-              </Grid>
-            </Grid>
-          )}
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            ລາຍການສິນຄ້າທີ່ນຳເຂົ້າ
-          </Typography>
-          
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : importDetails.length === 0 ? (
-            <Alert severity="info">ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດການນຳເຂົ້າ</Alert>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ລຳດັບ</TableCell>
-                    <TableCell>ຊື່ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="right">ລາຄາຕົ້ນທຶນ</TableCell>
-                    <TableCell align="right">ເປັນເງິນ</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {importDetails.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{item.ProductName}</TableCell>
-                      <TableCell align="center">{item.qty}</TableCell>
-                      <TableCell align="right">{formatNumber(item.cost_price)} ກີບ</TableCell>
-                      <TableCell align="right">{formatNumber(item.subtotal)} ກີບ</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={4} align="right" sx={{ fontWeight: 'bold' }}>
-                      ລາຄາລວມ:
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                      {formatNumber(selectedImport?.total_price)} ກີບ
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+              </Alert>
+            )}
+            
+            <Divider sx={{ my: 2 }} />
+            
+            <Typography variant="body2" color="text.secondary">
+              ຖ້າຂໍ້ຜິດພາດນີ້ຍັງສືບຕໍ່, ກະລຸນາຕິດຕໍ່ແອັດມິນລະບົບ ຫຼື ກວດສອບການຕັ້ງຄ່າເຊື່ອມຕໍ່ API ຂອງທ່ານໃນໄຟລ໌ .env
+            </Typography>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button variant="contained" onClick={handleCloseDetailsDialog}>
-            ປິດ
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleCloseErrorDialog}
+          >
+            ຕົກລົງ
           </Button>
         </DialogActions>
       </Dialog>
