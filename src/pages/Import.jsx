@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Add this line
+import axios from 'axios';
 import API_BASE_URL from '../config/api';
 import {
   Box,
@@ -28,8 +28,7 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  Snackbar,
-  Link
+  Snackbar
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,7 +41,7 @@ import {
   ImportExport as ImportExportIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { getPendingOrders, createImport, getAllImports, getImportDetails, testServerConnection } from '../services/importService';
+import { getPendingOrders, createImport, getAllImports, testServerConnection } from '../services/importService';
 import { getOrderDetails } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
 
@@ -60,10 +59,7 @@ function Import() {
   
   // Dialog states
   const [openImportDialog, setOpenImportDialog] = useState(false);
-  const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [openErrorDialog, setOpenErrorDialog] = useState(false);
-  const [selectedImport, setSelectedImport] = useState(null);
-  const [importDetails, setImportDetails] = useState([]);
   const [errorDetails, setErrorDetails] = useState({title: '', message: '', suggestion: ''});
   
   // Form states
@@ -90,38 +86,6 @@ function Import() {
     fetchPendingOrders();
   }, []);
   
-  // ທົດສອບໂຫຼດຂໍ້ມູນປະຫວັດການນຳເຂົ້າ
-const testImportHistory = async () => {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/import/All/Import`);
-    console.log("ຜົນການທົດສອບຂໍ້ມູນປະຫວັດການນຳເຂົ້າ:", response.data);
-    return true;
-  } catch (err) {
-    console.error("ບໍ່ສາມາດດຶງຂໍ້ມູນປະຫວັດການນຳເຂົ້າໄດ້:", err);
-    return false;
-  }
-}
-// ຟັງຊັນຈຳລອງການບັນທຶກການນຳເຂົ້າ
-const simulateImportRecord = async (importData) => {
-  try {
-    // ສ້າງຂໍ້ມູລການນຳເຂົ້າຈຳລອງ
-    const importRecord = {
-      emp_id: importData.emp_id,
-      order_id: importData.order_id,
-      imp_date: importData.imp_date,
-      status: 'Completed',
-      total_price: calculateTotalPrice()
-    };
-    
-    // ບັນທຶກຂໍ້ມູລການນຳເຂົ້າ
-    const response = await axios.post(`${API_BASE_URL}/import/Create/Import`, importRecord);
-    console.log("ຜົນການບັນທຶກການນຳເຂົ້າຈຳລອງ:", response.data);
-    return true;
-  } catch (err) {
-    console.error("ບໍ່ສາມາດບັນທຶກການນຳເຂົ້າຈຳລອງໄດ້:", err);
-    return false;
-  }
-}
   // Test server connection
   const testConnection = async () => {
     try {
@@ -183,7 +147,7 @@ const simulateImportRecord = async (importData) => {
         // Transform order details into import items
         const importItems = details.map(item => ({
           proid: item.proid,
-          name: item.ProductName,
+          name: item.ProductName || item.name,
           qty: item.qty,
           cost_price: item.cost_price || 0, // ອາດຈະມີລາຄາຕົ້ນທຶນຢູ່ແລ້ວ
           subtotal: (item.cost_price || 0) * item.qty
@@ -213,7 +177,6 @@ const simulateImportRecord = async (importData) => {
   const handleViewImportDetails = async (importItem) => {
     try {
       setLoading(true);
-      setSelectedImport(importItem);
       
       // Navigate to detail page instead of opening dialog
       navigate(`/import-detail?id=${importItem.imp_id}`);
@@ -266,12 +229,41 @@ const simulateImportRecord = async (importData) => {
     return importData.items.reduce((total, item) => total + (item.subtotal || 0), 0);
   };
   
+// ຟັງຊັນ handleSubmitImport ທີ່ປັບປຸງແລ້ວ
+// ຟັງຊັນບັນທຶກປະຫວັດການນຳເຂົ້າລົງໃນ localStorage
+const saveImportHistory = (importData) => {
+  try {
+    // ດຶງປະຫວັດທີ່ມີຢູ່ແລ້ວ
+    const existingHistory = JSON.parse(localStorage.getItem('importHistory') || '[]');
+    
+    // ສ້າງຂໍ້ມູນປະຫວັດໃໝ່
+    const newImport = {
+      imp_id: Date.now(), // ໃຊ້ timestamp ເປັນ ID
+      imp_date: importData.imp_date,
+      order_id: importData.order_id,
+      emp_id: importData.emp_id,
+      emp_name: currentUser?.emp_name || 'Admin',
+      status: importData.status,
+      total_price: calculateTotalPrice(),
+      items: [...importData.items]
+    };
+    
+    // ເພີ່ມປະຫວັດໃໝ່
+    existingHistory.unshift(newImport);
+    
+    // ບັນທຶກກັບຄືນໄປຍັງ localStorage
+    localStorage.setItem('importHistory', JSON.stringify(existingHistory));
+    
+    return newImport;
+  } catch (error) {
+    console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກປະຫວັດ:', error);
+    return null;
+  }
+};
 
-
-// Handle submit import
-// Handle submit import
+// ຟັງຊັນ handleSubmitImport ທີ່ປັບປຸງແລ້ວ
 const handleSubmitImport = async () => {
-  // Validate if all items have cost prices
+  // ກວດສອບຂໍ້ມູນກ່ອນບັນທຶກ
   const invalidItems = importData.items.filter(item => !item.cost_price);
   
   if (invalidItems.length > 0) {
@@ -282,96 +274,140 @@ const handleSubmitImport = async () => {
   try {
     setLoading(true);
     
+    // ສ້າງຂໍ້ມູນສຳລັບການບັນທຶກ
     const importPayload = {
-      ...importData,
+      emp_id: importData.emp_id || currentUser?.emp_id || 1,
+      order_id: importData.order_id,
+      imp_date: importData.imp_date || new Date().toISOString().split('T')[0],
+      status: importData.status || 'Completed',
       total_price: calculateTotalPrice(),
-      imp_date: importData.imp_date || new Date().toISOString().split('T')[0]
+      items: importData.items.map(item => ({
+        proid: item.proid,
+        qty: parseInt(item.qty),
+        cost_price: parseFloat(item.cost_price)
+      }))
     };
     
-    // ວິທີການອັບເດດສິນຄ້າໂດຍກົງ
-    let successCount = 0;
-    const totalItems = importPayload.items.length;
+    console.log('ກຳລັງສົ່ງຂໍ້ມູນການນຳເຂົ້າ:', JSON.stringify(importPayload));
     
-    // ວົນລູບຜ່ານແຕ່ລະລາຍການສິນຄ້າແລ້ວອັບເດດຈໍານວນເຂົ້າສາງ
-    for (const item of importPayload.items) {
-      try {
-        // ດຶງຂໍ້ມູນສິນຄ້າປັດຈຸບັນ
-        const productResponse = await axios.get(`${API_BASE_URL}/All/Product`);
-        
-        if (productResponse.data && productResponse.data.products) {
-          // ຊອກຫາສິນຄ້າໃນລາຍການທັງໝົດ
-          const product = productResponse.data.products.find(p => p.proid === item.proid);
-          
-          if (product) {
-            // ຄຳນວນຈຳນວນສິນຄ້າໃໝ່ (ເພີ່ມຈາກຈຳນວນທີ່ມີຢູ່ແລ້ວ)
-            const currentQty = parseInt(product.qty) || 0;
-            const newQty = currentQty + parseInt(item.qty);
-            
-            // ອັບເດດສິນຄ້າ
-            await axios.put(`${API_BASE_URL}/Update/Product`, {
-              proid: item.proid,
-              qty: newQty
-            });
-            
-            successCount++;
-          }
+    // ວິທີທີ 1: ລອງບັນທຶກຜ່ານ API
+    let apiSuccess = false;
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/import/Create/Import`, 
+        importPayload, 
+        { 
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000 // 10 ວິນາທີ
         }
-      } catch (updateError) {
-        console.error(`ບໍ່ສາມາດອັບເດດສິນຄ້າລະຫັດ ${item.proid} ໄດ້:`, updateError.message);
+      );
+      
+      if (response.data && response.data.result_code === "200") {
+        console.log('ບັນທຶກການນຳເຂົ້າສຳເລັດ:', response.data);
+        apiSuccess = true;
       }
+    } catch (apiError) {
+      console.error('ຂໍ້ຜິດພາດຈາກ API:', apiError);
+      if (apiError.response) {
+        console.error('ຄຳຕອບຈາກເຊີບເວີ:', apiError.response.data);
+      }
+      // ບໍ່ throw ຂໍ້ຜິດພາດຕໍ່ ເພື່ອໃຫ້ດຳເນີນການຕາມວິທີທີ 2 ຕໍ່ໄປ
     }
     
-    // ຖ້າອັບເດດໄດ້ຢ່າງໜ້ອຍ 1 ລາຍການ, ຖືວ່າສຳເລັດບາງສ່ວນ
-    if (successCount > 0) {
-      // ລຶບລາຍການສັ່ງຊື້ອອກຈາກຖານຂໍ້ມູນ
+    // ຖ້າວິທີທີ 1 ບໍ່ສຳເລັດ, ໃຊ້ວິທີທີ 2: ອັບເດດສິນຄ້າໂດຍກົງ
+    if (!apiSuccess) {
+      console.log('ໃຊ້ວິທີອັບເດດສິນຄ້າໂດຍກົງ...');
+      
+      let successCount = 0;
+      const totalItems = importData.items.length;
+      
+      // ອັບເດດສິນຄ້າແຕ່ລະລາຍການ
+      for (const item of importData.items) {
+        try {
+          // ດຶງຂໍ້ມູນສິນຄ້າປັດຈຸບັນ
+          const productResponse = await axios.get(`${API_BASE_URL}/All/Product`);
+          
+          if (productResponse.data && productResponse.data.products) {
+            // ຊອກຫາສິນຄ້າດ້ວຍລະຫັດ
+            const product = productResponse.data.products.find(p => p.proid === item.proid);
+            
+            if (product) {
+              // ຄຳນວນຈຳນວນສິນຄ້າໃໝ່
+              const currentQty = parseInt(product.qty) || 0;
+              const newQty = currentQty + parseInt(item.qty);
+              
+              // ອັບເດດຈຳນວນສິນຄ້າໃນຖານຂໍ້ມູນ
+              await axios.put(`${API_BASE_URL}/Update/Product`, {
+                proid: item.proid,
+                qty: newQty
+              });
+              
+              successCount++;
+            }
+          }
+        } catch (updateError) {
+          console.error(`ບໍ່ສາມາດອັບເດດສິນຄ້າລະຫັດ ${item.proid} ໄດ້:`, updateError);
+        }
+      }
+      
+      // ຖ້າບໍ່ສາມາດອັບເດດສິນຄ້າໄດ້ເລີຍ, ສະແດງຂໍ້ຜິດພາດ
+      if (successCount === 0) {
+        throw new Error('ບໍ່ສາມາດອັບເດດສິນຄ້າໄດ້ເລີຍ');
+      }
+      
+      // ບັນທຶກປະຫວັດການນຳເຂົ້າລົງໃນ localStorage
+      const savedImport = saveImportHistory(importPayload);
+      
+      // ພະຍາຍາມລຶບລາຍການສັ່ງຊື້ (ຖ້າມີ API)
       try {
         await axios.delete(`${API_BASE_URL}/order/Delete/Order`, {
           data: { order_id: selectedOrder.order_id }
         });
-        console.log(`ລຶບລາຍການສັ່ງຊື້ເລກທີ ${selectedOrder.order_id} ສຳເລັດແລ້ວ`);
+        console.log(`ລຶບລາຍການສັ່ງຊື້ລະຫັດ ${selectedOrder.order_id} ສຳເລັດ`);
       } catch (deleteError) {
-        console.error(`ບໍ່ສາມາດລຶບລາຍການສັ່ງຊື້ເລກທີ ${selectedOrder.order_id} ໄດ້:`, deleteError.message);
+        console.warn(`ບໍ່ສາມາດລຶບລາຍການສັ່ງຊື້ລະຫັດ ${selectedOrder.order_id} ໄດ້:`, deleteError);
       }
       
-      // ປິດກ່ອງໂຕ້ຕອບທັນທີຫຼັງຈາກສຳເລັດ
+      // ປິດກ່ອງໂຕ້ຕອບ
       setOpenImportDialog(false);
       
+      // ສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນ
       if (successCount === totalItems) {
-        showSnackbar('ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດ', 'success');
+        showSnackbar('ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດແລ້ວ', 'success');
       } else {
         showSnackbar(`ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດບາງສ່ວນ (${successCount}/${totalItems} ລາຍການ)`, 'warning');
       }
-      
-      // ລຶບລາຍການໃນໜ້າຈໍເຊັ່ນກັນ
-      const updatedPendingOrders = pendingOrders.filter(order => 
-        order.order_id !== selectedOrder.order_id
-      );
-      setPendingOrders(updatedPendingOrders);
-      
-      // ຣີເຊັດສະຖານະ
-      setSelectedOrder(null);
-      setOrderDetails([]);
-      setImportData({
-        imp_date: new Date().toISOString().split('T')[0],
-        status: 'Completed',
-        items: []
-      });
-      
-      // ໃຊ້ການໂຫຼດໜ້າຄືນໃໝ່ທັນທີເພື່ອໃຫ້ເຫັນຂໍ້ມູນທີ່ຖືກຕ້ອງ
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } else {
-      // ຖ້າບໍ່ມີລາຍການໃດສຳເລັດເລີຍ
-      throw new Error('ບໍ່ສາມາດອັບເດດສິນຄ້າໄດ້ເລີຍ');
+      // ຖ້າ API ສຳເລັດ, ພຽງແຕ່ປິດກ່ອງໂຕ້ຕອບແລະສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນ
+      setOpenImportDialog(false);
+      showSnackbar('ບັນທຶກການນຳເຂົ້າສິນຄ້າສຳເລັດແລ້ວ', 'success');
     }
-  } catch (err) {
-    console.error('Error creating import:', err);
     
-    // ສະແດງກ່ອງແຈ້ງເຕືອນຂໍ້ຜິດພາດ
+    // ອັບເດດລາຍການລໍຖ້າ
+    const updatedPendingOrders = pendingOrders.filter(order => 
+      order.order_id !== selectedOrder.order_id
+    );
+    setPendingOrders(updatedPendingOrders);
+    
+    // ລີເຊັດຟອມ
+    setSelectedOrder(null);
+    setOrderDetails([]);
+    setImportData({
+      imp_date: new Date().toISOString().split('T')[0],
+      status: 'Completed',
+      items: []
+    });
+    
+    // ໂຫຼດຂໍ້ມູນໃໝ່
+    fetchImports();
+    
+  } catch (error) {
+    console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກການນຳເຂົ້າ:', error);
+    
+    // ສະແດງກ່ອງຂໍ້ຄວາມແຈ້ງເຕືອນຂໍ້ຜິດພາດ
     setErrorDetails({
       title: 'ບໍ່ສາມາດບັນທຶກການນຳເຂົ້າສິນຄ້າໄດ້',
-      message: err.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳເຂົ້າສິນຄ້າ',
+      message: error.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳເຂົ້າສິນຄ້າ',
       suggestion: 'ກະລຸນາກວດສອບການເຊື່ອມຕໍ່ເຊີບເວີ ຫຼື ລາຍລະອຽດຂອງສິນຄ້າ ແລ້ວລອງໃໝ່ອີກຄັ້ງ.'
     });
     setOpenErrorDialog(true);
@@ -385,13 +421,6 @@ const handleSubmitImport = async () => {
     setOpenImportDialog(false);
     setSelectedOrder(null);
     setOrderDetails([]);
-  };
-  
-  // Handle closing the details dialog
-  const handleCloseDetailsDialog = () => {
-    setOpenDetailsDialog(false);
-    setSelectedImport(null);
-    setImportDetails([]);
   };
   
   // Handle closing the error dialog
@@ -423,7 +452,13 @@ const handleSubmitImport = async () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return dateString;
-      return date.toLocaleDateString('lo-LA');
+      
+      // Format as DD/MM/YYYY
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}/${month}/${year}`;
     } catch (error) {
       return dateString;
     }
