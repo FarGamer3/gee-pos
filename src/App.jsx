@@ -312,6 +312,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
 
           {/* ເສັ້ນທາງເລີ່ມຕົ້ນ ແມ່ນນຳໄປສູ່ໜ້າເຂົ້າສູ່ລະບົບຫຼືໜ້າຫຼັກ */}
           <Route 
@@ -322,6 +323,7 @@ function App() {
                 <Navigate to="/login" replace />
             } 
           />
+          
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
