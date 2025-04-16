@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import API_BASE_URL from '../config/api';
 import {
   Box,
   Paper,
@@ -17,7 +19,11 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -77,25 +83,43 @@ function Export() {
     fetchProducts();
   }, []);
   
-  // ຟັງຊັນດຶງຂໍ້ມູນສິນຄ້າ
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      // ໃນກໍລະນີຈິງ, ຈະມີການເຊື່ອມຕໍ່ກັບ API ເພື່ອດຶງຂໍ້ມູນສິນຄ້າ
-      // ຕົວຢ່າງ: const response = await axios.get(`${API_URL}/All/Product`);
-      // setProducts(response.data.products);
+ // ຟັງຊັນດຶງຂໍ້ມູນສິນຄ້າ
+const fetchProducts = async () => {
+  try {
+    setLoading(true);
+    // ເຊື່ອມຕໍ່ກັບ API ເພື່ອດຶງຂໍ້ມູນສິນຄ້າ
+    const response = await axios.get('http://localhost:4422/All/Product');
+    
+    if (response.data && response.data.result_code === "200" && response.data.products) {
+      // ແປງຂໍ້ມູນຈາກ API ໃຫ້ເຂົ້າກັບໂຄງສ້າງທີ່ຕ້ອງການ
+      const formattedProducts = response.data.products.map(product => ({
+        id: product.proid,
+        name: product.ProductName,
+        stock: product.qty,
+        location: product.zone || 'ບໍ່ລະບຸ', // ຖ້າມີຂໍ້ມູນ zone, ໃຊ້ zone ຖ້າບໍ່ມີໃຊ້ "ບໍ່ລະບຸ"
+      }));
       
-      // ໃຊ້ຂໍ້ມູນຕົວຢ່າງໄປກ່ອນ
-      setTimeout(() => {
-        setLoading(false);
-        showSnackbar('ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດ', 'success');
-      }, 1000);
-    } catch (error) {
-      console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ:', error);
-      setLoading(false);
-      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ', 'error');
+      setProducts(formattedProducts);
+      showSnackbar('ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດ', 'success');
+    } else {
+      throw new Error('ຂໍ້ມູນບໍ່ຖືກຕ້ອງ');
     }
-  };
+  } catch (error) {
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ:', error);
+    setLoading(false);
+    showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ', 'error');
+    
+    // ໃຊ້ຂໍ້ມູນຕົວຢ່າງໃນກໍລະນີທີ່ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບ API ໄດ້
+    setProducts([
+      { id: 1, name: 'ຕູ້ເຢັນ', stock: 10, location: 'A-02' },
+      { id: 2, name: 'ໂທລະທັດ', stock: 15, location: 'B-05' },
+      { id: 3, name: 'ແອຄອນດິຊັນ', stock: 20, location: 'C-01' },
+      { id: 4, name: 'ຈັກຊັກຜ້າ', stock: 8, location: 'A-08' },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ຈັດຮູບແບບວັນທີເປັນ DD/MM/YYYY
   const formatDate = (dateStr) => {
@@ -202,6 +226,7 @@ function Export() {
       };
       
       // ສົ່ງຂໍ້ມູນໄປຍັງ API
+      console.log("ຂໍ້ມູນທີ່ຈະສົ່ງໄປ API:", JSON.stringify(exportData));
       const result = await createExport(exportData);
       
       console.log('ຜົນການບັນທຶກ:', result);
