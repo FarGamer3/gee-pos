@@ -1,4 +1,4 @@
-// src/services/salesService.js - Improved with better error handling and data validation
+// src/services/salesService.js
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
@@ -146,63 +146,153 @@ export const searchProducts = async (keyword) => {
 };
 
 /**
- * ວິເຄາະຂໍ້ຜິດພາດຂອງ API (Diagnostic function for API errors)
- * @returns {Promise} - ຜົນການທົດສອບ API
+ * ດຶງປະຫວັດການຂາຍທັງໝົດ (Get all sales history)
+ * @returns {Promise<Array>} - ປະຫວັດການຂາຍ
  */
-export const diagnosticTest = async () => {
-  const results = {
-    customerApi: { success: false, message: '', data: null },
-    productApi: { success: false, message: '', data: null },
-    saleApi: { success: false, message: '', data: null }
+export const getSalesHistory = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+    
+    if (response.data && response.data.result_code === "200") {
+      // Map the API response to a more usable format
+      return response.data.sales_data.map(sale => ({
+        sale_id: sale.sale_id,
+        date_sale: sale.date_sale,
+        customer_name: sale.customer_name || "ລູກຄ້າທົ່ວໄປ",
+        emp_name: sale.emp_name,
+        subtotal: sale.subtotal,
+        pay: sale.pay,
+        money_change: sale.money_change,
+        // Add empty products array that will be populated when viewing details
+        products: []
+      }));
+    }
+    
+    // If API doesn't return valid data, create empty data for UI
+    console.warn('Invalid sales history data format from API');
+    return [];
+  } catch (error) {
+    console.error('Error fetching sales history:', error);
+    
+    // Return mock data for development/testing if API unavailable
+    if (process.env.NODE_ENV === 'development') {
+      return getMockSalesHistory();
+    }
+    
+    // In production, return empty array
+    return [];
+  }
+};
+
+/**
+ * ດຶງລາຍລະອຽດການຂາຍ (Get sale details)
+ * @param {number} saleId - ລະຫັດການຂາຍ
+ * @returns {Promise<Object>} - ລາຍລະອຽດການຂາຍ
+ */
+export const getSaleDetails = async (saleId) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/sale/Sale/Details`, {
+      sale_id: saleId
+    });
+    
+    if (response.data && response.data.result_code === "200") {
+      return response.data.sale_details || [];
+    }
+    
+    return []; // Return empty array for invalid response
+  } catch (error) {
+    console.error(`Error fetching details for sale #${saleId}:`, error);
+    
+    // Return mock data for development/testing if API unavailable
+    if (process.env.NODE_ENV === 'development') {
+      return getMockSaleDetails(saleId);
+    }
+    
+    return []; // Return empty array on error
+  }
+};
+
+/**
+ * ສ້າງຂໍ້ມູນຈຳລອງສຳລັບເຮັດວຽກແບບ Offline
+ * @returns {Array} - ຂໍ້ມູນຈຳລອງປະຫວັດການຂາຍ
+ */
+const getMockSalesHistory = () => {
+  const mockData = [
+    {
+      sale_id: 1001,
+      date_sale: '2025-04-15T10:30:00',
+      customer_name: 'ລູກຄ້າທົ່ວໄປ',
+      emp_name: 'ພະນັກງານ ທົດສອບ',
+      subtotal: 350000,
+      pay: 400000,
+      money_change: 50000,
+      products: []
+    },
+    {
+      sale_id: 1002,
+      date_sale: '2025-04-15T14:45:00',
+      customer_name: 'ທ. ສົມພອນ ວິໄລພອນ',
+      emp_name: 'ພະນັກງານ ທົດສອບ',
+      subtotal: 750000,
+      pay: 800000,
+      money_change: 50000,
+      products: []
+    },
+    {
+      sale_id: 1003,
+      date_sale: '2025-04-16T09:15:00',
+      customer_name: 'ນ. ດາລາວອນ ຄຳມີໄຊ',
+      emp_name: 'ພະນັກງານ ທົດສອບ',
+      subtotal: 1250000,
+      pay: 1300000,
+      money_change: 50000,
+      products: []
+    }
+  ];
+  
+  return mockData;
+};
+
+/**
+ * ສ້າງຂໍ້ມູນຈຳລອງລາຍລະອຽດການຂາຍສຳລັບເຮັດວຽກແບບ Offline
+ * @param {number} saleId - ລະຫັດການຂາຍ
+ * @returns {Array} - ຂໍ້ມູນຈຳລອງລາຍລະອຽດການຂາຍ
+ */
+const getMockSaleDetails = (saleId) => {
+  const mockSaleDetails = {
+    1001: [
+      { product_name: 'ແອ Samsung', price: 350000, qty: 1, total: 350000 }
+    ],
+    1002: [
+      { product_name: 'ຕູ້ເຢັນ LG', price: 450000, qty: 1, total: 450000 },
+      { product_name: 'ໝໍ້ຫຸງເຂົ້າ Panasonic', price: 300000, qty: 1, total: 300000 }
+    ],
+    1003: [
+      { product_name: 'ໂທລະພາບ Samsung 43"', price: 1250000, qty: 1, total: 1250000 }
+    ]
   };
   
-  // Test customer API
+  return mockSaleDetails[saleId] || [];
+};
+
+/**
+ * ຍົກເລີກການຂາຍ (Cancel sale)
+ * @param {number} saleId - ລະຫັດການຂາຍ
+ * @returns {Promise<boolean>} - ຜົນການຍົກເລີກການຂາຍ
+ */
+export const cancelSale = async (saleId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/users/All/Customer`, { timeout: 3000 });
-    results.customerApi.success = true;
-    results.customerApi.message = 'API is responding correctly';
-    results.customerApi.data = { count: response.data?.user_info?.length || 0 };
-  } catch (error) {
-    results.customerApi.message = `Error: ${error.message}`;
-    if (error.response) {
-      results.customerApi.data = { 
-        status: error.response.status,
-        statusText: error.response.statusText
-      };
+    const response = await axios.delete(`${API_BASE_URL}/sale/Delete/Sale`, {
+      data: { sale_id: saleId }
+    });
+    
+    if (response.data && response.data.result_code === "200") {
+      return true;
     }
-  }
-  
-  // Test product API
-  try {
-    const response = await axios.get(`${API_BASE_URL}/All/Product`, { timeout: 3000 });
-    results.productApi.success = true;
-    results.productApi.message = 'API is responding correctly';
-    results.productApi.data = { count: response.data?.products?.length || 0 };
+    
+    return false;
   } catch (error) {
-    results.productApi.message = `Error: ${error.message}`;
-    if (error.response) {
-      results.productApi.data = { 
-        status: error.response.status,
-        statusText: error.response.statusText
-      };
-    }
+    console.error(`Error canceling sale #${saleId}:`, error);
+    throw error;
   }
-  
-  // Test sale API with minimal data
-  try {
-    // Don't actually submit, just check if the endpoint exists
-    await axios.options(`${API_BASE_URL}/sale/Insert/Sales`, { timeout: 3000 });
-    results.saleApi.success = true;
-    results.saleApi.message = 'API endpoint exists';
-  } catch (error) {
-    results.saleApi.message = `Error: ${error.message}`;
-    if (error.response) {
-      results.saleApi.data = { 
-        status: error.response.status,
-        statusText: error.response.statusText
-      };
-    }
-  }
-  
-  return results;
 };

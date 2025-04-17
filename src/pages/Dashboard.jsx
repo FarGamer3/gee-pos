@@ -26,6 +26,7 @@ import {
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
+
 function Dashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -297,6 +298,7 @@ function Dashboard() {
         <Grid item xs={12}>
           <LowStockAlert lowStockItems={dashboardData.lowStockItems} />
         </Grid>
+        
       </Grid>
     </Layout>
   );
