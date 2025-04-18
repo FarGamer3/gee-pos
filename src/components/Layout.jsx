@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -35,6 +35,8 @@ import {
   AccountCircle as AccountCircleIcon
 } from '@mui/icons-material';
 import { getCurrentUser, logout } from '../services/authService';
+import { getAllNotificationsCount } from '../services/notificationService';
+import NotificationMenu from './NotificationMenu';
 import logoImage from '../assets/logo.png';
 
 // Drawer width
@@ -45,9 +47,72 @@ export default function Layout({ children, title, onLogout }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
   
   // ດຶງຂໍ້ມູນຜູ້ໃຊ້ທີ່ເຂົ້າສູ່ລະບົບ
   const currentUser = getCurrentUser();
+
+  // ດຶງຂໍ້ມູນຈຳນວນການແຈ້ງເຕືອນເມື່ອ component ຖືກໂຫຼດ
+  useEffect(() => {
+    fetchNotificationCount();
+    
+    // ກຳນົດໃຫ້ດຶງຂໍ້ມູນທຸກໆ 60 ວິນາທີ (1 ນາທີ)
+    const interval = setInterval(() => {
+      fetchNotificationCount();
+    }, 60000);
+    
+    // ຍົກເລີກ interval ເມື່ອ component ຖືກຖອດ
+    return () => clearInterval(interval);
+  }, []);
+  
+  // ຟັງຊັນດຶງຂໍ້ມູນຈຳນວນການແຈ້ງເຕືອນ
+  const fetchNotificationCount = async () => {
+    try {
+      const counts = await getAllNotificationsCount();
+      setNotificationCount(counts.total);
+    } catch (error) {
+      console.error('Error fetching notification counts:', error);
+    }
+  };
+
+  // ປັບປຸງ menu items ເພື່ອສະແດງການແຈ້ງເຕືອນ
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [pendingImportCount, setPendingImportCount] = useState(0);
+  const [pendingExportCount, setPendingExportCount] = useState(0);
+  
+  // ດຶງຂໍ້ມູນຈຳນວນການແຈ້ງເຕືອນແຍກຕາມປະເພດ
+  useEffect(() => {
+    const fetchDetailedNotificationCounts = async () => {
+      try {
+        const counts = await getAllNotificationsCount();
+        setLowStockCount(counts.lowStock);
+        setPendingImportCount(counts.pendingImports);
+        setPendingExportCount(counts.pendingExports);
+      } catch (error) {
+        console.error('Error fetching detailed notification counts:', error);
+      }
+    };
+    
+    // ເອີ້ນຟັງຊັນເມື່ອ component ຖືກໂຫຼດ
+    fetchDetailedNotificationCounts();
+    
+    // ຕັ້ງເວລາດຶງຂໍ້ມູນທຸກໆ 60 ວິນາທີ
+    const interval = setInterval(fetchDetailedNotificationCounts, 60000);
+    
+    // ຍົກເລີກ interval ເມື່ອ component ຖືກຖອດ
+    return () => clearInterval(interval);
+  }, []);
+  
+  const menuItems = [
+    { text: 'ໜ້າຫຼັກ', icon: <HomeIcon />, path: '/dashboard', badge: null },
+    { text: 'ຈັດການຂໍ້ມູນຫຼັກ', icon: <CategoryIcon />, path: '/Manage_data', badge: lowStockCount > 0 ? lowStockCount : null },
+    { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/Buy', badge: null },
+    { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales', badge: null },
+    { text: 'ນຳເຂົ້າສິນຄ້າ', icon: <ImportIcon />, path: '/import', badge: pendingImportCount > 0 ? pendingImportCount : null },
+    { text: 'ນຳອອກສິນຄ້າ', icon: <ExportIcon />, path: '/export', badge: pendingExportCount > 0 ? pendingExportCount : null },
+    { text: 'ລາຍງານ', icon: <ReportIcon />, path: '/reports', badge: null },
+  ];
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -63,6 +128,16 @@ export default function Layout({ children, title, onLogout }) {
     setAnchorEl(null);
   };
   
+  // ເປີດເມນູການແຈ້ງເຕືອນ
+  const handleNotificationMenuOpen = (event) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+  
+  // ປິດເມນູການແຈ້ງເຕືອນ
+  const handleNotificationMenuClose = () => {
+    setNotificationAnchorEl(null);
+  };
+  
   // ຈັດການການອອກຈາກລະບົບ
   const handleLogout = () => {
     handleMenuClose();
@@ -76,16 +151,6 @@ export default function Layout({ children, title, onLogout }) {
       navigate('/login');
     }
   };
-
-  const menuItems = [
-    { text: 'ໜ້າຫຼັກ', icon: <HomeIcon />, path: '/dashboard' },
-    { text: 'ຈັດການຂໍ້ມູນຫຼັກ', icon: <CategoryIcon />, path: '/Manage_data' },
-    { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/Buy' },
-    { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales' },
-    { text: 'ນຳເຂົ້າສິນຄ້າ', icon: <ImportIcon />, path: '/import' },
-    { text: 'ນຳອອກສິນຄ້າ', icon: <ExportIcon />, path: '/export' },
-    { text: 'ລາຍງານ', icon: <ReportIcon />, path: '/reports' },
-  ];
 
   const drawer = (
     <div>
@@ -121,7 +186,24 @@ export default function Layout({ children, title, onLogout }) {
               }}
             >
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                {item.icon}
+                {item.badge ? (
+                  <Badge 
+                    badgeContent={item.badge} 
+                    color="error"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.6rem',
+                        height: '16px',
+                        minWidth: '16px',
+                        padding: '0 3px'
+                      }
+                    }}
+                  >
+                    {item.icon}
+                  </Badge>
+                ) : (
+                  item.icon
+                )}
               </ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>
@@ -156,11 +238,37 @@ export default function Layout({ children, title, onLogout }) {
           
           <Box sx={{ flexGrow: 1 }} />
           
-          <IconButton size="large" color="inherit">
-            <Badge badgeContent={4} color="error">
-              <NotificationIcon />
-            </Badge>
-          </IconButton>
+          <Tooltip title="ການແຈ້ງເຕືອນ">
+            <IconButton 
+              size="large" 
+              color="inherit"
+              onClick={handleNotificationMenuOpen}
+              aria-label="show notifications"
+              aria-controls="notification-menu"
+              aria-haspopup="true"
+            >
+              <Badge 
+                badgeContent={notificationCount} 
+                color="error"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.7rem',
+                    height: '18px',
+                    minWidth: '18px',
+                    padding: '0 4px'
+                  }
+                }}
+              >
+                <NotificationIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          
+          <NotificationMenu 
+            anchorEl={notificationAnchorEl}
+            open={Boolean(notificationAnchorEl)}
+            onClose={handleNotificationMenuClose}
+          />
           
           <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
             <Tooltip title="ຈັດການບັນຊີຜູ້ໃຊ້">
