@@ -419,10 +419,31 @@ const handleSaveSale = async () => {
   };
   
   // View sale details
-  const handleViewSaleDetails = (sale) => {
+// ແກ້ໄຂຟັງຊັນ handleViewSaleDetails ໃນໄຟລ໌ src/pages/Sales.jsx
+const handleViewSaleDetails = async (sale) => {
+  try {
     setSelectedSale(sale);
     setSaleDetailsOpen(true);
-  };
+    
+    // ດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍຈາກ API
+    const response = await axios.post(`${API_BASE_URL}/sale/Sale/Details`, {
+      sale_id: sale.sale_id
+    });
+    
+    if (response.data && response.data.result_code === "200") {
+      // ອັບເດດລາຍລະອຽດສິນຄ້າທີ່ຖືກຂາຍ
+      setSelectedSale(prev => ({
+        ...prev,
+        products: response.data.sale_details || []
+      }));
+    } else {
+      showAlert('ບໍ່ສາມາດດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍໄດ້', 'error');
+    }
+  } catch (error) {
+    console.error('Error fetching sale details:', error);
+    showAlert('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍ', 'error');
+  }
+};
   
   // Show alert message
   const showAlert = (message, severity = 'success') => {
@@ -950,128 +971,127 @@ const handleSelectCustomer = (customer) => {
         </DialogActions>
       </Dialog>
       
-      {/* Sale Details Modal */}
-      <Dialog 
-        open={saleDetailsOpen} 
-        onClose={() => setSaleDetailsOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Typography variant="h6">
-            ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          {selectedSale ? (
-            <Box>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6}>
-                // When displaying customer information
-<Typography variant="body1" sx={{ mb: 1 }}>
-  <strong>ລູກຄ້າ:</strong> {selectedCustomer?.cus_id === 0 ? 'ລູກຄ້າທົ່ວໄປ' : `${selectedCustomer?.cus_name || ''} ${selectedCustomer?.cus_lname || ''}`}
-</Typography>
-                  <Typography variant="body1">
-                    <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ວັນທີ:</strong> {formatDate(selectedSale.date_sale)}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>ເລກທີໃບບິນ:</strong> {selectedSale.sale_id}
-                  </Typography>
-                </Grid>
-              </Grid>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              {selectedSale.products && selectedSale.products.length > 0 ? (
-                <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell align="center">#</TableCell>
-                        <TableCell>ລາຍການ</TableCell>
-                        <TableCell align="right">ລາຄາ</TableCell>
-                        <TableCell align="center">ຈຳນວນ</TableCell>
-                        <TableCell align="right">ລວມ</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedSale.products.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell align="center">{index + 1}</TableCell>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell align="right">{formatNumber(item.price)}</TableCell>
-                          <TableCell align="center">{item.qty}</TableCell>
-                          <TableCell align="right">{formatNumber(item.total)}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow>
-                        <TableCell colSpan={3} />
-                        <TableCell align="right">
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            ລວມທັງໝົດ:
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            {formatNumber(selectedSale.subtotal)} ກີບ
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell colSpan={3} />
-                        <TableCell align="right">
-                          ຈຳນວນເງິນທີ່ຮັບ:
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(selectedSale.pay)} ກີບ
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell colSpan={3} />
-                        <TableCell align="right">
-                          ເງິນທອນ:
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(selectedSale.money_change)} ກີບ
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Box sx={{ textAlign: 'center', my: 4 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດສິນຄ້າ
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-              <CircularProgress />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<PrintIcon />}
-            onClick={() => {
-              // Implement print functionality for receipt here
-              setSaleDetailsOpen(false);
-            }}
-          >
-            ພິມໃບບິນ
-          </Button>
-          <Button onClick={() => setSaleDetailsOpen(false)}>ປິດ</Button>
-        </DialogActions>
-      </Dialog>
+   {/* Sale Details Modal */}
+<Dialog 
+  open={saleDetailsOpen} 
+  onClose={() => setSaleDetailsOpen(false)}
+  maxWidth="md"
+  fullWidth
+>
+  <DialogTitle>
+    {/* ແກ້ໄຂບັນຫາໂຄງສ້າງ HTML */}
+    ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
+  </DialogTitle>
+  <DialogContent>
+    {selectedSale ? (
+      <Box>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>ລູກຄ້າ:</strong> {selectedSale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>ວັນທີ:</strong> {formatDate(selectedSale.date_sale)}
+            </Typography>
+            <Typography variant="body1">
+              <strong>ເລກທີໃບບິນ:</strong> {selectedSale.sale_id}
+            </Typography>
+          </Grid>
+        </Grid>
+        
+        <Divider sx={{ my: 2 }} />
+        
+        {/* ສະແດງລາຍລະອຽດສິນຄ້າທີ່ຖືກຂາຍ */}
+        {selectedSale.products && selectedSale.products.length > 0 ? (
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">#</TableCell>
+                  <TableCell>ລາຍການ</TableCell>
+                  <TableCell align="right">ລາຄາ</TableCell>
+                  <TableCell align="center">ຈຳນວນ</TableCell>
+                  <TableCell align="right">ລວມ</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedSale.products.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell>{item.product_name || `ສິນຄ້າລະຫັດ ${item.proid}`}</TableCell>
+                    <TableCell align="right">{formatNumber(item.price)}</TableCell>
+                    <TableCell align="center">{item.qty}</TableCell>
+                    <TableCell align="right">{formatNumber(item.total)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow>
+                  <TableCell colSpan={3} />
+                  <TableCell align="right">
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      ລວມທັງໝົດ:
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {formatNumber(selectedSale.subtotal)} ກີບ
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} />
+                  <TableCell align="right">
+                    ຈຳນວນເງິນທີ່ຮັບ:
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatNumber(selectedSale.pay)} ກີບ
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} />
+                  <TableCell align="right">
+                    ເງິນທອນ:
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatNumber(selectedSale.money_change)} ກີບ
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Box sx={{ textAlign: 'center', my: 4 }}>
+            <Typography variant="body1" color="text.secondary">
+              ກຳລັງໂຫຼດຂໍ້ມູນລາຍລະອຽດສິນຄ້າ...
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    ) : (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+        <CircularProgress />
+      </Box>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button
+      variant="contained"
+      color="primary"
+      startIcon={<PrintIcon />}
+      onClick={() => {
+        // ພິມໃບບິນ
+        setSaleDetailsOpen(false);
+      }}
+    >
+      ພິມໃບບິນ
+    </Button>
+    <Button onClick={() => setSaleDetailsOpen(false)}>ປິດ</Button>
+  </DialogActions>
+</Dialog>
     </Layout>
   );
 }
