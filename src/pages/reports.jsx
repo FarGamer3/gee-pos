@@ -78,8 +78,9 @@ function Reports() {
     }
   };
 
-  // Format number with commas
+  // Format number with commas - FIXED to handle undefined/null values
   const formatNumber = (num) => {
+    if (num === undefined || num === null) return "0";
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
@@ -107,9 +108,9 @@ function Reports() {
                 {reportData.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.id}</TableCell>
-                    <TableCell>{row.date}</TableCell>
-                    <TableCell>{row.customer}</TableCell>
-                    <TableCell align="center">{row.items}</TableCell>
+                    <TableCell>{row.date || '-'}</TableCell>
+                    <TableCell>{row.customer || '-'}</TableCell>
+                    <TableCell align="center">{row.items || 0}</TableCell>
                     <TableCell align="right">{formatNumber(row.totalAmount)} ກີບ</TableCell>
                   </TableRow>
                 ))}
@@ -118,7 +119,7 @@ function Reports() {
                   <TableCell align="right"><strong>ລວມທັງໝົດ:</strong></TableCell>
                   <TableCell align="right">
                     <strong>
-                      {formatNumber(reportData.reduce((sum, row) => sum + row.totalAmount, 0))} ກີບ
+                      {formatNumber(reportData.reduce((sum, row) => sum + (row.totalAmount || 0), 0))} ກີບ
                     </strong>
                   </TableCell>
                 </TableRow>
@@ -145,10 +146,10 @@ function Reports() {
                 {reportData.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.id}</TableCell>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell align="center">{row.stock}</TableCell>
-                    <TableCell align="center">{row.minLevel}</TableCell>
-                    <TableCell align="center">{row.location}</TableCell>
+                    <TableCell>{row.name || '-'}</TableCell>
+                    <TableCell align="center">{row.stock || 0}</TableCell>
+                    <TableCell align="center">{row.minLevel || 0}</TableCell>
+                    <TableCell align="center">{row.location || '-'}</TableCell>
                     <TableCell align="center">
                       {row.stock <= row.minLevel ? 
                         <span style={{ color: 'red' }}>ຕ້ອງສັ່ງຊື້</span> : 
@@ -179,9 +180,9 @@ function Reports() {
                 {reportData.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.id}</TableCell>
-                    <TableCell>{row.date}</TableCell>
-                    <TableCell>{row.supplier}</TableCell>
-                    <TableCell align="center">{row.items}</TableCell>
+                    <TableCell>{row.date || '-'}</TableCell>
+                    <TableCell>{row.supplier || '-'}</TableCell>
+                    <TableCell align="center">{row.items || 0}</TableCell>
                     <TableCell align="right">{formatNumber(row.totalCost)} ກີບ</TableCell>
                   </TableRow>
                 ))}
@@ -190,7 +191,7 @@ function Reports() {
                   <TableCell align="right"><strong>ລວມທັງໝົດ:</strong></TableCell>
                   <TableCell align="right">
                     <strong>
-                      {formatNumber(reportData.reduce((sum, row) => sum + row.totalCost, 0))} ກີບ
+                      {formatNumber(reportData.reduce((sum, row) => sum + (row.totalCost || 0), 0))} ກີບ
                     </strong>
                   </TableCell>
                 </TableRow>
@@ -215,9 +216,9 @@ function Reports() {
                 {reportData.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.id}</TableCell>
-                    <TableCell>{row.date}</TableCell>
-                    <TableCell>{row.reason}</TableCell>
-                    <TableCell align="center">{row.items}</TableCell>
+                    <TableCell>{row.date || '-'}</TableCell>
+                    <TableCell>{row.reason || '-'}</TableCell>
+                    <TableCell align="center">{row.items || 0}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

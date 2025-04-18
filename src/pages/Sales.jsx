@@ -160,17 +160,25 @@ function Sales() {
   }, [amountPaid, cartTotal]);
 
   // Load products and customers on component mount
-  useEffect(() => {
-    const loadInitialData = async () => {
+// In the useEffect for loading initial data
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel but handle each promise individually
+      // to prevent complete failure if one request fails
+      
       try {
-        setLoading(true);
-        const [productsData, customersData] = await Promise.all([
-          getAllProducts(),
-          getAllCustomers()
-        ]);
-        
+        const productsData = await getAllProducts();
         setProducts(productsData || []);
         setFilteredProducts(productsData || []);
+      } catch (productError) {
+        console.error('Error loading products:', productError);
+      }
+      
+      try {
+        const customersData = await getAllCustomers();
         setCustomers(customersData || []);
         setFilteredCustomers(customersData || []);
         
@@ -180,17 +188,52 @@ function Sales() {
         } else {
           setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
         }
-      } catch (error) {
-        console.error('Error loading initial data:', error);
-        showAlert('ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນ', 'error');
-      } finally {
-        setLoading(false);
+      } catch (customerError) {
+        console.error('Error loading customers:', customerError);
+        // Set default customer even if API fails
+        setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
       }
-    };
-    
-    loadInitialData();
-  }, []);
+      
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  loadInitialData();
+}, []);
 
+// Modify the filter products useEffect to prevent unnecessary updates
+useEffect(() => {
+  if (!products || products.length === 0) return;
+  
+  if (searchTerm.trim() === '') {
+    setFilteredProducts(products);
+  } else {
+    const filtered = products.filter(product =>
+      product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.proid?.toString().includes(searchTerm)
+    );
+    setFilteredProducts(filtered);
+  }
+}, [searchTerm, products]);
+
+// Modify the filter customers useEffect similarly
+useEffect(() => {
+  if (!customers || customers.length === 0) return;
+  
+  if (customerSearch.trim() === '') {
+    setFilteredCustomers(customers);
+  } else {
+    const filtered = customers.filter(customer =>
+      customer.cus_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      customer.cus_lname?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      customer.tel?.includes(customerSearch)
+    );
+    setFilteredCustomers(filtered);
+  }
+}, [customerSearch, customers]);
   // Fetch sales history
   const fetchSalesHistory = async () => {
     try {
@@ -304,56 +347,60 @@ function Sales() {
   };
   
   // Handle save sale
-  const handleSaveSale = async () => {
-    if (cartItems.length === 0) {
-      showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
-      return;
-    }
+// Handle save sale
+const handleSaveSale = async () => {
+  if (cartItems.length === 0) {
+    showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
+    return;
+  }
 
-    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
-    if (paid < cartTotal) {
-      showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
-      return;
-    }
+  const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+  if (paid < cartTotal) {
+    showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
+    return;
+  }
+  
+  try {
+    setLoading(true);
     
-    try {
-      setLoading(true);
-      
-      // Create the sale data to send to API
-      const saleData = {
-        cus_id: selectedCustomer?.cus_id || 1,
-        emp_id: currentUser?.emp_id || 1,
-        subtotal: cartTotal,
-        pay: paid,
-        money_change: changeAmount,
-        products: cartItems.map(item => ({
-          proid: item.id,
-          qty: item.quantity,
-          price: item.price,
-          total: item.price * item.quantity
-        }))
-      };
-      
-      // Call the API
-      const result = await createSale(saleData);
-      
-      // Clear cart and payment info after successful save
-      setCartItems([]);
-      setAmountPaid('');
-      setChangeAmount(0);
-      showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
-      
-      // Refresh sales history if on that tab
-      if (tabValue === 1) {
-        fetchSalesHistory();
-      }
-    } catch (error) {
-      console.error('Error saving sale:', error);
-      showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
-    } finally {
-      setLoading(false);
+    // Use a default customer ID for the generic customer
+    const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
+    
+    // Create the sale data to send to API
+    const saleData = {
+      cus_id: customerIdToUse,
+      emp_id: currentUser?.emp_id || 1,
+      subtotal: cartTotal,
+      pay: paid,
+      money_change: changeAmount,
+      products: cartItems.map(item => ({
+        proid: item.id,
+        qty: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      }))
+    };
+    
+    // Call the API
+    const result = await createSale(saleData);
+    
+    // Clear cart and payment info after successful save
+    setCartItems([]);
+    setAmountPaid('');
+    setChangeAmount(0);
+    showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
+    
+    // Refresh sales history if on that tab
+    if (tabValue === 1) {
+      fetchSalesHistory();
     }
-  };
+  } catch (error) {
+    console.error('Error saving sale:', error);
+    showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
   
   // Handle print receipt
   const handlePrintReceipt = () => {
@@ -389,11 +436,23 @@ function Sales() {
     setAlertOpen(false);
   };
   
-  // Handle customer selection
-  const handleSelectCustomer = (customer) => {
+// When handling the selection of a generic customer, 
+// use a special ID that won't conflict with real customers
+const handleSelectCustomer = (customer) => {
+  // Check if this is the generic customer
+  if (customer.cus_name === 'ລູກຄ້າທົ່ວໄປ' && !customer.cus_lname) {
+    // Use a special ID for the generic customer (like 0 or -1)
+    setSelectedCustomer({ 
+      cus_id: 0,  // Use 0 or -1 instead of 1
+      cus_name: 'ລູກຄ້າທົ່ວໄປ', 
+      cus_lname: '' 
+    });
+  } else {
+    // Regular customer selection
     setSelectedCustomer(customer);
-    setCustomerDialogOpen(false);
-  };
+  }
+  setCustomerDialogOpen(false);
+};
   
   // Filter sales history based on search term
   const filteredSalesHistory = salesHistory.filter(sale => {
@@ -849,7 +908,7 @@ function Sales() {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => handleSelectCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' })}
+                      onClick={() => handleSelectCustomer({ cus_id: 0, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' })}
                     >
                       ເລືອກ
                     </Button>
@@ -908,9 +967,10 @@ function Sales() {
             <Box>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="body1" sx={{ mb: 1 }}>
-                    <strong>ລູກຄ້າ:</strong> {selectedSale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}
-                  </Typography>
+                // When displaying customer information
+<Typography variant="body1" sx={{ mb: 1 }}>
+  <strong>ລູກຄ້າ:</strong> {selectedCustomer?.cus_id === 0 ? 'ລູກຄ້າທົ່ວໄປ' : `${selectedCustomer?.cus_name || ''} ${selectedCustomer?.cus_lname || ''}`}
+</Typography>
                   <Typography variant="body1">
                     <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
                   </Typography>
