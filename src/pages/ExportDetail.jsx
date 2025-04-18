@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
 import {
   Box,
   Paper,
@@ -21,7 +19,9 @@ import {
   DialogContent,
   DialogActions,
   Grid,
-  CircularProgress
+  CircularProgress,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -29,79 +29,141 @@ import {
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   Print as PrintIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
-import { getAllExports, updateExportStatus, deleteExport } from '../services/exportService';
+import { getAllExports, updateExportStatus, deleteExport, getExportDetails } from '../services/exportService';
 
+/**
+ * ExportDetail - Component for displaying export history and details
+ * This component shows a list of past product exports and allows viewing details,
+ * approving pending exports, printing export forms, and deleting exports.
+ */
 function ExportDetail() {
   const navigate = useNavigate();
+  
+  // State for search and loading
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Alert/notification state
+  const [alert, setAlert] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
   
   // Export history state
   const [exportHistory, setExportHistory] = useState([]);
 
-  // Selected export for viewing details
+  // Selected export states
   const [selectedExport, setSelectedExport] = useState(null);
+  const [exportDetails, setExportDetails] = useState([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  
+  // Dialog states
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  
-  // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedExportId, setSelectedExportId] = useState(null);
-  
-  // Approve confirmation dialog state
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [selectedApproveId, setSelectedApproveId] = useState(null);
-  
-  // Success action dialog state
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  
+  // Selected IDs for actions
+  const [selectedExportId, setSelectedExportId] = useState(null);
+  const [selectedApproveId, setSelectedApproveId] = useState(null);
   const [actionType, setActionType] = useState('');
   
-  // Print dialog state
-  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  // Print reference for printing functionality
   const printRef = useRef(null);
 
-  // ດຶງຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ
+  // Load export history on component mount
+  useEffect(() => {
+    fetchExportHistory();
+  }, []);
+
+  /**
+   * Fetch export history from API or localStorage fallback
+   */
   const fetchExportHistory = async () => {
     try {
       setLoading(true);
-      // ພະຍາຍາມດຶງຂໍ້ມູນຈາກ API ກ່ອນ
+      // Try to get data from API first
       const apiData = await getAllExports();
       if (apiData && apiData.length > 0) {
         setExportHistory(apiData);
+        showAlert('ໂຫຼດຂໍ້ມູນສຳເລັດແລ້ວ', 'success');
       } else {
-        // ຖ້າບໍ່ສາມາດດຶງຈາກ API ໄດ້, ໃຫ້ດຶງຈາກ localStorage
+        // If API fails, try localStorage
         const savedExports = localStorage.getItem('exportHistory');
         if (savedExports) {
           setExportHistory(JSON.parse(savedExports));
+          showAlert('ໂຫຼດຂໍ້ມູນຈາກ cache ສຳເລັດແລ້ວ', 'info');
+        } else {
+          showAlert('ບໍ່ພົບຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ', 'warning');
         }
       }
     } catch (error) {
-      console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ:', error);
+      console.error('Error fetching export history:', error);
       
-      // ກໍລະນີເກີດຂໍ້ຜິດພາດ, ລອງດຶງຈາກ localStorage
+      // Try localStorage as fallback
       const savedExports = localStorage.getItem('exportHistory');
       if (savedExports) {
         setExportHistory(JSON.parse(savedExports));
+        showAlert('ໂຫຼດຂໍ້ມູນຈາກ cache ສຳເລັດແລ້ວ', 'info');
+      } else {
+        showAlert('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ', 'error');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Load export history on mount
-  useEffect(() => {
-    fetchExportHistory();
-  }, []);
+  /**
+   * Fetch export details by ID
+   * @param {number} exportId - Export ID to fetch details for
+   */
+  const fetchExportDetails = async (exportId) => {
+    if (!exportId) return;
+    
+    try {
+      setDetailsLoading(true);
+      const details = await getExportDetails(exportId);
+      
+      if (details && details.length > 0) {
+        setExportDetails(details);
+      } else {
+        // If API fails, try to get details from the export history
+        const exportItem = exportHistory.find(item => 
+          (item.id === exportId) || (item.export_id === exportId)
+        );
+        
+        if (exportItem && exportItem.items) {
+          setExportDetails(exportItem.items);
+        } else {
+          setExportDetails([]);
+          showAlert('ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດການນຳອອກສິນຄ້າ', 'warning');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching export details:', error);
+      showAlert('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການນຳອອກສິນຄ້າ', 'error');
+      setExportDetails([]);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
-  // Filter exports based on search term
+  /**
+   * Filter exports based on search term
+   */
   const filteredExports = exportHistory.filter(item =>
     (item.id && item.id.toString().includes(searchTerm)) ||
     (item.export_id && item.export_id.toString().includes(searchTerm)) ||
     (item.date && item.date.includes(searchTerm)) ||
     (item.export_date && item.export_date.includes(searchTerm)) ||
+    (item.status && item.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (item.items && item.items.some(product => 
       (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (product.ProductName && product.ProductName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -110,61 +172,93 @@ function ExportDetail() {
     ))
   );
 
-  // Handle view export details
+  /**
+   * View export details
+   * @param {Object} exportData - Export data to view
+   */
   const handleViewExport = (exportData) => {
     setSelectedExport(exportData);
     setDetailDialogOpen(true);
+    
+    // Get export ID based on available property
+    const exportId = exportData.id || exportData.export_id;
+    if (exportId) {
+      fetchExportDetails(exportId);
+    } else if (exportData.items) {
+      // If the export data already has items, use them
+      setExportDetails(exportData.items);
+    }
   };
 
-  // Handle print export
+  /**
+   * Prepare for printing export
+   * @param {Object} exportData - Export data to print
+   */
   const handlePrintExport = (exportData) => {
     setSelectedExport(exportData);
     setPrintDialogOpen(true);
+    
+    // Ensure we have the details for printing
+    const exportId = exportData.id || exportData.export_id;
+    if (exportId && (!exportData.items || exportData.items.length === 0)) {
+      fetchExportDetails(exportId);
+    }
   };
 
-  // Handle delete export
+  /**
+   * Open delete confirmation dialog
+   * @param {number} id - Export ID to delete
+   */
   const handleDeleteExport = (id) => {
     setSelectedExportId(id);
     setDeleteDialogOpen(true);
   };
 
-  // Handle approve export
+  /**
+   * Open approve confirmation dialog
+   * @param {number} id - Export ID to approve
+   */
   const handleApproveExport = (id) => {
     setSelectedApproveId(id);
     setApproveDialogOpen(true);
   };
 
-  // Confirm delete action
+  /**
+   * Confirm and execute delete action
+   * @param {number} id - Export ID to delete
+   */
   const confirmDelete = async (id) => {
     try {
       setLoading(true);
       
-      // ທຳການລຶບຜ່ານ API
+      // Try to delete via API
       const exportIdToDelete = id || selectedExportId;
       await deleteExport(exportIdToDelete);
       
-      // ອັບເດດຂໍ້ມູນໃນໜ້າ
+      // Update local state
       const updatedHistory = exportHistory.filter(item => 
         (item.id !== exportIdToDelete) && (item.export_id !== exportIdToDelete)
       );
       setExportHistory(updatedHistory);
       
-      // ອັບເດດ localStorage
+      // Update localStorage
       localStorage.setItem('exportHistory', JSON.stringify(updatedHistory));
       
-      // ປິດກ່ອງໂຕ້ຕອບແລະສະແດງຜົນສຳເລັດ
+      // Show success message
       setDeleteDialogOpen(false);
       setActionType('delete');
       setSuccessDialogOpen(true);
     } catch (error) {
-      console.error('ເກີດຂໍ້ຜິດພາດໃນການລຶບການນຳອອກສິນຄ້າ:', error);
+      console.error('Error deleting export:', error);
       
-      // ຍັງຄົງຄວນດຳເນີນການປັບປຸງ UI ເຖິງແມ່ນວ່າ API ຈະລົ້ມເຫຼວ
+      // Update UI even if API fails
       const updatedHistory = exportHistory.filter(item => 
         (item.id !== id) && (item.export_id !== id)
       );
       setExportHistory(updatedHistory);
       localStorage.setItem('exportHistory', JSON.stringify(updatedHistory));
+      
+      showAlert('ມີຂໍ້ຜິດພາດໃນການເຊື່ອມຕໍ່ API ແຕ່ໄດ້ດຳເນີນການລຶບໃນລະບົບແລ້ວ', 'warning');
       
       setDeleteDialogOpen(false);
       setActionType('delete');
@@ -175,16 +269,19 @@ function ExportDetail() {
     }
   };
 
-  // Confirm approve action
+  /**
+   * Confirm and execute approve action
+   * @param {number} id - Export ID to approve
+   */
   const confirmApprove = async (id) => {
     try {
       setLoading(true);
       
-      // ພະຍາຍາມອັບເດດຜ່ານ API
+      // Try to update via API
       const exportIdToApprove = id || selectedApproveId;
       await updateExportStatus(exportIdToApprove, 'ນຳອອກແລ້ວ');
       
-      // ອັບເດດຂໍ້ມູນໃນໜ້າ
+      // Update local state
       const updatedHistory = exportHistory.map(item => {
         if ((item.id === exportIdToApprove) || (item.export_id === exportIdToApprove)) {
           return {...item, status: 'ນຳອອກແລ້ວ'};
@@ -194,17 +291,17 @@ function ExportDetail() {
       
       setExportHistory(updatedHistory);
       
-      // ອັບເດດ localStorage
+      // Update localStorage
       localStorage.setItem('exportHistory', JSON.stringify(updatedHistory));
       
-      // ປິດກ່ອງໂຕ້ຕອບແລະສະແດງຜົນສຳເລັດ
+      // Show success message
       setApproveDialogOpen(false);
       setActionType('approve');
       setSuccessDialogOpen(true);
     } catch (error) {
-      console.error('ເກີດຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳອອກສິນຄ້າ:', error);
+      console.error('Error approving export:', error);
       
-      // ຍັງຄົງຄວນດຳເນີນການປັບປຸງ UI ເຖິງແມ່ນວ່າ API ຈະລົ້ມເຫຼວ
+      // Update UI even if API fails
       const updatedHistory = exportHistory.map(item => {
         if ((item.id === id) || (item.export_id === id)) {
           return {...item, status: 'ນຳອອກແລ້ວ'};
@@ -215,6 +312,8 @@ function ExportDetail() {
       setExportHistory(updatedHistory);
       localStorage.setItem('exportHistory', JSON.stringify(updatedHistory));
       
+      showAlert('ມີຂໍ້ຜິດພາດໃນການເຊື່ອມຕໍ່ API ແຕ່ໄດ້ດຳເນີນການອະນຸມັດໃນລະບົບແລ້ວ', 'warning');
+      
       setApproveDialogOpen(false);
       setActionType('approve');
       setSuccessDialogOpen(true);
@@ -224,27 +323,9 @@ function ExportDetail() {
     }
   };
 
-  // Dialog handlers
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setSelectedExportId(null);
-  };
-
-  const handleCloseApproveDialog = () => {
-    setApproveDialogOpen(false);
-    setSelectedApproveId(null);
-  };
-
-  const handleCloseDetailDialog = () => {
-    setDetailDialogOpen(false);
-    setSelectedExport(null);
-  };
-
-  const handleClosePrintDialog = () => {
-    setPrintDialogOpen(false);
-    setSelectedExport(null);
-  };
-
+  /**
+   * Handle print functionality
+   */
   const handlePrint = () => {
     if (printRef.current) {
       const printContent = printRef.current;
@@ -257,14 +338,41 @@ function ExportDetail() {
       printWindow.document.write('<html><head><title>ໃບນຳອອກສິນຄ້າ</title>');
       printWindow.document.write('<style>');
       printWindow.document.write(`
-        body { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif; padding: 20px; }
-        .export-header { text-align: center; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
-        thead { background-color: #f0f0f0; }
-        .signatures { display: flex; justify-content: space-around; margin-top: 50px; }
-        .signature-box { width: 200px; text-align: center; }
-        .signature-line { border-top: 1px solid #000; margin-top: 70px; padding-top: 10px; }
+        body { 
+          font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif; 
+          padding: 20px; 
+        }
+        .export-header { 
+          text-align: center; 
+          margin-bottom: 20px; 
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-bottom: 30px; 
+        }
+        th, td { 
+          padding: 8px; 
+          border: 1px solid #ddd; 
+          text-align: center; 
+        }
+        thead { 
+          background-color: #f0f0f0; 
+        }
+        .signatures { 
+          display: flex; 
+          justify-content: space-around; 
+          margin-top: 50px; 
+        }
+        .signature-box { 
+          width: 200px; 
+          text-align: center; 
+        }
+        .signature-line { 
+          border-top: 1px solid #000; 
+          margin-top: 70px; 
+          padding-top: 10px; 
+        }
       `);
       printWindow.document.write('</style></head><body>');
       printWindow.document.write(printContent.innerHTML);
@@ -273,7 +381,7 @@ function ExportDetail() {
       printWindow.document.close();
       printWindow.focus();
       
-      // ພິມຫຼັງຈາກການສ້າງເນື້ອຫາສຳເລັດ
+      // Print after content has loaded
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
@@ -282,36 +390,44 @@ function ExportDetail() {
     }
   };
 
-  const handleCloseActionSuccessDialog = () => {
-    setSuccessDialogOpen(false);
-  };
-
-  // ຈັດຮູບແບບວັນທີເປັນຮູບແບບທີ່ອ່ານໄດ້ງ່າຍ
+  /**
+   * Format date to readable format
+   * @param {string} dateStr - Date string to format
+   * @returns {string} Formatted date string
+   */
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     
     try {
-      // ກວດກາວ່າວັນທີຢູ່ໃນຮູບແບບ ISO ຫຼືບໍ່
+      // Check if date is in ISO format
       if (dateStr.includes('T')) {
         const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        
         return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
       }
       
-      // ຖ້າເປັນຮູບແບບ DD/MM/YYYY ຢູ່ແລ້ວ, ສົ່ງຄືນຕາມເດີມ
+      // Handle DD/MM/YYYY format
       if (dateStr.includes('/')) {
         return dateStr;
       }
       
-      // ພະຍາຍາມປ່ຽນຮູບແບບອື່ນໆ
+      // Try to parse other formats
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      
       return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     } catch (error) {
-      console.error("ຂໍ້ຜິດພາດໃນການຈັດຮູບແບບວັນທີ:", error);
-      return dateStr; // ສົ່ງຄືນຕາມເດີມໃນກໍລະນີທີ່ມີຂໍ້ຜິດພາດ
+      console.error("Date formatting error:", error);
+      return dateStr;
     }
   };
 
-  // ດຶງຈຳນວນລາຍການສິນຄ້າຈາກການນຳອອກ
+  /**
+   * Get item count from export
+   * @param {Object} exportItem - Export item to count
+   * @returns {number} Number of items in export
+   */
   const getItemCount = (exportItem) => {
     if (exportItem.items && Array.isArray(exportItem.items)) {
       return exportItem.items.length;
@@ -319,59 +435,136 @@ function ExportDetail() {
     return 0;
   };
 
-  // ດຶງວັນທີຈາກເອກະສານນຳອອກ
+  /**
+   * Get export date
+   * @param {Object} exportItem - Export item to get date from
+   * @returns {string} Formatted date
+   */
   const getExportDate = (exportItem) => {
-    // ເລືອກວັນທີຕາມຂໍ້ມູນທີ່ມີ
     const exportDate = exportItem.date || exportItem.export_date;
     return formatDate(exportDate);
   };
 
-  // ດຶງສະຖານະຂອງການນຳອອກ
+  /**
+   * Get export status
+   * @param {Object} exportItem - Export item to get status from
+   * @returns {string} Status string
+   */
   const getExportStatus = (exportItem) => {
-    return exportItem.status || 'ລໍຖ້າອະນຸມັດ'; // ຄ່າເລີ່ມຕົ້ນຖ້າບໍ່ມີສະຖານະ
+    return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
   };
 
-  // ດຶງລະຫັດຂອງການນຳອອກ
+  /**
+   * Get export ID
+   * @param {Object} exportItem - Export item to get ID from
+   * @returns {number} Export ID
+   */
   const getExportId = (exportItem) => {
-    return exportItem.id || exportItem.export_id; // ລອງທັງສອງຮູບແບບ
+    return exportItem.id || exportItem.export_id;
   };
 
-  // Get status chip color based on status
+  /**
+   * Get status chip color based on status
+   * @param {string} status - Status string
+   * @returns {string} Color hex code
+   */
   const getStatusChipColor = (status) => {
     switch(status) {
       case 'ລໍຖ້າອະນຸມັດ':
         return '#FFA726'; // Orange for waiting
       case 'ນຳອອກແລ້ວ':
-        return '#9ACD32'; // Green for approved
+        return '#4CAF50'; // Green for approved
       default:
         return '#9E9E9E'; // Gray for other statuses
     }
   };
 
-  // ດຶງຊື່ສິນຄ້າຈາກລາຍການສິນຄ້າ
+  /**
+   * Get product name from item
+   * @param {Object} item - Product item
+   * @returns {string} Product name
+   */
   const getProductName = (item) => {
-    // ກວດສອບທຸກຮູບແບບທີ່ເປັນໄປໄດ້ສຳລັບຊື່ສິນຄ້າ
     return item.name || item.ProductName || '-';
   };
 
-  // ດຶງຈຳນວນສິນຄ້າທີ່ນຳອອກ
+  /**
+   * Get export quantity from item
+   * @param {Object} item - Product item
+   * @returns {number} Export quantity
+   */
   const getExportQuantity = (item) => {
     return item.exportQuantity || item.qty || 0;
   };
 
-  // ດຶງບ່ອນຈັດວາງຂອງສິນຄ້າ
+  /**
+   * Get export location from item
+   * @param {Object} item - Product item
+   * @returns {string} Export location
+   */
   const getExportLocation = (item) => {
     return item.exportLocation || item.location || '-';
   };
 
-  // ດຶງສາເຫດການນຳອອກ
+  /**
+   * Get export reason from item
+   * @param {Object} item - Product item
+   * @returns {string} Export reason
+   */
   const getExportReason = (item) => {
     return item.exportReason || item.reason || '-';
   };
 
+  /**
+   * Show alert message
+   * @param {string} message - Alert message
+   * @param {string} severity - Alert severity
+   */
+  const showAlert = (message, severity = 'info') => {
+    setAlert({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  /**
+   * Close alert
+   */
+  const handleCloseAlert = () => {
+    setAlert({
+      ...alert,
+      open: false
+    });
+  };
+
+  // Dialog handlers
+  const handleCloseDetailDialog = () => setDetailDialogOpen(false);
+  const handleClosePrintDialog = () => setPrintDialogOpen(false);
+  const handleCloseDeleteDialog = () => setDeleteDialogOpen(false);
+  const handleCloseApproveDialog = () => setApproveDialogOpen(false);
+  const handleCloseActionSuccessDialog = () => setSuccessDialogOpen(false);
+
   return (
     <Layout title="ປະຫວັດການນຳອອກສິນຄ້າ">
-      {/* Delete Confirmation Dialog */}
+      {/* Alert Snackbar */}
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={5000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseAlert} 
+          severity={alert.severity} 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
+      
+      {/* Confirmation Dialogs */}
       <DeleteConfirmDialog 
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
@@ -380,7 +573,6 @@ function ExportDetail() {
         loading={loading}
       />
       
-      {/* Approve Confirmation Dialog */}
       <ApproveConfirmDialog 
         open={approveDialogOpen}
         onClose={handleCloseApproveDialog}
@@ -389,7 +581,6 @@ function ExportDetail() {
         loading={loading}
       />
       
-      {/* Action Success Dialog */}
       <ActionSuccessDialog 
         open={successDialogOpen}
         onClose={handleCloseActionSuccessDialog}
@@ -419,7 +610,7 @@ function ExportDetail() {
         </DialogTitle>
         
         <DialogContent sx={{ mt: 2 }}>
-          {selectedExport && (
+          {selectedExport ? (
             <Box sx={{ mb: 4 }}>
               <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
                 ລາຍລະອຽດນຳອອກສິນຄ້າ
@@ -428,45 +619,65 @@ function ExportDetail() {
                 ວັນທີ: {getExportDate(selectedExport)}
               </Typography>
               
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: 'background.default' }}>
-                    <TableRow>
-                      <TableCell align="center" width="5%">#</TableCell>
-                      <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
-                      <TableCell align="center">ຈຳນວນ</TableCell>
-                      <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
-                      <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedExport.items && selectedExport.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{getProductName(item)}</TableCell>
-                        <TableCell align="center">{getExportQuantity(item)}</TableCell>
-                        <TableCell align="center">{getExportLocation(item)}</TableCell>
-                        <TableCell align="center">{getExportReason(item)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }}>
-                <Box sx={{ textAlign: 'center', width: '200px' }}>
-                  <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
-                  <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                    <Typography variant="body2">ລາຍເຊັນ</Typography>
-                  </Box>
+              {detailsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
                 </Box>
-                <Box sx={{ textAlign: 'center', width: '200px' }}>
-                  <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
-                  <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                    <Typography variant="body2">ລາຍເຊັນ</Typography>
+              ) : (
+                <>
+                  <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                    <Table>
+                      <TableHead sx={{ bgcolor: 'background.default' }}>
+                        <TableRow>
+                          <TableCell align="center" width="5%">#</TableCell>
+                          <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
+                          <TableCell align="center">ຈຳນວນ</TableCell>
+                          <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
+                          <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {exportDetails && exportDetails.length > 0 ? (
+                          exportDetails.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell align="center">{index + 1}</TableCell>
+                              <TableCell align="center">{getProductName(item)}</TableCell>
+                              <TableCell align="center">{getExportQuantity(item)}</TableCell>
+                              <TableCell align="center">{getExportLocation(item)}</TableCell>
+                              <TableCell align="center">{getExportReason(item)}</TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} align="center">
+                              ບໍ່ພົບຂໍ້ມູນລາຍການສິນຄ້າ
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }}>
+                    <Box sx={{ textAlign: 'center', width: '200px' }}>
+                      <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
+                      <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                        <Typography variant="body2">ລາຍເຊັນ</Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ textAlign: 'center', width: '200px' }}>
+                      <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
+                      <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                        <Typography variant="body2">ລາຍເຊັນ</Typography>
+                      </Box>
+                    </Box>
                   </Box>
-                </Box>
-              </Box>
+                </>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
             </Box>
           )}
         </DialogContent>
@@ -493,14 +704,14 @@ function ExportDetail() {
         </DialogTitle>
         
         <DialogContent sx={{ mt: 2 }}>
-          {selectedExport && (
+          {selectedExport ? (
             <div ref={printRef}>
               <Box sx={{ mb: 4 }} className="export-header">
                 <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
                   ໃບນຳອອກສິນຄ້າ
                 </Typography>
                 <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                  ວັນທີ: {getExportDate(selectedExport)}
+                  ເລກທີ: {getExportId(selectedExport)} | ວັນທີ: {getExportDate(selectedExport)}
                 </Typography>
                 
                 <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
@@ -515,7 +726,8 @@ function ExportDetail() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {selectedExport.items && selectedExport.items.map((item, index) => (
+                      {(exportDetails && exportDetails.length > 0 ? exportDetails : 
+                        (selectedExport.items ? selectedExport.items : [])).map((item, index) => (
                         <TableRow key={index}>
                           <TableCell align="center">{index + 1}</TableCell>
                           <TableCell align="center">{getProductName(item)}</TableCell>
@@ -524,6 +736,13 @@ function ExportDetail() {
                           <TableCell align="center">{getExportReason(item)}</TableCell>
                         </TableRow>
                       ))}
+                      {(!exportDetails || exportDetails.length === 0) && (!selectedExport.items || selectedExport.items.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            ບໍ່ພົບຂໍ້ມູນລາຍການສິນຄ້າ
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -544,6 +763,10 @@ function ExportDetail() {
                 </Box>
               </Box>
             </div>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
           )}
         </DialogContent>
         <DialogActions>
@@ -558,6 +781,7 @@ function ExportDetail() {
         </DialogActions>
       </Dialog>
       
+      {/* Main Page Content */}
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ປະຫວັດການນຳອອກສິນຄ້າ
@@ -620,10 +844,10 @@ function ExportDetail() {
               <TableBody>
                 {filteredExports.map((exportItem, index) => (
                   <TableRow
-                    key={index}
+                    key={getExportId(exportItem) || index}
                     sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
                   >
-                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell align="center">{getExportId(exportItem) || index + 1}</TableCell>
                     <TableCell align="center">{getExportDate(exportItem)}</TableCell>
                     <TableCell align="center">{getItemCount(exportItem)}</TableCell>
                     <TableCell align="center">
@@ -700,4 +924,5 @@ function ExportDetail() {
     </Layout>
   );
 }
+
 export default ExportDetail;
