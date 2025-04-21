@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+import DashboardCharts from '../components/DashboardCharts';
 
 
 function Dashboard() {
@@ -292,6 +293,16 @@ function Dashboard() {
             color="#9C27B0" // Purple
             onClick={() => window.location.href = "/employees"}
           />
+        </Grid>
+
+        {/* Charts Section */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, borderRadius: 1, boxShadow: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              ສະຖິຕິການຂາຍແລະຂໍ້ມູນສິນຄ້າ
+            </Typography>
+            <DashboardCharts />
+          </Paper>
         </Grid>
 
         {/* Low stock alerts section */}

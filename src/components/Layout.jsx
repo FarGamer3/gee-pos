@@ -18,7 +18,8 @@ import {
   Container,
   Menu,
   MenuItem,
-  Tooltip
+  Tooltip,
+  Collapse
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -32,7 +33,16 @@ import {
   Notifications as NotificationIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
-  AccountCircle as AccountCircleIcon
+  AccountCircle as AccountCircleIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Inventory2 as ProductIcon,
+  Bookmark as BrandIcon,
+  Class as CategoryTypeIcon,
+  LocationOn as WarehouseIcon,
+  Business as SupplierIcon,
+  People as CustomersIcon,
+  Group as EmployeesIcon
 } from '@mui/icons-material';
 import { getCurrentUser, logout } from '../services/authService';
 import { getAllNotificationsCount } from '../services/notificationService';
@@ -52,6 +62,25 @@ export default function Layout({ children, title, onLogout }) {
   
   // ດຶງຂໍ້ມູນຜູ້ໃຊ້ທີ່ເຂົ້າສູ່ລະບົບ
   const currentUser = getCurrentUser();
+
+  // State ສຳລັບເມນູຍ່ອຍ
+  const [openManageData, setOpenManageData] = useState(false);
+  
+  // ເຊັກວ່າຢູ່ໃນໜ້າຈັດການຂໍ້ມູນຫລັກຫຼືບໍ່ເມື່ອໂຫລດ component
+  useEffect(() => {
+    const currentPath = location.pathname;
+    // ຖ້າຢູ່ໃນໜ້າຈັດການຂໍ້ມູນຫລັກຫຼືໜຶ່ງໃນໜ້າຍ່ອຍຂອງມັນ ແມ່ນໃຫ້ເປີດເມນູຍ່ອຍ
+    if (currentPath === '/Manage_data' || 
+        currentPath === '/products' || 
+        currentPath === '/categories' || 
+        currentPath === '/units' || 
+        currentPath === '/warehouse' || 
+        currentPath === '/suppliers' || 
+        currentPath === '/customers' || 
+        currentPath === '/employees') {
+      setOpenManageData(true);
+    }
+  }, [location.pathname]);
 
   // ດຶງຂໍ້ມູນຈຳນວນການແຈ້ງເຕືອນເມື່ອ component ຖືກໂຫຼດ
   useEffect(() => {
@@ -103,10 +132,27 @@ export default function Layout({ children, title, onLogout }) {
     // ຍົກເລີກ interval ເມື່ອ component ຖືກຖອດ
     return () => clearInterval(interval);
   }, []);
+
+  // ກຳນົດລາຍການເມນູຍ່ອຍຂອງຈັດການຂໍ້ມູນຫຼັກ
+  const manageDataSubMenus = [
+    { text: 'ຂໍ້ມູນສິນຄ້າ', icon: <ProductIcon fontSize="small" />, path: '/products' },
+    { text: 'ຂໍ້ມູນປະເພດ', icon: <CategoryTypeIcon fontSize="small" />, path: '/categories' },
+    { text: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: <BrandIcon fontSize="small" />, path: '/units' },
+    { text: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: <WarehouseIcon fontSize="small" />, path: '/warehouse' },
+    { text: 'ຂໍ້ມູນພະນັກງານ', icon: <EmployeesIcon fontSize="small" />, path: '/employees' },
+    { text: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: <SupplierIcon fontSize="small" />, path: '/suppliers' },
+    { text: 'ຂໍ້ມູນລູກຄ້າ', icon: <CustomersIcon fontSize="small" />, path: '/customers' },
+  ];
   
   const menuItems = [
     { text: 'ໜ້າຫຼັກ', icon: <HomeIcon />, path: '/dashboard', badge: null },
-    { text: 'ຈັດການຂໍ້ມູນຫຼັກ', icon: <CategoryIcon />, path: '/Manage_data', badge: lowStockCount > 0 ? lowStockCount : null },
+    { 
+      text: 'ຈັດການຂໍ້ມູນຫຼັກ', 
+      icon: <CategoryIcon />, 
+      path: '/Manage_data', 
+      badge: lowStockCount > 0 ? lowStockCount : null,
+      hasSubMenu: true 
+    },
     { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/Buy', badge: null },
     { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales', badge: null },
     { text: 'ນຳເຂົ້າສິນຄ້າ', icon: <ImportIcon />, path: '/import', badge: pendingImportCount > 0 ? pendingImportCount : null },
@@ -116,6 +162,11 @@ export default function Layout({ children, title, onLogout }) {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+  
+  // ຟັງຊັນເປີດ/ປິດເມນູຍ່ອຍຂອງຈັດການຂໍ້ມູນຫຼັກ
+  const handleToggleManageData = () => {
+    setOpenManageData(!openManageData);
   };
   
   // ເປີດເມນູຜູ້ໃຊ້
@@ -168,46 +219,149 @@ export default function Layout({ children, title, onLogout }) {
       <Divider />
       <List>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton 
-              selected={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                  },
-                },
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                },
-                py: 1.5
-              }}
-            >
-              <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                {item.badge ? (
-                  <Badge 
-                    badgeContent={item.badge} 
-                    color="error"
+          <div key={item.text}>
+            <ListItem disablePadding>
+              {item.hasSubMenu ? (
+                // ຖ້າເປັນເມນູທີ່ມີເມນູຍ່ອຍ (ຈັດການຂໍ້ມູນຫຼັກ)
+                <Box sx={{ display: 'flex', width: '100%' }}>
+                  <ListItemButton
+                    onClick={() => navigate(item.path)}
                     sx={{
-                      '& .MuiBadge-badge': {
-                        fontSize: '0.6rem',
-                        height: '16px',
-                        minWidth: '16px',
-                        padding: '0 3px'
-                      }
+                      flexGrow: 1,
+                      backgroundColor: (location.pathname === item.path || location.pathname.includes('/products') || 
+                                        location.pathname.includes('/categories') || location.pathname.includes('/units') || 
+                                        location.pathname.includes('/warehouse') || location.pathname.includes('/suppliers') || 
+                                        location.pathname.includes('/customers') || location.pathname.includes('/employees')) 
+                                        ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                      py: 1.5,
+                      pr: 0
                     }}
                   >
-                    {item.icon}
-                  </Badge>
-                ) : (
-                  item.icon
-                )}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
+                    <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                      {item.badge ? (
+                        <Badge 
+                          badgeContent={item.badge} 
+                          color="error"
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              fontSize: '0.6rem',
+                              height: '16px',
+                              minWidth: '16px',
+                              padding: '0 3px'
+                            }
+                          }}
+                        >
+                          {item.icon}
+                        </Badge>
+                      ) : (
+                        item.icon
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                  <ListItemButton
+                    onClick={handleToggleManageData}
+                    sx={{
+                      width: '40px',
+                      justifyContent: 'center',
+                      backgroundColor: (location.pathname === item.path || location.pathname.includes('/products') || 
+                                        location.pathname.includes('/categories') || location.pathname.includes('/units') || 
+                                        location.pathname.includes('/warehouse') || location.pathname.includes('/suppliers') || 
+                                        location.pathname.includes('/customers') || location.pathname.includes('/employees')) 
+                                        ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                      py: 1.5
+                    }}
+                  >
+                    {openManageData ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  </ListItemButton>
+                </Box>
+              ) : (
+                // ເມນູທຳມະດາທີ່ບໍ່ມີເມນູຍ່ອຍ
+                <ListItemButton 
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    py: 1.5
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                    {item.badge ? (
+                      <Badge 
+                        badgeContent={item.badge} 
+                        color="error"
+                        sx={{
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.6rem',
+                            height: '16px',
+                            minWidth: '16px',
+                            padding: '0 3px'
+                          }
+                        }}
+                      >
+                        {item.icon}
+                      </Badge>
+                    ) : (
+                      item.icon
+                    )}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              )}
+            </ListItem>
+            
+            {/* ສ່ວນສະແດງເມນູຍ່ອຍຂອງຈັດການຂໍ້ມູນຫຼັກ */}
+            {item.hasSubMenu && (
+              <Collapse in={openManageData} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {manageDataSubMenus.map((subMenu) => (
+                    <ListItemButton 
+                      key={subMenu.text}
+                      selected={location.pathname === subMenu.path}
+                      onClick={() => navigate(subMenu.path)}
+                      sx={{ 
+                        pl: 4,
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                          },
+                        },
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'white', minWidth: 35 }}>
+                        {subMenu.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={subMenu.text} 
+                        primaryTypographyProps={{ 
+                          fontSize: '0.85rem',
+                          fontWeight: location.pathname === subMenu.path ? 'bold' : 'normal'
+                        }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+            )}
+          </div>
         ))}
       </List>
     </div>

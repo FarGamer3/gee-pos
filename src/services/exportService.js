@@ -61,38 +61,16 @@ export const getExportDetails = async (exportId) => {
  * @returns {Promise<Object>} ຜົນການບັນທຶກການນຳອອກສິນຄ້າ
  */
 export const createExport = async (exportData) => {
-  if (!exportData.items || exportData.items.length === 0) {
-    throw new Error('ຕ້ອງມີລາຍການສິນຄ້າຢ່າງໜ້ອຍ 1 ລາຍການ');
-  }
-  
   try {
-    // ພະຍາຍາມສົ່ງຂໍ້ມູນໄປຍັງ backend API
     const response = await axios.post(`${API_BASE_URL}/export/Create/Export`, exportData);
     
-    if (response.data && (response.data.result_code === "200" || response.data.result_code === "201")) {
-      saveExportToLocalStorage(exportData, response.data.export_id);
+    if (response.data && response.data.result_code === "200") {
       return response.data;
-    } else {
-      throw new Error(response.data?.result || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກສິນຄ້າ');
     }
+    throw new Error(response.data?.result || 'Failed to create export');
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກສິນຄ້າ:', error);
-    
-    // Fallback ຖ້າ API ບໍ່ສາມາດໃຊ້ໄດ້: ບັນທຶກໄວ້ໃນ localStorage
-    const saveResult = saveExportToLocalStorage(exportData);
-    
-    // ພະຍາຍາມອັບເດດສະຕັອກສິນຄ້າໂດຍກົງ (ຖ້າ API ການນຳອອກສິນຄ້າໃຊ້ບໍ່ໄດ້)
-    try {
-      await updateProductStockDirectly(exportData.items);
-    } catch (stockError) {
-      console.error('ບໍ່ສາມາດອັບເດດສະຕັອກສິນຄ້າໄດ້:', stockError);
-    }
-    
-    if (saveResult) {
-      return { result_code: "200", result: "ບັນທຶກສຳເລັດ (ເກັບໄວ້ໃນເຄື່ອງ)", local_storage: true };
-    } else {
-      throw new Error('ບໍ່ສາມາດບັນທຶກຂໍ້ມູນໄດ້');
-    }
+    throw error;
   }
 };
 
@@ -129,20 +107,19 @@ export const updateExportStatus = async (exportId, status) => {
  */
 export const deleteExport = async (exportId) => {
   try {
+    console.log("ກຳລັງລຶບການນຳອອກສິນຄ້າ ID:", exportId);
+    
     const response = await axios.delete(`${API_BASE_URL}/export/Delete/Export`, {
       data: { export_id: exportId }
     });
     
     if (response.data && response.data.result_code === "200") {
-      deleteExportFromLocalStorage(exportId);
       return true;
     }
     return false;
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການລຶບການນຳອອກສິນຄ້າ:', error);
-    
-    // Fallback: ລຶບຈາກ localStorage
-    return deleteExportFromLocalStorage(exportId);
+    throw error;
   }
 };
 
@@ -228,7 +205,16 @@ function saveExportToLocalStorage(exportData, serverExportId = null) {
     return false;
   }
 }
-
+export const testExportAPI = async (exportData) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/export/test-export`, exportData);
+    console.log("Test response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error('ຂໍ້ຜິດພາດໃນການທົດສອບ API:', error);
+    throw error;
+  }
+};
 /**
  * ອັບເດດສະຖານະການນຳອອກສິນຄ້າໃນ localStorage
  * @param {number} exportId - ລະຫັດການນຳອອກສິນຄ້າ

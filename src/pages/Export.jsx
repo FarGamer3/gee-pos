@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+// ຕອນເທິງຂອງໄຟລ໌ໃກ້ກັບການ import ອື່ນໆ
+import { createExport, testExportAPI } from '../services/exportService';
 import {
   Box,
   Paper,
@@ -35,7 +37,7 @@ import {
 import Layout from '../components/Layout';
 import { SuccessDialog, ErrorDialog } from '../components/SuccessDialog';
 import { getCurrentUser } from '../services/authService';
-import { createExport } from '../services/exportService';
+
 import ExportFormDialog from '../components/ExportFormDialog';
 
 function Export() {
@@ -208,7 +210,7 @@ const fetchProducts = async () => {
       showSnackbar('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການນຳອອກ', 'warning');
       return;
     }
-
+  
     try {
       setLoading(true);
       
@@ -220,13 +222,15 @@ const fetchProducts = async () => {
         items: exportItems.map(item => ({
           id: item.id,
           exportQuantity: item.exportQuantity,
-          exportLocation: item.exportLocation,
+          exportLocation: item.exportLocation || item.location || '',
           exportReason: item.exportReason
         }))
       };
       
+      // ສະແດງຂໍ້ມູນທີ່ຈະສົ່ງ
+      console.log("ສົ່ງຂໍ້ມູນໄປ API:", JSON.stringify(exportData, null, 2));
+      
       // ສົ່ງຂໍ້ມູນໄປຍັງ API
-      console.log("ຂໍ້ມູນທີ່ຈະສົ່ງໄປ API:", JSON.stringify(exportData));
       const result = await createExport(exportData);
       
       console.log('ຜົນການບັນທຶກ:', result);
@@ -244,7 +248,6 @@ const fetchProducts = async () => {
       setLoading(false);
     }
   };
-
   // ຈັດການກັບການປິດກ່ອງໂຕ້ຕອບ
   const handleCloseSuccessDialog = () => {
     setShowSuccessDialog(false);
@@ -353,7 +356,27 @@ const fetchProducts = async () => {
         loading={loading}
         errorMessage={apiError}
       />
-      
+      <Button
+  variant="outlined"
+  color="info"
+  onClick={async () => {
+    try {
+      const testData = {
+        emp_id: currentUser?.emp_id || 1,
+        test: true,
+        items: [{id: 1, exportQuantity: 1, exportReason: "ທົດສອບ"}]
+      };
+      const result = await testExportAPI(testData);
+      console.log("ຜົນການທົດສອບ:", result);
+      showSnackbar('ການທົດສອບ API ສຳເລັດ', 'success');
+    } catch (err) {
+      console.error("ຂໍ້ຜິດພາດການທົດສອບ:", err);
+      showSnackbar('ການທົດສອບ API ບໍ່ສຳເລັດ', 'error');
+    }
+  }}
+>
+  ທົດສອບ API
+</Button>
       {/* ກ່ອງໂຕ້ຕອບການພິມ */}
       <Dialog
         open={printDialogOpen}
