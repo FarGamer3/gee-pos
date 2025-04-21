@@ -86,21 +86,31 @@ function Export() {
   }, []);
   
  // ຟັງຊັນດຶງຂໍ້ມູນສິນຄ້າ
-const fetchProducts = async () => {
+ const fetchProducts = async (zoneMap = {}) => {
   try {
     setLoading(true);
-    // ເຊື່ອມຕໍ່ກັບ API ເພື່ອດຶງຂໍ້ມູນສິນຄ້າ
     const response = await axios.get('http://localhost:4422/All/Product');
     
     if (response.data && response.data.result_code === "200" && response.data.products) {
-      // ແປງຂໍ້ມູນຈາກ API ໃຫ້ເຂົ້າກັບໂຄງສ້າງທີ່ຕ້ອງການ
-      const formattedProducts = response.data.products.map(product => ({
-        id: product.proid,
-        name: product.ProductName,
-        stock: product.qty,
-        location: product.zone || 'ບໍ່ລະບຸ', // ຖ້າມີຂໍ້ມູນ zone, ໃຊ້ zone ຖ້າບໍ່ມີໃຊ້ "ບໍ່ລະບຸ"
-      }));
+      const formattedProducts = response.data.products.map(product => {
+        let locationValue = 'ບໍ່ລະບຸ';
+        
+        // ໃຊ້ zoneMap ຖ້າມີ
+        if (product.zone_id && zoneMap[product.zone_id]) {
+          locationValue = zoneMap[product.zone_id];
+        } else if (product.zone) {
+          locationValue = product.zone;
+        }
+        
+        return {
+          id: product.proid,
+          name: product.ProductName,
+          stock: parseInt(product.qty) || 0,
+          location: locationValue,
+        };
+      });
       
+      console.log("ຂໍ້ມູນສິນຄ້າທີ່ຈະໃຊ້:", formattedProducts);
       setProducts(formattedProducts);
       showSnackbar('ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດ', 'success');
     } else {
@@ -138,7 +148,7 @@ const fetchProducts = async () => {
   const handleOpenFormDialog = (product) => {
     setCurrentProduct(product);
     setExportQuantity(1);
-    setExportLocation(product.location);
+    setExportLocation(product.location || 'ບໍ່ລະບຸ'); // Ensure default value
     setExportReason('');
     setApiError(null);
     setFormDialogOpen(true);

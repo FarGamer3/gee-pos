@@ -19,24 +19,10 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
+import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
-/**
- * ກ່ອງໂຕ້ຕອບສຳລັບການນຳອອກສິນຄ້າ
- * @param {Object} props - Component properties
- * @param {boolean} props.open - Dialog open state
- * @param {Function} props.onClose - Dialog close handler
- * @param {Object} props.product - Product to export
- * @param {number} props.exportQuantity - Quantity to export
- * @param {Function} props.setExportQuantity - Function to set export quantity
- * @param {string} props.exportLocation - Export location
- * @param {Function} props.setExportLocation - Function to set export location
- * @param {string} props.exportReason - Reason for export
- * @param {Function} props.setExportReason - Function to set export reason
- * @param {Function} props.onSave - Function to save export
- * @param {boolean} props.loading - Loading state for API operations
- * @param {string} props.errorMessage - Error message from API
- */
-const ExportFormDialog = ({ 
+function ExportFormDialog({ 
   open, 
   onClose, 
   product, 
@@ -49,20 +35,61 @@ const ExportFormDialog = ({
   onSave,
   loading = false,
   errorMessage = null
-}) => {
+}) {
+  // ເພີ່ມ state ສໍາລັບເກັບຂໍ້ມູນບ່ອນຈັດວາງ
+  const [warehouseLocations, setWarehouseLocations] = useState([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+
   // ກວດກາຄ່າ state ຂອງຟອມ
   const [formErrors, setFormErrors] = useState({
     quantity: false,
     reason: false
   });
   
-  // ຕັ້ງຄ່າເລີ່ມຕົ້ນເມື່ອເປີດກ່ອງໂຕ້ຕອບ
+  // ດຶງຂໍ້ມູນບ່ອນຈັດວາງເມື່ອເປີດກ່ອງໂຕ້ຕອບ
   useEffect(() => {
-    if (open && product) {
-      setExportLocation(product.location || '');
+    if (open) {
+      fetchWarehouseLocations();
       setFormErrors({ quantity: false, reason: false });
     }
-  }, [open, product, setExportLocation]);
+  }, [open]);
+
+  // ຟັງຊັນດຶງຂໍ້ມູນບ່ອນຈັດວາງສິນຄ້າ
+  const fetchWarehouseLocations = async () => {
+    try {
+      setLocationLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/All/Zone`);
+      
+      if (response.data && response.data.result_code === "200") {
+        setWarehouseLocations(response.data.zones || []);
+        
+        // ຖ້າມີຂໍ້ມູນແລະຍັງບໍ່ໄດ້ເລືອກບ່ອນຈັດວາງ, ໃຫ້ເລືອກບ່ອນຈັດວາງຂອງສິນຄ້າເປັນຄ່າເລີ່ມຕົ້ນ
+        if (response.data.zones && response.data.zones.length > 0 && !exportLocation) {
+          // ຊອກຫາບ່ອນຈັດວາງຂອງສິນຄ້າ (ຖ້າມີ)
+          if (product && product.location) {
+            const productZone = response.data.zones.find(
+              zone => zone.zone === product.location || 
+                     zone.zone_detail.includes(product.location)
+            );
+            
+            if (productZone) {
+              setExportLocation(productZone.zone);
+            } else {
+              // ຖ້າບໍ່ພົບບ່ອນຈັດວາງຂອງສິນຄ້າ, ໃຊ້ບ່ອນຈັດວາງທໍາອິດ
+              setExportLocation(response.data.zones[0].zone);
+            }
+          } else {
+            // ຖ້າບໍ່ມີຂໍ້ມູນບ່ອນຈັດວາງຂອງສິນຄ້າ, ໃຊ້ບ່ອນຈັດວາງທໍາອິດ
+            setExportLocation(response.data.zones[0].zone);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("ຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນບ່ອນຈັດວາງ:", error);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
   
   // ກວດສອບຄວາມຖືກຕ້ອງເມື່ອມີການປ່ຽນແປງຄ່າ
   useEffect(() => {
@@ -158,32 +185,43 @@ const ExportFormDialog = ({
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="ບ່ອນຈັດວາງ"
-                value={exportLocation}
-                onChange={(e) => setExportLocation(e.target.value)}
-              />
+              <FormControl fullWidth disabled={locationLoading}>
+                <InputLabel id="location-label">ບ່ອນຈັດວາງ</InputLabel>
+                <Select
+                  labelId="location-label"
+                  id="location"
+                  value={exportLocation}
+                  onChange={(e) => setExportLocation(e.target.value)}
+                  label="ບ່ອນຈັດວາງ"
+                >
+                  {locationLoading ? (
+                    <MenuItem value="">
+                      <CircularProgress size={20} /> ກຳລັງໂຫຼດຂໍ້ມູນ...
+                    </MenuItem>
+                  ) : warehouseLocations.length > 0 ? (
+                    warehouseLocations.map((location) => (
+                      <MenuItem key={location.zone_id} value={location.zone}>
+                        {location.zone} - {location.zone_detail}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem value="">ບໍ່ພົບຂໍ້ມູນບ່ອນຈັດວາງ</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
             </Grid>
             
             <Grid item xs={12}>
-              <FormControl fullWidth error={formErrors.reason}>
-                <InputLabel id="export-reason-label">ສາເຫດການນຳອອກ</InputLabel>
-                <Select
-                  labelId="export-reason-label"
-                  id="export-reason"
-                  value={exportReason}
-                  onChange={(e) => setExportReason(e.target.value)}
-                  label="ສາເຫດການນຳອອກ"
-                >
-                  <MenuItem value="">ເລືອກສາເຫດ</MenuItem>
-                  <MenuItem value="ສິນຄ້າເສຍຫາຍ">ສິນຄ້າເສຍຫາຍ</MenuItem>
-                  <MenuItem value="ສິນຄ້າໝົດອາຍຸ">ສິນຄ້າໝົດອາຍຸ</MenuItem>
-                  <MenuItem value="ສິນຄ້າຊຳລຸດ">ສິນຄ້າຊຳລຸດ</MenuItem>
-                  <MenuItem value="ໂອນຍ້າຍສາງ">ໂອນຍ້າຍສາງ</MenuItem>
-                </Select>
-                {formErrors.reason && <FormHelperText>ກະລຸນາເລືອກສາເຫດການນຳອອກ</FormHelperText>}
-              </FormControl>
+              <TextField
+                fullWidth
+                label="ສາເຫດການນຳອອກ"
+                value={exportReason}
+                onChange={(e) => setExportReason(e.target.value)}
+                error={formErrors.reason}
+                helperText={formErrors.reason ? "ກະລຸນາລະບຸສາເຫດການນຳອອກ" : ""}
+                multiline
+                rows={2}
+              />
             </Grid>
           </Grid>
         </Box>
@@ -208,6 +246,6 @@ const ExportFormDialog = ({
       </DialogActions>
     </Dialog>
   );
-};
+}
 
 export default ExportFormDialog;
