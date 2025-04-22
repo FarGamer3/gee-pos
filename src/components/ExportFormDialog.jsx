@@ -15,7 +15,8 @@ import {
   Select,
   FormHelperText,
   CircularProgress,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
@@ -36,17 +37,17 @@ function ExportFormDialog({
   loading = false,
   errorMessage = null
 }) {
-  // ເພີ່ມ state ສໍາລັບເກັບຂໍ້ມູນບ່ອນຈັດວາງ
+  // State for warehouse locations
   const [warehouseLocations, setWarehouseLocations] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
 
-  // ກວດກາຄ່າ state ຂອງຟອມ
+  // Form validation state
   const [formErrors, setFormErrors] = useState({
     quantity: false,
     reason: false
   });
   
-  // ດຶງຂໍ້ມູນບ່ອນຈັດວາງເມື່ອເປີດກ່ອງໂຕ້ຕອບ
+  // Fetch warehouse locations when dialog opens
   useEffect(() => {
     if (open) {
       fetchWarehouseLocations();
@@ -54,20 +55,20 @@ function ExportFormDialog({
     }
   }, [open]);
 
-  // ຟັງຊັນດຶງຂໍ້ມູນບ່ອນຈັດວາງສິນຄ້າ
+  // Function to fetch warehouse locations
   const fetchWarehouseLocations = async () => {
     try {
       setLocationLoading(true);
       const response = await axios.get(`${API_BASE_URL}/All/Zone`);
       
       if (response.data && response.data.result_code === "200") {
-        setWarehouseLocations(response.data.zones || []);
+        setWarehouseLocations(response.data.user_info || []);
         
-        // ຖ້າມີຂໍ້ມູນແລະຍັງບໍ່ໄດ້ເລືອກບ່ອນຈັດວາງ, ໃຫ້ເລືອກບ່ອນຈັດວາງຂອງສິນຄ້າເປັນຄ່າເລີ່ມຕົ້ນ
-        if (response.data.zones && response.data.zones.length > 0 && !exportLocation) {
-          // ຊອກຫາບ່ອນຈັດວາງຂອງສິນຄ້າ (ຖ້າມີ)
+        // Set default location if not already set
+        if (response.data.user_info && response.data.user_info.length > 0 && !exportLocation) {
+          // Try to find product's location in available zones
           if (product && product.location) {
-            const productZone = response.data.zones.find(
+            const productZone = response.data.user_info.find(
               zone => zone.zone === product.location || 
                      zone.zone_detail.includes(product.location)
             );
@@ -75,23 +76,36 @@ function ExportFormDialog({
             if (productZone) {
               setExportLocation(productZone.zone);
             } else {
-              // ຖ້າບໍ່ພົບບ່ອນຈັດວາງຂອງສິນຄ້າ, ໃຊ້ບ່ອນຈັດວາງທໍາອິດ
-              setExportLocation(response.data.zones[0].zone);
+              // Default to first location if product's location not found
+              setExportLocation(response.data.user_info[0].zone);
             }
           } else {
-            // ຖ້າບໍ່ມີຂໍ້ມູນບ່ອນຈັດວາງຂອງສິນຄ້າ, ໃຊ້ບ່ອນຈັດວາງທໍາອິດ
-            setExportLocation(response.data.zones[0].zone);
+            // Default to first location if no product location
+            setExportLocation(response.data.user_info[0].zone);
           }
         }
       }
     } catch (error) {
       console.error("ຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນບ່ອນຈັດວາງ:", error);
+      
+      // Use default locations if API fails
+      const defaultLocations = [
+        { zone_id: 1, zone: 'A', zone_detail: 'ບ່ອນຈັດວາງ A' },
+        { zone_id: 2, zone: 'B', zone_detail: 'ບ່ອນຈັດວາງ B' },
+        { zone_id: 3, zone: 'C', zone_detail: 'ບ່ອນຈັດວາງ C' }
+      ];
+      
+      setWarehouseLocations(defaultLocations);
+      
+      if (!exportLocation && defaultLocations.length > 0) {
+        setExportLocation(defaultLocations[0].zone);
+      }
     } finally {
       setLocationLoading(false);
     }
   };
   
-  // ກວດສອບຄວາມຖືກຕ້ອງເມື່ອມີການປ່ຽນແປງຄ່າ
+  // Validate form as values change
   useEffect(() => {
     if (exportQuantity > 0 && exportQuantity <= (product?.stock || 0)) {
       setFormErrors(prev => ({ ...prev, quantity: false }));
@@ -102,7 +116,7 @@ function ExportFormDialog({
     }
   }, [exportQuantity, exportReason, product]);
   
-  // ຟັງຊັນກວດສອບຄວາມຖືກຕ້ອງຂອງຟອມ
+  // Validate form before submission
   const validateForm = () => {
     const errors = {
       quantity: !exportQuantity || exportQuantity <= 0 || exportQuantity > (product?.stock || 0),
@@ -113,14 +127,14 @@ function ExportFormDialog({
     return !Object.values(errors).some(Boolean);
   };
   
-  // ຈັດການການບັນທຶກຂໍ້ມູນ
+  // Handle save button click
   const handleSave = () => {
     if (validateForm()) {
       onSave();
     }
   };
   
-  // ຖ້າບໍ່ມີຂໍ້ມູນສິນຄ້າ, ບໍ່ຕ້ອງສະແດງ
+  // If no product, don't render dialog
   if (!product) return null;
   
   return (
@@ -220,8 +234,33 @@ function ExportFormDialog({
                 error={formErrors.reason}
                 helperText={formErrors.reason ? "ກະລຸນາລະບຸສາເຫດການນຳອອກ" : ""}
                 multiline
-                rows={2}
+                rows={3}
+                placeholder="ລະບຸສາເຫດໃນການນຳອອກສິນຄ້າ ເຊັ່ນ: ສິນຄ້າເສຍຫາຍ, ໝົດອາຍຸ, ໂອນໄປສາຂາອື່ນ ຫຼື ອື່ນໆ..."
               />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                  ຈຳນວນຄົງເຫຼືອໃນສາງ:
+                </Typography>
+                <Chip 
+                  label={`${product.stock} ອັນ`} 
+                  color="primary" 
+                  variant="outlined" 
+                  size="small"
+                />
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mx: 1 }}>
+                  ຫຼັງນຳອອກ:
+                </Typography>
+                <Chip 
+                  label={`${Math.max(0, product.stock - exportQuantity)} ອັນ`} 
+                  color={product.stock - exportQuantity < 0 ? "error" : "success"} 
+                  variant="outlined" 
+                  size="small"
+                />
+              </Box>
             </Grid>
           </Grid>
         </Box>
