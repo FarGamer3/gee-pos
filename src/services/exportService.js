@@ -62,6 +62,12 @@ export const getExportDetails = async (exportId) => {
  */
 export const createExport = async (exportData) => {
   try {
+    // Check if all items have zone_id
+    const missingZoneId = exportData.items.some(item => !item.zone_id);
+    if (missingZoneId) {
+      console.warn('ບາງລາຍການບໍ່ມີ zone_id, ຈະຖືກກຳນົດເປັນຄ່າເລີ່ມຕົ້ນ 1');
+    }
+
     // ກຳນົດຂໍ້ມູນທີ່ຈະສົ່ງໄປໃຫ້ API
     const apiExportData = {
       emp_id: exportData.emp_id,
@@ -70,11 +76,8 @@ export const createExport = async (exportData) => {
       items: exportData.items.map(item => ({
         proid: item.id,  // ສົ່ງ proid ແທນ id ເພື່ອຄວາມເຂົ້າກັນໄດ້ກັບ API
         qty: item.exportQuantity,
-        // ຖ້າມີ zone_id ໃຫ້ໃຊ້, ຖ້າບໍ່ມີໃຫ້ພະຍາຍາມຄົ້ນຫາຈາກ location
-        zone_id: item.zone_id || getZoneIdFromLocation(item.exportLocation || item.location),
-        reason: item.exportReason,
-        // ເພີ່ມຂໍ້ມູນ location ສຳລັບການບັນທຶກ
-        location: item.exportLocation || item.location || ''
+        zone_id: item.zone_id || 1, // ຖ້າບໍ່ມີໃຫ້ໃຊ້ 1 ເປັນຄ່າເລີ່ມຕົ້ນ
+        reason: item.exportReason
       }))
     };
     
@@ -94,43 +97,6 @@ export const createExport = async (exportData) => {
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກສິນຄ້າ:', error);
     
-    // ທົດລອງສົ່ງ direct request ໄປຍັງຕາຕະລາງ export ແລະ export_detail
-    try {
-      // ສ້າງລາຍການ export ກ່ອນ
-      const exportResponse = await axios.post(`${API_BASE_URL}/export/test-export`, {
-        emp_id: exportData.emp_id,
-        export_date: exportData.export_date,
-        status: exportData.status || 'ລໍຖ້າອະນຸມັດ',
-        is_direct: true // ເພື່ອບອກວ່ານີ້ແມ່ນການບັນທຶກໂດຍກົງ
-      });
-      
-      if (exportResponse.data && exportResponse.data.result_code === "200" && exportResponse.data.export_id) {
-        const exportId = exportResponse.data.export_id;
-        
-        // ບັນທຶກລາຍລະອຽດສຳລັບແຕ່ລະລາຍການສິນຄ້າ
-        for (const item of exportData.items) {
-          await axios.post(`${API_BASE_URL}/export/test-detail`, {
-            exp_id: exportId,
-            proid: item.id,
-            qty: item.exportQuantity,
-            zone_id: item.zone_id || getZoneIdFromLocation(item.exportLocation || item.location) || 1,
-            reason: item.exportReason
-          });
-        }
-        
-        // ບັນທຶກປະຫວັດໃນ localStorage
-        saveExportToLocalStorage(exportData, exportId);
-        
-        return {
-          result_code: "200",
-          result: "ບັນທຶກສຳເລັດ (ວິທີທາງເລືອກ)",
-          export_id: exportId
-        };
-      }
-    } catch (directError) {
-      console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກໂດຍກົງ:', directError);
-    }
-    
     // ພະຍາຍາມບັນທຶກໃສ່ localStorage ໃນກໍລະນີ API ລົ້ມເຫຼວ
     const localResult = saveExportToLocalStorage(exportData);
     
@@ -146,28 +112,6 @@ export const createExport = async (exportData) => {
     throw error; // ສົ່ງຕໍ່ຂໍ້ຜິດພາດໄປຍັງຜູ້ເອີ້ນໃຊ້
   }
 };
-
-/**
- * ຄົ້ນຫາ zone_id ຈາກຊື່ location
- * @param {string} location - ຊື່ location (ເຊັ່ນ: "A", "B", "C")
- * @returns {number|null} zone_id ຖ້າພົບ, null ຖ້າບໍ່ພົບ
- */
-function getZoneIdFromLocation(location) {
-  if (!location) return null;
-  
-  // ສ້າງແມັບແບບງ່າຍສຳລັບຄົ້ນຫາ zone_id ຈາກຊື່ zone
-  const zoneMap = {
-    'A': 1,
-    'B': 2,
-    'C': 3,
-    'D': 4,
-    'E': 5
-  };
-  
-  // ດຶງຕົວອັກສອນທຳອິດຈາກ location ເພື່ອໃຊ້ຄົ້ນຫາ
-  const firstChar = location.charAt(0).toUpperCase();
-  return zoneMap[firstChar] || 1; // ຖ້າບໍ່ພົບໃຫ້ໃຊ້ 1 ເປັນຄ່າເລີ່ມຕົ້ນ
-}
 
 /**
  * ອັບເດດສະຖານະການນຳອອກສິນຄ້າ
@@ -319,11 +263,16 @@ function deleteExportFromLocalStorage(exportId) {
 
 /**
  * ຟັງຊັນທົດສອບການເຊື່ອມຕໍ່
- * @param {Object} exportData - ຂໍ້ມູນທົດສອບທີ່ຈະສົ່ງ
  * @returns {Promise<Object>} ຄຳຕອບຈາກ API
  */
-export const testExportAPI = async (testData) => {
+export const testExportAPI = async () => {
   try {
+    // Create a simple test payload
+    const testData = {
+      test: true,
+      timestamp: new Date().toISOString()
+    };
+    
     const response = await axios.post(`${API_BASE_URL}/export/test-export`, testData);
     console.log("ຜົນການທົດສອບ API:", response.data);
     return response.data;

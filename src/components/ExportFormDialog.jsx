@@ -40,6 +40,7 @@ function ExportFormDialog({
   // State for warehouse locations
   const [warehouseLocations, setWarehouseLocations] = useState([]);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState(null);
 
   // Form validation state
   const [formErrors, setFormErrors] = useState({
@@ -62,26 +63,36 @@ function ExportFormDialog({
       const response = await axios.get(`${API_BASE_URL}/All/Zone`);
       
       if (response.data && response.data.result_code === "200") {
-        setWarehouseLocations(response.data.user_info || []);
+        const zones = response.data.user_info || [];
+        setWarehouseLocations(zones);
         
         // Set default location if not already set
-        if (response.data.user_info && response.data.user_info.length > 0 && !exportLocation) {
+        if (zones.length > 0 && !exportLocation) {
           // Try to find product's location in available zones
           if (product && product.location) {
-            const productZone = response.data.user_info.find(
+            const productZone = zones.find(
               zone => zone.zone === product.location || 
                      zone.zone_detail.includes(product.location)
             );
             
             if (productZone) {
               setExportLocation(productZone.zone);
+              setSelectedZoneId(productZone.zone_id);
             } else {
               // Default to first location if product's location not found
-              setExportLocation(response.data.user_info[0].zone);
+              setExportLocation(zones[0].zone);
+              setSelectedZoneId(zones[0].zone_id);
             }
           } else {
             // Default to first location if no product location
-            setExportLocation(response.data.user_info[0].zone);
+            setExportLocation(zones[0].zone);
+            setSelectedZoneId(zones[0].zone_id);
+          }
+        } else if (exportLocation) {
+          // Find zone_id for existing exportLocation
+          const matchingZone = zones.find(zone => zone.zone === exportLocation);
+          if (matchingZone) {
+            setSelectedZoneId(matchingZone.zone_id);
           }
         }
       }
@@ -99,6 +110,7 @@ function ExportFormDialog({
       
       if (!exportLocation && defaultLocations.length > 0) {
         setExportLocation(defaultLocations[0].zone);
+        setSelectedZoneId(defaultLocations[0].zone_id);
       }
     } finally {
       setLocationLoading(false);
@@ -127,10 +139,30 @@ function ExportFormDialog({
     return !Object.values(errors).some(Boolean);
   };
   
+  // Handle location change
+  const handleLocationChange = (e) => {
+    const selectedZone = e.target.value;
+    setExportLocation(selectedZone);
+    
+    // Find zone_id for the selected zone
+    const matchingZone = warehouseLocations.find(zone => zone.zone === selectedZone);
+    if (matchingZone) {
+      setSelectedZoneId(matchingZone.zone_id);
+    }
+  };
+  
   // Handle save button click
   const handleSave = () => {
     if (validateForm()) {
-      onSave();
+      // Pass zone_id along with other data
+      const updatedProduct = {
+        ...product,
+        exportQuantity,
+        exportLocation,
+        exportReason,
+        zone_id: selectedZoneId
+      };
+      onSave(updatedProduct);
     }
   };
   
@@ -205,7 +237,7 @@ function ExportFormDialog({
                   labelId="location-label"
                   id="location"
                   value={exportLocation}
-                  onChange={(e) => setExportLocation(e.target.value)}
+                  onChange={handleLocationChange}
                   label="ບ່ອນຈັດວາງ"
                 >
                   {locationLoading ? (
