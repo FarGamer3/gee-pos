@@ -62,9 +62,9 @@ export const getExportDetails = async (exportId) => {
  */
 export const createExport = async (exportData) => {
   try {
-    // ກວດສອບຂໍ້ມູນ zone_id ສຳລັບແຕ່ລະລາຍການ
-    const checkItems = exportData.items.some(item => !item.zone_id);
-    if (checkItems) {
+    // Check if all items have zone_id
+    const missingZoneId = exportData.items.some(item => !item.zone_id);
+    if (missingZoneId) {
       console.warn('ບາງລາຍການບໍ່ມີ zone_id, ຈະຖືກກຳນົດເປັນຄ່າເລີ່ມຕົ້ນ 1');
     }
 
@@ -76,7 +76,7 @@ export const createExport = async (exportData) => {
       items: exportData.items.map(item => ({
         proid: item.id,  // ສົ່ງ proid ແທນ id ເພື່ອຄວາມເຂົ້າກັນໄດ້ກັບ API
         qty: item.exportQuantity,
-        zone_id: item.zone_id || 1, // ໃຊ້ zone_id ແທນ location ສຳລັບການສົ່ງຂໍ້ມູນໄປຫາ API
+        zone_id: item.zone_id || 1, // ຖ້າບໍ່ມີໃຫ້ໃຊ້ 1 ເປັນຄ່າເລີ່ມຕົ້ນ
         reason: item.exportReason
       }))
     };
@@ -189,8 +189,7 @@ function saveExportToLocalStorage(exportData, serverExportId = null) {
         proid: item.id,
         qty: item.exportQuantity,
         location: item.exportLocation,
-        reason: item.exportReason,
-        zone_id: item.zone_id // ເພີ່ມ zone_id ໃນການບັນທຶກ localStorage
+        reason: item.exportReason
       })),
       status: exportData.status || 'ລໍຖ້າອະນຸມັດ',
       emp_id: exportData.emp_id || 1
