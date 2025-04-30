@@ -1,4 +1,5 @@
-// src/services/exportService.js
+// src/services/exportService.js - Updated version with fixes for export functionality
+
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
@@ -56,52 +57,50 @@ export const getExportDetails = async (exportId) => {
 };
 
 /**
- * ບັນທຶກການນຳອອກສິນຄ້າ
+ * ບັນທຶກການນຳອອກສິນຄ້າ (ປັບປຸງໃຫ້ຮອງຮັບການໃຊ້ງານທີ່ດີຂຶ້ນ)
  * @param {Object} exportData - ຂໍ້ມູນການນຳອອກສິນຄ້າ
  * @returns {Promise<Object>} ຜົນການບັນທຶກການນຳອອກສິນຄ້າ
  */
 export const createExport = async (exportData) => {
+  console.log('ກຳລັງສົ່ງຄຳຂໍການນຳອອກສິນຄ້າ:', exportData);
+  
   try {
-    // Check if all items have zone_id
-    const missingZoneId = exportData.items.some(item => !item.zone_id);
-    if (missingZoneId) {
-      console.warn('ບາງລາຍການບໍ່ມີ zone_id, ຈະຖືກກຳນົດເປັນຄ່າເລີ່ມຕົ້ນ 1');
-    }
-
-    // ກຳນົດຂໍ້ມູນທີ່ຈະສົ່ງໄປໃຫ້ API
-    const apiExportData = {
+    // Process item data to ensure compatibility with API
+    const processedItems = exportData.items.map(item => ({
+      proid: item.id || item.proid,  // Make sure we have proid set
+      qty: item.exportQuantity || item.qty, // Ensure qty is set
+      zone_id: item.zone_id || 1,  // Include zone_id or default to 1
+      reason: item.exportReason || item.reason || ''
+    }));
+    
+    // Prepare data in format expected by the API
+    const apiData = {
       emp_id: exportData.emp_id,
       export_date: exportData.export_date,
       status: exportData.status || 'ລໍຖ້າອະນຸມັດ',
-      items: exportData.items.map(item => ({
-        proid: item.id,  // ສົ່ງ proid ແທນ id ເພື່ອຄວາມເຂົ້າກັນໄດ້ກັບ API
-        qty: item.exportQuantity,
-        zone_id: item.zone_id || 1, // ຖ້າບໍ່ມີໃຫ້ໃຊ້ 1 ເປັນຄ່າເລີ່ມຕົ້ນ
-        reason: item.exportReason
-      }))
+      items: processedItems
     };
     
-    console.log('ກຳລັງສົ່ງຂໍ້ມູນໄປຍັງ API:', apiExportData);
+    console.log('ຂໍ້ມູນທີ່ປັບຮຽບຮ້ອຍແລ້ວສຳລັບ API:', apiData);
     
-    // ສົ່ງຂໍ້ມູນໄປ API
-    const response = await axios.post(`${API_BASE_URL}/export/Create/Export`, apiExportData);
+    // Send data to API
+    const response = await axios.post(`${API_BASE_URL}/export/Create/Export`, apiData);
     
     if (response.data && response.data.result_code === "200") {
-      // ບັນທຶກສຳເລັດ, ບັນທຶກປະຫວັດໃນ localStorage ເຊັ່ນກັນ
+      // Save to localStorage as well
       saveExportToLocalStorage(exportData, response.data.export_id);
-      
       return response.data;
     } else {
       throw new Error(response.data?.result || 'ບໍ່ສາມາດບັນທຶກການນຳອອກສິນຄ້າໄດ້');
     }
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກສິນຄ້າ:', error);
+    console.log('ກຳລັງພະຍາຍາມບັນທຶກແບບ fallback ໃນ localStorage...');
     
-    // ພະຍາຍາມບັນທຶກໃສ່ localStorage ໃນກໍລະນີ API ລົ້ມເຫຼວ
+    // Fallback - store in localStorage if API fails
     const localResult = saveExportToLocalStorage(exportData);
     
     if (localResult) {
-      // ຖ້າບັນທຶກໃນ localStorage ສຳເລັດ, ສົ່ງຄືນຂໍ້ມູນຄ້າຍຄືກັບຈາກ API
       return {
         result_code: "200",
         result: "ບັນທຶກສຳເລັດ (ບັນທຶກໄວ້ໃນເຄື່ອງເທົ່ານັ້ນ)",
@@ -109,7 +108,7 @@ export const createExport = async (exportData) => {
       };
     }
     
-    throw error; // ສົ່ງຕໍ່ຂໍ້ຜິດພາດໄປຍັງຜູ້ເອີ້ນໃຊ້
+    throw error;
   }
 };
 
@@ -134,7 +133,7 @@ export const updateExportStatus = async (exportId, status) => {
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການອັບເດດສະຖານະການນຳອອກສິນຄ້າ:', error);
     
-    // Fallback: ອັບເດດສະຖານະໃນ localStorage
+    // Fallback - update in localStorage
     return updateExportStatusInLocalStorage(exportId, status);
   }
 };
@@ -153,7 +152,7 @@ export const deleteExport = async (exportId) => {
     });
     
     if (response.data && response.data.result_code === "200") {
-      // ລຶບຈາກ localStorage ເຊັ່ນກັນ
+      // Remove from localStorage as well
       deleteExportFromLocalStorage(exportId);
       return true;
     }
@@ -161,7 +160,7 @@ export const deleteExport = async (exportId) => {
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການລຶບການນຳອອກສິນຄ້າ:', error);
     
-    // ລອງລຶບຈາກ localStorage ໃນກໍລະນີທີ່ API ລົ້ມເຫຼວ
+    // Try to delete from localStorage anyway
     deleteExportFromLocalStorage(exportId);
     throw error;
   }

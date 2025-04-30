@@ -66,9 +66,8 @@ function ExportFormDialog({
         const zones = response.data.user_info || [];
         setWarehouseLocations(zones);
         
-        // Set default location if not already set
-        if (zones.length > 0 && !exportLocation) {
-          // Try to find product's location in available zones
+        // Set default zone based on product's current location
+        if (zones.length > 0) {
           if (product && product.location) {
             const productZone = zones.find(
               zone => zone.zone === product.location || 
@@ -78,21 +77,15 @@ function ExportFormDialog({
             if (productZone) {
               setExportLocation(productZone.zone);
               setSelectedZoneId(productZone.zone_id);
-            } else {
+            } else if (!exportLocation) {
               // Default to first location if product's location not found
               setExportLocation(zones[0].zone);
               setSelectedZoneId(zones[0].zone_id);
             }
-          } else {
+          } else if (!exportLocation) {
             // Default to first location if no product location
             setExportLocation(zones[0].zone);
             setSelectedZoneId(zones[0].zone_id);
-          }
-        } else if (exportLocation) {
-          // Find zone_id for existing exportLocation
-          const matchingZone = zones.find(zone => zone.zone === exportLocation);
-          if (matchingZone) {
-            setSelectedZoneId(matchingZone.zone_id);
           }
         }
       }
@@ -121,10 +114,14 @@ function ExportFormDialog({
   useEffect(() => {
     if (exportQuantity > 0 && exportQuantity <= (product?.stock || 0)) {
       setFormErrors(prev => ({ ...prev, quantity: false }));
+    } else {
+      setFormErrors(prev => ({ ...prev, quantity: true }));
     }
     
     if (exportReason) {
       setFormErrors(prev => ({ ...prev, reason: false }));
+    } else {
+      setFormErrors(prev => ({ ...prev, reason: true }));
     }
   }, [exportQuantity, exportReason, product]);
   
@@ -160,11 +157,12 @@ function ExportFormDialog({
         exportQuantity,
         exportLocation,
         exportReason,
-        zone_id: selectedZoneId || 1, // Ensure zone_id is always available
-        location: exportLocation // Add location field for compatibility
+        zone_id: selectedZoneId
       };
       
+      // Log the data being saved
       console.log("Saving export item with data:", updatedProduct);
+      
       onSave(updatedProduct);
     }
   };
@@ -230,11 +228,12 @@ function ExportFormDialog({
                 }}
                 error={formErrors.quantity}
                 helperText={formErrors.quantity ? `ຈຳນວນຕ້ອງຢູ່ລະຫວ່າງ 1 ແລະ ${product.stock}` : ''}
+                required
               />
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth disabled={locationLoading}>
+              <FormControl fullWidth disabled={locationLoading} required>
                 <InputLabel id="location-label">ບ່ອນຈັດວາງ</InputLabel>
                 <Select
                   labelId="location-label"
@@ -258,9 +257,7 @@ function ExportFormDialog({
                   )}
                 </Select>
                 {selectedZoneId && (
-                  <FormHelperText>
-                    ລະຫັດຈຸດຈັດວາງ: {selectedZoneId}
-                  </FormHelperText>
+                  <FormHelperText>Zone ID: {selectedZoneId}</FormHelperText>
                 )}
               </FormControl>
             </Grid>
@@ -276,6 +273,7 @@ function ExportFormDialog({
                 multiline
                 rows={3}
                 placeholder="ລະບຸສາເຫດໃນການນຳອອກສິນຄ້າ ເຊັ່ນ: ສິນຄ້າເສຍຫາຍ, ໝົດອາຍຸ, ໂອນໄປສາຂາອື່ນ ຫຼື ອື່ນໆ..."
+                required
               />
             </Grid>
             
@@ -318,7 +316,7 @@ function ExportFormDialog({
           onClick={handleSave} 
           color="primary" 
           variant="contained"
-          disabled={loading}
+          disabled={loading || formErrors.quantity || formErrors.reason}
         >
           {loading ? <CircularProgress size={24} /> : 'ນຳອອກ'}
         </Button>
