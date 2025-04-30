@@ -1,3 +1,5 @@
+// Import axios at the top of the file
+import axios from 'axios';
 import { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -48,9 +50,11 @@ import {
   getAllProducts, 
   searchProducts, 
   createSale,
-  getSalesHistory 
+  getSalesHistory,
+  getSaleDetails 
 } from '../services/salesService';
 import { getCurrentUser } from '../services/authService';
+import API_BASE_URL from '../config/api';
 
 // TabPanel component for tab content
 function TabPanel(props) {
@@ -160,80 +164,80 @@ function Sales() {
   }, [amountPaid, cartTotal]);
 
   // Load products and customers on component mount
-// In the useEffect for loading initial data
-useEffect(() => {
-  const loadInitialData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch all data in parallel but handle each promise individually
-      // to prevent complete failure if one request fails
-      
+  useEffect(() => {
+    const loadInitialData = async () => {
       try {
-        const productsData = await getAllProducts();
-        setProducts(productsData || []);
-        setFilteredProducts(productsData || []);
-      } catch (productError) {
-        console.error('Error loading products:', productError);
-      }
-      
-      try {
-        const customersData = await getAllCustomers();
-        setCustomers(customersData || []);
-        setFilteredCustomers(customersData || []);
+        setLoading(true);
         
-        // Set a default customer (first one or a generic one)
-        if (customersData && customersData.length > 0) {
-          setSelectedCustomer(customersData[0]);
-        } else {
+        // Fetch all data in parallel but handle each promise individually
+        // to prevent complete failure if one request fails
+        
+        try {
+          const productsData = await getAllProducts();
+          setProducts(productsData || []);
+          setFilteredProducts(productsData || []);
+        } catch (productError) {
+          console.error('Error loading products:', productError);
+        }
+        
+        try {
+          const customersData = await getAllCustomers();
+          setCustomers(customersData || []);
+          setFilteredCustomers(customersData || []);
+          
+          // Set a default customer (first one or a generic one)
+          if (customersData && customersData.length > 0) {
+            setSelectedCustomer(customersData[0]);
+          } else {
+            setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
+          }
+        } catch (customerError) {
+          console.error('Error loading customers:', customerError);
+          // Set default customer even if API fails
           setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
         }
-      } catch (customerError) {
-        console.error('Error loading customers:', customerError);
-        // Set default customer even if API fails
-        setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setLoading(false);
       }
-      
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-    } finally {
-      setLoading(false);
+    };
+    
+    loadInitialData();
+  }, []);
+
+  // Modify the filter products useEffect to prevent unnecessary updates
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+    
+    if (searchTerm.trim() === '') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(product =>
+        product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.proid?.toString().includes(searchTerm)
+      );
+      setFilteredProducts(filtered);
     }
-  };
-  
-  loadInitialData();
-}, []);
+  }, [searchTerm, products]);
 
-// Modify the filter products useEffect to prevent unnecessary updates
-useEffect(() => {
-  if (!products || products.length === 0) return;
-  
-  if (searchTerm.trim() === '') {
-    setFilteredProducts(products);
-  } else {
-    const filtered = products.filter(product =>
-      product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.proid?.toString().includes(searchTerm)
-    );
-    setFilteredProducts(filtered);
-  }
-}, [searchTerm, products]);
+  // Modify the filter customers useEffect similarly
+  useEffect(() => {
+    if (!customers || customers.length === 0) return;
+    
+    if (customerSearch.trim() === '') {
+      setFilteredCustomers(customers);
+    } else {
+      const filtered = customers.filter(customer =>
+        customer.cus_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.cus_lname?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        customer.tel?.includes(customerSearch)
+      );
+      setFilteredCustomers(filtered);
+    }
+  }, [customerSearch, customers]);
 
-// Modify the filter customers useEffect similarly
-useEffect(() => {
-  if (!customers || customers.length === 0) return;
-  
-  if (customerSearch.trim() === '') {
-    setFilteredCustomers(customers);
-  } else {
-    const filtered = customers.filter(customer =>
-      customer.cus_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.cus_lname?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.tel?.includes(customerSearch)
-    );
-    setFilteredCustomers(filtered);
-  }
-}, [customerSearch, customers]);
   // Fetch sales history
   const fetchSalesHistory = async () => {
     try {
@@ -265,33 +269,6 @@ useEffect(() => {
     }
     setAmountPaid(value);
   };
-
-  // Filter products based on search term
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredProducts(products);
-    } else {
-      const filtered = products.filter(product =>
-        product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.proid?.toString().includes(searchTerm)
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [searchTerm, products]);
-
-  // Filter customers based on search term
-  useEffect(() => {
-    if (customerSearch.trim() === '') {
-      setFilteredCustomers(customers);
-    } else {
-      const filtered = customers.filter(customer =>
-        customer.cus_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        customer.cus_lname?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        customer.tel?.includes(customerSearch)
-      );
-      setFilteredCustomers(filtered);
-    }
-  }, [customerSearch, customers]);
 
   // Add item to cart
   const addToCart = (product) => {
@@ -347,60 +324,59 @@ useEffect(() => {
   };
   
   // Handle save sale
-// Handle save sale
-const handleSaveSale = async () => {
-  if (cartItems.length === 0) {
-    showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
-    return;
-  }
-
-  const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
-  if (paid < cartTotal) {
-    showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    
-    // Use a default customer ID for the generic customer
-    const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
-    
-    // Create the sale data to send to API
-    const saleData = {
-      cus_id: customerIdToUse,
-      emp_id: currentUser?.emp_id || 1,
-      subtotal: cartTotal,
-      pay: paid,
-      money_change: changeAmount,
-      products: cartItems.map(item => ({
-        proid: item.id,
-        qty: item.quantity,
-        price: item.price,
-        total: item.price * item.quantity
-      }))
-    };
-    
-    // Call the API
-    const result = await createSale(saleData);
-    
-    // Clear cart and payment info after successful save
-    setCartItems([]);
-    setAmountPaid('');
-    setChangeAmount(0);
-    showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
-    
-    // Refresh sales history if on that tab
-    if (tabValue === 1) {
-      fetchSalesHistory();
+  const handleSaveSale = async () => {
+    if (cartItems.length === 0) {
+      showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
+      return;
     }
-  } catch (error) {
-    console.error('Error saving sale:', error);
-    showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+
+    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+    if (paid < cartTotal) {
+      showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Use a default customer ID for the generic customer
+      const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
+      
+      // Create the sale data to send to API
+      const saleData = {
+        cus_id: customerIdToUse,
+        emp_id: currentUser?.emp_id || 1,
+        subtotal: cartTotal,
+        pay: paid,
+        money_change: changeAmount,
+        products: cartItems.map(item => ({
+          proid: item.id,
+          qty: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        }))
+      };
+      
+      // Call the API
+      const result = await createSale(saleData);
+      
+      // Clear cart and payment info after successful save
+      setCartItems([]);
+      setAmountPaid('');
+      setChangeAmount(0);
+      showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
+      
+      // Refresh sales history if on that tab
+      if (tabValue === 1) {
+        fetchSalesHistory();
+      }
+    } catch (error) {
+      console.error('Error saving sale:', error);
+      showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Handle print receipt
   const handlePrintReceipt = () => {
@@ -418,32 +394,29 @@ const handleSaveSale = async () => {
     setReceiptOpen(true);
   };
   
-  // View sale details
-// ແກ້ໄຂຟັງຊັນ handleViewSaleDetails ໃນໄຟລ໌ src/pages/Sales.jsx
-const handleViewSaleDetails = async (sale) => {
-  try {
-    setSelectedSale(sale);
-    setSaleDetailsOpen(true);
-    
-    // ດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍຈາກ API
-    const response = await axios.post(`${API_BASE_URL}/sale/Sale/Details`, {
-      sale_id: sale.sale_id
-    });
-    
-    if (response.data && response.data.result_code === "200") {
-      // ອັບເດດລາຍລະອຽດສິນຄ້າທີ່ຖືກຂາຍ
-      setSelectedSale(prev => ({
-        ...prev,
-        products: response.data.sale_details || []
-      }));
-    } else {
-      showAlert('ບໍ່ສາມາດດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍໄດ້', 'error');
+  // View sale details - FIXED FUNCTION
+  const handleViewSaleDetails = async (sale) => {
+    try {
+      setSelectedSale(sale);
+      setSaleDetailsOpen(true);
+      
+      // Use the imported getSaleDetails function instead of direct axios call
+      const detailsData = await getSaleDetails(sale.sale_id);
+      
+      if (detailsData && detailsData.length > 0) {
+        // Update selected sale with the fetched products
+        setSelectedSale(prev => ({
+          ...prev,
+          products: detailsData
+        }));
+      } else {
+        showAlert('ບໍ່ສາມາດດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍໄດ້', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching sale details:', error);
+      showAlert('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍ', 'error');
     }
-  } catch (error) {
-    console.error('Error fetching sale details:', error);
-    showAlert('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການຂາຍ', 'error');
-  }
-};
+  };
   
   // Show alert message
   const showAlert = (message, severity = 'success') => {
@@ -456,24 +429,24 @@ const handleViewSaleDetails = async (sale) => {
   const handleAlertClose = () => {
     setAlertOpen(false);
   };
-  
-// When handling the selection of a generic customer, 
-// use a special ID that won't conflict with real customers
-const handleSelectCustomer = (customer) => {
-  // Check if this is the generic customer
-  if (customer.cus_name === 'ລູກຄ້າທົ່ວໄປ' && !customer.cus_lname) {
-    // Use a special ID for the generic customer (like 0 or -1)
-    setSelectedCustomer({ 
-      cus_id: 0,  // Use 0 or -1 instead of 1
-      cus_name: 'ລູກຄ້າທົ່ວໄປ', 
-      cus_lname: '' 
-    });
-  } else {
-    // Regular customer selection
-    setSelectedCustomer(customer);
-  }
-  setCustomerDialogOpen(false);
-};
+
+  // When handling the selection of a generic customer, 
+  // use a special ID that won't conflict with real customers
+  const handleSelectCustomer = (customer) => {
+    // Check if this is the generic customer
+    if (customer.cus_name === 'ລູກຄ້າທົ່ວໄປ' && !customer.cus_lname) {
+      // Use a special ID for the generic customer (like 0 or -1)
+      setSelectedCustomer({ 
+        cus_id: 0,  // Use 0 or -1 instead of 1
+        cus_name: 'ລູກຄ້າທົ່ວໄປ', 
+        cus_lname: '' 
+      });
+    } else {
+      // Regular customer selection
+      setSelectedCustomer(customer);
+    }
+    setCustomerDialogOpen(false);
+  };
   
   // Filter sales history based on search term
   const filteredSalesHistory = salesHistory.filter(sale => {
@@ -705,7 +678,7 @@ const handleSelectCustomer = (customer) => {
               </TableContainer>
 
               {/* Payment Section */}
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p:.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Grid container spacing={2} alignItems="center">
                   <Grid item xs={4}>
                     <Typography variant="subtitle1" fontWeight="bold">
@@ -971,128 +944,128 @@ const handleSelectCustomer = (customer) => {
         </DialogActions>
       </Dialog>
       
-   {/* Sale Details Modal */}
-<Dialog 
-  open={saleDetailsOpen} 
-  onClose={() => setSaleDetailsOpen(false)}
-  maxWidth="md"
-  fullWidth
->
-  <DialogTitle>
-    {/* ແກ້ໄຂບັນຫາໂຄງສ້າງ HTML */}
-    ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
-  </DialogTitle>
-  <DialogContent>
-    {selectedSale ? (
-      <Box>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              <strong>ລູກຄ້າ:</strong> {selectedSale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}
-            </Typography>
-            <Typography variant="body1">
-              <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              <strong>ວັນທີ:</strong> {formatDate(selectedSale.date_sale)}
-            </Typography>
-            <Typography variant="body1">
-              <strong>ເລກທີໃບບິນ:</strong> {selectedSale.sale_id}
-            </Typography>
-          </Grid>
-        </Grid>
-        
-        <Divider sx={{ my: 2 }} />
-        
-        {/* ສະແດງລາຍລະອຽດສິນຄ້າທີ່ຖືກຂາຍ */}
-        {selectedSale.products && selectedSale.products.length > 0 ? (
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center">#</TableCell>
-                  <TableCell>ລາຍການ</TableCell>
-                  <TableCell align="right">ລາຄາ</TableCell>
-                  <TableCell align="center">ຈຳນວນ</TableCell>
-                  <TableCell align="right">ລວມ</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {selectedSale.products.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell align="center">{index + 1}</TableCell>
-                    <TableCell>{item.product_name || `ສິນຄ້າລະຫັດ ${item.proid}`}</TableCell>
-                    <TableCell align="right">{formatNumber(item.price)}</TableCell>
-                    <TableCell align="center">{item.qty}</TableCell>
-                    <TableCell align="right">{formatNumber(item.total)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell colSpan={3} />
-                  <TableCell align="right">
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      ລວມທັງໝົດ:
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {formatNumber(selectedSale.subtotal)} ກີບ
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={3} />
-                  <TableCell align="right">
-                    ຈຳນວນເງິນທີ່ຮັບ:
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatNumber(selectedSale.pay)} ກີບ
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={3} />
-                  <TableCell align="right">
-                    ເງິນທອນ:
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatNumber(selectedSale.money_change)} ກີບ
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Box sx={{ textAlign: 'center', my: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              ກຳລັງໂຫຼດຂໍ້ມູນລາຍລະອຽດສິນຄ້າ...
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    ) : (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-        <CircularProgress />
-      </Box>
-    )}
-  </DialogContent>
-  <DialogActions>
-    <Button
-      variant="contained"
-      color="primary"
-      startIcon={<PrintIcon />}
-      onClick={() => {
-        // ພິມໃບບິນ
-        setSaleDetailsOpen(false);
-      }}
-    >
-      ພິມໃບບິນ
-    </Button>
-    <Button onClick={() => setSaleDetailsOpen(false)}>ປິດ</Button>
-  </DialogActions>
-</Dialog>
+      {/* Sale Details Modal */}
+      <Dialog 
+        open={saleDetailsOpen} 
+        onClose={() => setSaleDetailsOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          {selectedSale ? (
+            <Box>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    <strong>ລູກຄ້າ:</strong> {selectedSale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    <strong>ວັນທີ:</strong> {formatDate(selectedSale.date_sale)}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>ເລກທີໃບບິນ:</strong> {selectedSale.sale_id}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              {/* ສະແດງລາຍລະອຽດສິນຄ້າທີ່ຖືກຂາຍ */}
+              {selectedSale.products && selectedSale.products.length > 0 ? (
+                <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="center">#</TableCell>
+                        <TableCell>ລາຍການ</TableCell>
+                        <TableCell align="right">ລາຄາ</TableCell>
+                        <TableCell align="center">ຈຳນວນ</TableCell>
+                        <TableCell align="right">ລວມ</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedSale.products.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell align="center">{index + 1}</TableCell>
+                          <TableCell>{item.product_name || `ສິນຄ້າລະຫັດ ${item.proid}`}</TableCell>
+                          <TableCell align="right">{formatNumber(item.price)}</TableCell>
+                          <TableCell align="center">{item.qty}</TableCell>
+                          <TableCell align="right">{formatNumber(item.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow>
+                        <TableCell colSpan={3} />
+                        <TableCell align="right">
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            ລວມທັງໝົດ:
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {formatNumber(selectedSale.subtotal)} ກີບ
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={3} />
+                        <TableCell align="right">
+                          ຈຳນວນເງິນທີ່ຮັບ:
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatNumber(selectedSale.pay)} ກີບ
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={3} />
+                        <TableCell align="right">
+                          ເງິນທອນ:
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatNumber(selectedSale.money_change)} ກີບ
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ textAlign: 'center', my: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    ກຳລັງໂຫຼດຂໍ້ມູນລາຍລະອຽດສິນຄ້າ...
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PrintIcon />}
+            onClick={() => {
+              // ພິມໃບບິນ
+              setSaleDetailsOpen(false);
+            }}
+          >
+            ພິມໃບບິນ
+          </Button>
+          <Button onClick={() => setSaleDetailsOpen(false)}>ປິດ</Button>
+        </DialogActions>
+      </Dialog>
     </Layout>
   );
 }
+
 export default Sales;
