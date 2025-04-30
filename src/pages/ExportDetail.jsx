@@ -1,3 +1,6 @@
+// This is a modified version of the ExportDetail.jsx file
+// Changes focus on the getItemCount function and how exports are processed
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -93,7 +96,38 @@ function ExportDetail() {
       const data = await getAllExports();
       
       if (data && data.length > 0) {
-        setExportHistory(data);
+        // Process each export to ensure item counts are available
+        const processedExports = await Promise.all(data.map(async (exportItem) => {
+          // If we already have items or item_count, no need for further processing
+          if ((exportItem.items && exportItem.items.length > 0) || 
+              (exportItem.export_details && exportItem.export_details.length > 0) ||
+              typeof exportItem.item_count === 'number') {
+            return exportItem;
+          }
+          
+          // Get the export ID from either export_id or id field
+          const exportId = exportItem.export_id || exportItem.id;
+          
+          // For exports without item info, try to get item count from API
+          try {
+            console.log(`Fetching details for export ${exportId}`);
+            const details = await getExportDetails(exportId);
+            if (details && details.length > 0) {
+              return {
+                ...exportItem,
+                // Store both the details and the count
+                items: details,
+                item_count: details.length
+              };
+            }
+          } catch (detailError) {
+            console.log(`Could not load details for export ${exportId}:`, detailError);
+          }
+          
+          return exportItem;
+        }));
+        
+        setExportHistory(processedExports);
       } else {
         setExportHistory([]);
         setError("ບໍ່ພົບຂໍ້ມູນການນຳອອກສິນຄ້າ");
@@ -115,16 +149,7 @@ function ExportDetail() {
       const details = await getExportDetails(exportId);
       
       if (details && details.length > 0) {
-        // Map data to ensure consistency with field names
-        const mappedDetails = details.map(item => ({
-          ...item,
-          // Add additional mapped fields to handle database format
-          name: item.name || item.ProductName,
-          zone: item.zone || (item.zone_id ? `Zone ${item.zone_id}` : undefined),
-          exportQuantity: item.exportQuantity || item.qty,
-          exportReason: item.exportReason || item.reason
-        }));
-        setSelectedExportItems(mappedDetails);
+        setSelectedExportItems(details);
       } else {
         setSelectedExportItems([]);
       }
@@ -183,6 +208,32 @@ function ExportDetail() {
       console.error("Date formatting error:", error);
       return dateStr; // Return original on error
     }
+  };
+
+  // IMPROVED: Get item count from export item - handles multiple data structures
+  const getItemCount = (exportItem) => {
+    // Check for items array (most common case)
+    if (exportItem.items && Array.isArray(exportItem.items)) {
+      return exportItem.items.length;
+    }
+    
+    // Check for export_details array
+    if (exportItem.export_details && Array.isArray(exportItem.export_details)) {
+      return exportItem.export_details.length;
+    }
+    
+    // Check for item_count field
+    if (typeof exportItem.item_count === 'number') {
+      return exportItem.item_count;
+    }
+    
+    // Check for count field
+    if (typeof exportItem.count === 'number') {
+      return exportItem.count;
+    }
+    
+    // If no count info is available, show a placeholder
+    return "—";
   };
 
   // Handle view export details
@@ -304,6 +355,23 @@ function ExportDetail() {
     setFilterDialogOpen(false);
   };
 
+  // Show snackbar notification
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+  
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
+  };
+
   // Dialog handlers
   const handleCloseDetailDialog = () => {
     setDetailDialogOpen(false);
@@ -376,23 +444,6 @@ function ExportDetail() {
     }
   };
   
-  // Show snackbar notification
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity
-    });
-  };
-  
-  // Close snackbar
-  const handleCloseSnackbar = () => {
-    setSnackbar({
-      ...snackbar,
-      open: false
-    });
-  };
-  
   // Get status chip color based on status
   const getStatusChipColor = (status) => {
     switch(status) {
@@ -404,78 +455,68 @@ function ExportDetail() {
         return '#9E9E9E'; // Gray for other statuses
     }
   };
-  
 
+  // IMPROVED: Get export date from different possible properties
+  const getExportDate = (exportItem) => {
+    return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
+  };
 
-// Get export date from different possible properties
-const getExportDate = (exportItem) => {
-  return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
-};
+  // IMPROVED: Get export id from different possible properties
+  const getExportId = (exportItem) => {
+    return exportItem.id || exportItem.export_id || exportItem.exp_id;
+  };
 
-// Get export id from different possible properties
-const getExportId = (exportItem) => {
-  return exportItem.id || exportItem.export_id || exportItem.exp_id;
-};
+  // IMPROVED: Get status from export item
+  const getExportStatus = (exportItem) => {
+    return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
+  };
 
-// Get status from export item
-const getExportStatus = (exportItem) => {
-  return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
-};
-
-// Get item count from export
-const getItemCount = (exportItem) => {
-  if (exportItem.items && Array.isArray(exportItem.items)) {
-    return exportItem.items.length;
-  }
-  return 0;
-};
-
-// Get product name from item
-const getProductName = (item) => {
-  // Try all possible field names where product name might be stored
-  const nameFields = ['name', 'ProductName', 'product_name'];
-  
-  // Find the first non-empty value
-  for (const field of nameFields) {
-    if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
-      return item[field];
+  // Get product name from item
+  const getProductName = (item) => {
+    // Try all possible field names where product name might be stored
+    const nameFields = ['name', 'ProductName', 'product_name'];
+    
+    // Find the first non-empty value
+    for (const field of nameFields) {
+      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+        return item[field];
+      }
     }
-  }
-  
-  // Default value if no name found
-  return 'ບໍ່ລະບຸຊື່ສິນຄ້າ';
-};
+    
+    // Default value if no name found
+    return 'ບໍ່ລະບຸຊື່ສິນຄ້າ';
+  };
 
-// Get export quantity from item
-const getExportQuantity = (item) => {
-  return item.exportQuantity || item.qty || 0;
-};
+  // Get export quantity from item
+  const getExportQuantity = (item) => {
+    return item.exportQuantity || item.qty || 0;
+  };
 
-// Get export location from item - handle multiple possible field names
-const getExportLocation = (item) => {
-  // Try to get location from various possible fields
-  const locationFields = ['exportLocation', 'location', 'zone'];
-  
-  // Find the first non-empty value
-  for (const field of locationFields) {
-    if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
-      return item[field];
+  // Get export location from item - handle multiple possible field names
+  const getExportLocation = (item) => {
+    // Try to get location from various possible fields
+    const locationFields = ['exportLocation', 'location', 'zone'];
+    
+    // Find the first non-empty value
+    for (const field of locationFields) {
+      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+        return item[field];
+      }
     }
-  }
-  
-  // If no location found but we have zone_id, generate location from it
-  if (item.zone_id) {
-    return `Zone ${item.zone_id}`;
-  }
-  
-  // Default value if no location info found
-  return 'ບໍ່ລະບຸສະຖານທີ່';
-};
+    
+    // If no location found but we have zone_id, generate location from it
+    if (item.zone_id) {
+      return `Zone ${item.zone_id}`;
+    }
+    
+    // Default value if no location info found
+    return 'ບໍ່ລະບຸສະຖານທີ່';
+  };
 
-// Get export reason from item
-const getExportReason = (item) => {
-  return item.exportReason || item.reason || '-';
-};
+  // Get export reason from item
+  const getExportReason = (item) => {
+    return item.exportReason || item.reason || '-';
+  };
 
   return (
     <Layout title="ປະຫວັດການນຳອອກສິນຄ້າ">

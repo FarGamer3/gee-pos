@@ -12,20 +12,52 @@ export const getAllExports = async () => {
     const response = await axios.get(`${API_BASE_URL}/export/All/Export`);
     
     if (response.data && response.data.result_code === "200") {
-      return response.data.exports || [];
+      // Process the response to ensure all exports have item_count if possible
+      const exports = response.data.exports || [];
+      
+      // Add item counts where missing (for demo only, in production this should be handled server-side)
+      // This is just a temporary measure until the API is updated to include item_count
+      const processedExports = exports.map(exportItem => {
+        // If the export already has an item_count, use it
+        if (typeof exportItem.item_count === 'number') {
+          return exportItem;
+        }
+        
+        // If the export has items array, count those
+        if (exportItem.items && Array.isArray(exportItem.items)) {
+          return {
+            ...exportItem,
+            item_count: exportItem.items.length
+          };
+        }
+        
+        // If the export has export_details array, count those
+        if (exportItem.export_details && Array.isArray(exportItem.export_details)) {
+          return {
+            ...exportItem,
+            item_count: exportItem.export_details.length
+          };
+        }
+        
+        // No item count available
+        return exportItem;
+      });
+      
+      return processedExports;
     }
     
     // ດຶງຈາກ localStorage ຖ້າ API ບໍ່ສາມາດດຶງໄດ້
-    const localExports = JSON.parse(localStorage.getItem('exportHistory') || '[]');
+    const localExports = getExportsFromLocalStorage();
     return localExports;
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ:', error);
     
     // ດຶງຈາກ localStorage ຖ້າມີຂໍ້ຜິດພາດໃນການຮ້ອງຂໍຈາກ API
-    const localExports = JSON.parse(localStorage.getItem('exportHistory') || '[]');
+    const localExports = getExportsFromLocalStorage();
     return localExports;
   }
 };
+
 
 /**
  * ດຶງຂໍ້ມູນລາຍລະອຽດການນຳອອກສິນຄ້າຕາມລະຫັດ
@@ -39,22 +71,54 @@ export const getExportDetails = async (exportId) => {
     });
     
     if (response.data && response.data.result_code === "200") {
-      return response.data.export_details || [];
+      // Process the details for consistent field names
+      const details = response.data.export_details || [];
+      
+      const processedDetails = details.map(item => ({
+        ...item,
+        // Add standardized fields to handle different APIs
+        name: item.name || item.ProductName || 'ບໍ່ລະບຸຊື່',
+        exportQuantity: item.qty || item.exportQuantity || 0,
+        exportLocation: item.location || (item.zone_id ? `Zone ${item.zone_id}` : 'ບໍ່ລະບຸ'),
+        exportReason: item.reason || item.exportReason || 'ບໍ່ລະບຸສາເຫດ'
+      }));
+      
+      return processedDetails;
     }
     
-    // ດຶງຈາກ localStorage ຖ້າ API ບໍ່ສາມາດດຶງໄດ້
-    const localExports = JSON.parse(localStorage.getItem('exportHistory') || '[]');
-    const exportItem = localExports.find(item => item.id === parseInt(exportId) || item.export_id === parseInt(exportId));
-    return exportItem?.items || [];
+    // Try to get from localStorage if API fails
+    return getExportDetailsFromLocalStorage(exportId);
   } catch (error) {
     console.error('ຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການນຳອອກສິນຄ້າ:', error);
     
-    // ດຶງຈາກ localStorage ຖ້າມີຂໍ້ຜິດພາດໃນການຮ້ອງຂໍຈາກ API
-    const localExports = JSON.parse(localStorage.getItem('exportHistory') || '[]');
-    const exportItem = localExports.find(item => item.id === parseInt(exportId) || item.export_id === parseInt(exportId));
-    return exportItem?.items || [];
+    // Get from localStorage as fallback
+    return getExportDetailsFromLocalStorage(exportId);
   }
 };
+
+/**
+ * Get export details from localStorage for fallback
+ * @param {number} exportId - Export ID to find
+ * @returns {Array} Export details if found, empty array if not
+ */
+function getExportDetailsFromLocalStorage(exportId) {
+  try {
+    const localExports = JSON.parse(localStorage.getItem('exportHistory') || '[]');
+    const exportItem = localExports.find(item => 
+      item.id === parseInt(exportId) || item.export_id === parseInt(exportId)
+    );
+    
+    if (exportItem && exportItem.items && Array.isArray(exportItem.items)) {
+      return exportItem.items;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error getting export details from localStorage:', error);
+    return [];
+  }
+}
+    
 
 /**
  * ບັນທຶກການນຳອອກສິນຄ້າ (ປັບປຸງໃຫ້ຮອງຮັບການໃຊ້ງານທີ່ດີຂຶ້ນ)
