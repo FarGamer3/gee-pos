@@ -233,14 +233,14 @@ function NotificationsDialog({ open, onClose }) {
                       </Box>
                     }
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.primary">
+                      <React.Fragment>
+                        <Typography variant="body2" component="span" color="text.primary">
                           {notification.message}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" component="div" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
                           {formatDate(notification.date)}
                         </Typography>
-                      </Box>
+                      </React.Fragment>
                     }
                   />
                 </ListItem>

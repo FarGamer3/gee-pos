@@ -239,8 +239,11 @@ function Export() {
         status: 'ລໍຖ້າອະນຸມັດ',
         items: exportItems.map(item => ({
           id: item.id,
+          proid: item.id || item.proid,
+          name: item.name,
           exportQuantity: item.exportQuantity,
           exportLocation: item.exportLocation || item.location || '',
+          zone_id: item.zone_id || 1, // Make sure zone_id is always available
           exportReason: item.exportReason
         }))
       };

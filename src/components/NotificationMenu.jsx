@@ -101,11 +101,17 @@ const NotificationItem = ({ notification, onClose }) => {
       </ListItemIcon>
       <ListItemText
         primary={notification.title}
-        secondary={notification.message}
+        secondary={
+          <React.Fragment>
+            <Typography variant="body2" component="span" color="text.primary">
+              {notification.message}
+            </Typography>
+            <Typography variant="caption" component="div" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+              {formatDate(notification.date)}
+            </Typography>
+          </React.Fragment>
+        }
       />
-      <Typography variant="body2" color="text.secondary" sx={{ ml: 1, fontSize: '0.75rem' }}>
-        {formatDate(notification.date)}
-      </Typography>
     </ListItem>
   );
 };
@@ -145,7 +151,9 @@ function NotificationMenu({ anchorEl, open, onClose }) {
   // ເປີດກ່ອງໂຕ້ຕອບການແຈ້ງເຕືອນທັງໝົດ
   const handleOpenAllNotifications = () => {
     onClose(); // ປິດເມນູ
-    setDialogOpen(true); // ເປີດກ່ອງໂຕ້ຕອບ
+    setTimeout(() => {
+      setDialogOpen(true); // ເປີດກ່ອງໂຕ້ຕອບຫຼັງຈາກປິດເມນູແລ້ວ
+    }, 100);
   };
   
   // ປິດກ່ອງໂຕ້ຕອບການແຈ້ງເຕືອນທັງໝົດ
@@ -166,115 +174,117 @@ function NotificationMenu({ anchorEl, open, onClose }) {
   };
   
   return (
-    <Menu
-      anchorEl={anchorEl}
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        elevation: 3,
-        sx: {
-          width: 360,
-          maxHeight: 500,
-          overflow: 'hidden',
-          borderRadius: 2
-        }
-      }}
-      anchorOrigin={{
-        vertical: 'bottom',
-        horizontal: 'right',
-      }}
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
-    >
-      <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white' }}>
-        <Typography variant="subtitle1" fontWeight="bold">
-          ການແຈ້ງເຕືອນ
-        </Typography>
-      </Box>
-      
-      <Tabs
-        value={tabValue}
-        onChange={handleTabChange}
-        variant="fullWidth"
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
+    <>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={onClose}
+        PaperProps={{
+          elevation: 3,
+          sx: {
+            width: 360,
+            maxHeight: 500,
+            overflow: 'hidden',
+            borderRadius: 2
+          }
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
-        <Tab label="ທັງໝົດ" />
-        <Tab 
-          label={
-            <Badge badgeContent={notifications.filter(n => n.type === 'lowStock').length} color="error">
-              ສິນຄ້າໃກ້ໝົດ
-            </Badge>
-          } 
-        />
-        <Tab 
-          label={
-            <Badge 
-              badgeContent={
-                notifications.filter(n => n.type === 'pendingImport' || n.type === 'pendingExport').length
-              } 
-              color="warning"
-            >
-              ລໍຖ້າອະນຸມັດ
-            </Badge>
-          } 
-        />
-      </Tabs>
-      
-      <Box sx={{ maxHeight: 350, overflow: 'auto' }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : filteredNotifications().length > 0 ? (
-          <List>
-            {filteredNotifications().map((notification) => (
-              <React.Fragment key={notification.id}>
-                <NotificationItem notification={notification} onClose={onClose} />
-                <Divider component="li" />
-              </React.Fragment>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              ບໍ່ມີການແຈ້ງເຕືອນໃໝ່
-            </Typography>
-          </Box>
-        )}
-      </Box>
-      
-      <Divider />
-      
-      <Box sx={{ p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography 
-          variant="body2" 
-          sx={{ color: 'primary.main', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-          onClick={() => {
-            fetchNotifications();
-          }}
-        >
-          ໂຫຼດຄືນໃໝ່
-        </Typography>
+        <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white' }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            ການແຈ້ງເຕືອນ
+          </Typography>
+        </Box>
         
-        <Button
-          variant="text"
-          color="primary"
-          size="small"
-          endIcon={<MoreIcon />}
-          onClick={handleOpenAllNotifications}
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant="fullWidth"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          ເບິ່ງທັງໝົດ
-        </Button>
-      </Box>
+          <Tab label="ທັງໝົດ" />
+          <Tab 
+            label={
+              <Badge badgeContent={notifications.filter(n => n.type === 'lowStock').length} color="error">
+                ສິນຄ້າໃກ້ໝົດ
+              </Badge>
+            } 
+          />
+          <Tab 
+            label={
+              <Badge 
+                badgeContent={
+                  notifications.filter(n => n.type === 'pendingImport' || n.type === 'pendingExport').length
+                } 
+                color="warning"
+              >
+                ລໍຖ້າອະນຸມັດ
+              </Badge>
+            } 
+          />
+        </Tabs>
+        
+        <Box sx={{ maxHeight: 350, overflow: 'auto' }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredNotifications().length > 0 ? (
+            <List>
+              {filteredNotifications().map((notification) => (
+                <React.Fragment key={notification.id}>
+                  <NotificationItem notification={notification} onClose={onClose} />
+                  <Divider component="li" />
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography color="text.secondary">
+                ບໍ່ມີການແຈ້ງເຕືອນໃໝ່
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        
+        <Divider />
+        
+        <Box sx={{ p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography 
+            variant="body2" 
+            sx={{ color: 'primary.main', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+            onClick={() => {
+              fetchNotifications();
+            }}
+          >
+            ໂຫຼດຄືນໃໝ່
+          </Typography>
+          
+          <Button
+            variant="text"
+            color="primary"
+            size="small"
+            endIcon={<MoreIcon />}
+            onClick={handleOpenAllNotifications}
+          >
+            ເບິ່ງທັງໝົດ
+          </Button>
+        </Box>
+      </Menu>
       
       {/* ກ່ອງໂຕ້ຕອບສະແດງລາຍລະອຽດການແຈ້ງເຕືອນທັງໝົດ */}
       <NotificationsDialog
         open={dialogOpen}
         onClose={handleCloseDialog}
       />
-    </Menu>
+    </>
   );
 }
 

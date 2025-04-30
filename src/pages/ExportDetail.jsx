@@ -405,50 +405,77 @@ function ExportDetail() {
     }
   };
   
-  // Helper functions to handle different data structures
+
+
+// Get export date from different possible properties
+const getExportDate = (exportItem) => {
+  return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
+};
+
+// Get export id from different possible properties
+const getExportId = (exportItem) => {
+  return exportItem.id || exportItem.export_id || exportItem.exp_id;
+};
+
+// Get status from export item
+const getExportStatus = (exportItem) => {
+  return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
+};
+
+// Get item count from export
+const getItemCount = (exportItem) => {
+  if (exportItem.items && Array.isArray(exportItem.items)) {
+    return exportItem.items.length;
+  }
+  return 0;
+};
+
+// Get product name from item
+const getProductName = (item) => {
+  // Try all possible field names where product name might be stored
+  const nameFields = ['name', 'ProductName', 'product_name'];
   
-  // Get export date from different possible properties
-  const getExportDate = (exportItem) => {
-    return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
-  };
-  
-  // Get export id from different possible properties
-  const getExportId = (exportItem) => {
-    return exportItem.id || exportItem.export_id || exportItem.exp_id;
-  };
-  
-  // Get status from export item
-  const getExportStatus = (exportItem) => {
-    return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
-  };
-  
-  // Get item count from export
-  const getItemCount = (exportItem) => {
-    if (exportItem.items && Array.isArray(exportItem.items)) {
-      return exportItem.items.length;
+  // Find the first non-empty value
+  for (const field of nameFields) {
+    if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+      return item[field];
     }
-    return 0;
-  };
+  }
   
-  // Get product name from item
-  const getProductName = (item) => {
-    return item.name || item.ProductName || '-';
-  };
+  // Default value if no name found
+  return 'ບໍ່ລະບຸຊື່ສິນຄ້າ';
+};
+
+// Get export quantity from item
+const getExportQuantity = (item) => {
+  return item.exportQuantity || item.qty || 0;
+};
+
+// Get export location from item - handle multiple possible field names
+const getExportLocation = (item) => {
+  // Try to get location from various possible fields
+  const locationFields = ['exportLocation', 'location', 'zone'];
   
-  // Get export quantity from item
-  const getExportQuantity = (item) => {
-    return item.exportQuantity || item.qty || 0;
-  };
+  // Find the first non-empty value
+  for (const field of locationFields) {
+    if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+      return item[field];
+    }
+  }
   
-  // Get export location from item - handle multiple possible field names
-  const getExportLocation = (item) => {
-    return item.exportLocation || item.location || item.zone || (item.zone_id ? `Zone ${item.zone_id}` : '-');
-  };
+  // If no location found but we have zone_id, generate location from it
+  if (item.zone_id) {
+    return `Zone ${item.zone_id}`;
+  }
   
-  // Get export reason from item
-  const getExportReason = (item) => {
-    return item.exportReason || item.reason || '-';
-  };
+  // Default value if no location info found
+  return 'ບໍ່ລະບຸສະຖານທີ່';
+};
+
+// Get export reason from item
+const getExportReason = (item) => {
+  return item.exportReason || item.reason || '-';
+};
 
   return (
     <Layout title="ປະຫວັດການນຳອອກສິນຄ້າ">

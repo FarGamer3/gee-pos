@@ -160,8 +160,11 @@ function ExportFormDialog({
         exportQuantity,
         exportLocation,
         exportReason,
-        zone_id: selectedZoneId
+        zone_id: selectedZoneId || 1, // Ensure zone_id is always available
+        location: exportLocation // Add location field for compatibility
       };
+      
+      console.log("Saving export item with data:", updatedProduct);
       onSave(updatedProduct);
     }
   };
@@ -254,6 +257,11 @@ function ExportFormDialog({
                     <MenuItem value="">ບໍ່ພົບຂໍ້ມູນບ່ອນຈັດວາງ</MenuItem>
                   )}
                 </Select>
+                {selectedZoneId && (
+                  <FormHelperText>
+                    ລະຫັດຈຸດຈັດວາງ: {selectedZoneId}
+                  </FormHelperText>
+                )}
               </FormControl>
             </Grid>
             
