@@ -834,7 +834,7 @@ function ExportDetail() {
         </Box>
       </Box>
 
-      <Paper sx={{ p: 2 }}>
+         <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <TextField
             placeholder="ຄົ້ນຫາ..."

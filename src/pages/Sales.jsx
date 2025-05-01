@@ -892,7 +892,7 @@ function Sales() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Default customer option */}
+                {/* Default customer option
                 <TableRow hover>
                   <TableCell>0</TableCell>
                   <TableCell>ລູກຄ້າທົ່ວໄປ</TableCell>
@@ -907,7 +907,7 @@ function Sales() {
                       ເລືອກ
                     </Button>
                   </TableCell>
-                </TableRow>
+                </TableRow> */}
                 
                 {/* Filtered customer list */}
                 {filteredCustomers.map((customer) => (
