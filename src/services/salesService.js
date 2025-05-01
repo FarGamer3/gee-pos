@@ -41,9 +41,17 @@ export const createSale = async (saleData) => {
       formattedData.pay = formattedData.subtotal;
     }
     
-    // Calculate change if not provided
-    if (!formattedData.money_change) {
-      formattedData.money_change = formattedData.pay - formattedData.subtotal;
+    // Calculate change if not provided - Ensure it's never negative
+    if (formattedData.money_change === undefined) {
+      formattedData.money_change = Math.max(0, formattedData.pay - formattedData.subtotal);
+    }
+    
+    // Adjust money_change to ensure minimum 1 kip if pay == subtotal
+    // This is a workaround for the API requirement that money_change > 0
+    if (formattedData.pay === formattedData.subtotal) {
+      // Add 1 kip to pay amount and money_change 
+      formattedData.pay += 1;
+      formattedData.money_change = 1;
     }
     
     console.log('Sending formatted sale data:', JSON.stringify(formattedData));

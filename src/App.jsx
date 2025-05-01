@@ -22,6 +22,7 @@ import City from './pages/Add-data/City';
 import Province from './pages/Add-data/Province';
 import Reports from './pages/Reports';
 import Sales from './pages/Sales';
+import SalesHistory from './pages/SalesHistory'; // ເພີ່ມໜ້າປະຫວັດການຂາຍ
 import Buy from './pages/Buy';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Import from './pages/Import';
@@ -255,6 +256,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <Sales />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ເສັ້ນທາງໃໝ່ໄປຫາໜ້າປະຫວັດການຂາຍ */}
+          <Route 
+            path="/SalesHistory" 
+            element={
+              <ProtectedRoute>
+                <SalesHistory />
               </ProtectedRoute>
             } 
           />
