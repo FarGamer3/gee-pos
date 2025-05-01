@@ -369,14 +369,15 @@ function Sales() {
       </Snackbar>
       
       {/* Header with sales history link */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6">ຂາຍສິນຄ້າໃໝ່</Typography>
-        <Button
-          component={Link}
-          to="/SalesHistory"
-          startIcon={<HistoryIcon />}
-          variant="outlined"
-          color="primary"
+      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="subtitle1" fontWeight="bold" color="primary">
+          ການຂາຍສິນຄ້າ
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="info" 
+          component={Link}  // ໃຊ້ Link ແທນ onClick
+          to="/SalesHistory"  // ໃຊ້ to ແທນທີ່ onClick
         >
           ປະຫວັດການຂາຍ
         </Button>
@@ -387,7 +388,7 @@ function Sales() {
         <Grid item xs={12} md={5}>
           <Paper sx={{ p: 2, height: '100%' }}>
             <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1, mb: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold" color="primary">
+              <Typography variant="subtitle1" fontWeight="bold" color="Black">
                 ສິນຄ້າໃນສາງ
               </Typography>
             </Box>

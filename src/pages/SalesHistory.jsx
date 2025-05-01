@@ -43,15 +43,11 @@ import {
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import loLocale from "date-fns/locale/lo";
 import { 
   getSalesHistory,
   getSaleDetails,
   cancelSale
 } from '../services/salesService';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-// ເອົາການອ້າງອີງ import loLocale from "date-fns/locale/lo" ອອກ
 
 // Format number with commas for every 3 digits
 const formatNumber = (num) => {
@@ -89,10 +85,10 @@ function SalesHistory() {
   const [saleDetailsOpen, setSaleDetailsOpen] = useState(false);
   const [saleDetailsLoading, setSaleDetailsLoading] = useState(false);
   
-  // Filter states
+  // Filter states - ປ່ຽນເປັນ string ແທນທີ່ date objects
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
   const [filterAmount, setFilterAmount] = useState('');
   const [filtersApplied, setFiltersApplied] = useState(false);
@@ -195,8 +191,8 @@ function SalesHistory() {
   
   // Reset filters
   const handleResetFilters = () => {
-    setStartDate(null);
-    setEndDate(null);
+    setStartDate('');
+    setEndDate('');
     setFilterEmployee('');
     setFilterAmount('');
     setFiltersApplied(false);
@@ -229,8 +225,8 @@ function SalesHistory() {
     
     // Then apply date range filters if set
     if (filtersApplied) {
-      if (startDate && new Date(sale.date_sale) < startDate) return false;
-      if (endDate && new Date(sale.date_sale) > endDate) return false;
+      if (startDate && new Date(sale.date_sale) < new Date(startDate)) return false;
+      if (endDate && new Date(sale.date_sale) > new Date(endDate)) return false;
       
       // Apply employee filter if set
       if (filterEmployee && sale.emp_name !== filterEmployee) return false;
@@ -476,24 +472,24 @@ function SalesHistory() {
         <DialogContent dividers>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="ວັນທີເລີ່ມຕົ້ນ"
-                  value={startDate}
-                  onChange={(newValue) => setStartDate(newValue)}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
+              <TextField
+                fullWidth
+                label="ວັນທີເລີ່ມຕົ້ນ"
+                type="date"
+                value={startDate || ''}
+                onChange={(e) => setStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="ວັນທີສິ້ນສຸດ"
-                  value={endDate}
-                  onChange={(newValue) => setEndDate(newValue)}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
+              <TextField
+                fullWidth
+                label="ວັນທີສິ້ນສຸດ"
+                type="date"
+                value={endDate || ''}
+                onChange={(e) => setEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
