@@ -1,6 +1,5 @@
-// Import axios at the top of the file
-import axios from 'axios';
-import { useState, useEffect, useRef } from 'react';
+// src/pages/Sales.jsx - Improved version
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -26,7 +25,14 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Tooltip
+  Tooltip,
+  Card,
+  CardContent,
+  Avatar,
+  Badge,
+  useTheme,
+  useMediaQuery,
+  Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -35,7 +41,14 @@ import {
   Save as SaveIcon,
   Person as PersonIcon,
   AttachMoney as MoneyIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Receipt as ReceiptIcon,
+  Close as CloseIcon,
+  InfoOutlined as InfoIcon,
+  CheckCircle as CheckIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import ReceiptModal from '../components/ReceiptModal';
@@ -46,7 +59,6 @@ import {
   createSale
 } from '../services/salesService';
 import { getCurrentUser } from '../services/authService';
-import API_BASE_URL from '../config/api';
 
 // Format number with commas for every 3 digits
 const formatNumber = (num) => {
@@ -55,6 +67,10 @@ const formatNumber = (num) => {
 };
 
 function Sales() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+
   // New Sale States
   const [searchTerm, setSearchTerm] = useState('');
   const [cartItems, setCartItems] = useState([]);
@@ -82,6 +98,14 @@ function Sales() {
   
   // Calculate total
   const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // Additional states for better UX
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [confirmClearCart, setConfirmClearCart] = useState(false);
+  const [lastCompletedSale, setLastCompletedSale] = useState(null);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
 
   // Calculate change when amount paid changes
   useEffect(() => {
@@ -108,6 +132,7 @@ function Sales() {
           setFilteredProducts(productsData || []);
         } catch (productError) {
           console.error('Error loading products:', productError);
+          showAlert('ບໍ່ສາມາດໂຫຼດຂໍ້ມູນສິນຄ້າໄດ້', 'warning');
         }
         
         try {
@@ -123,12 +148,14 @@ function Sales() {
           }
         } catch (customerError) {
           console.error('Error loading customers:', customerError);
+          showAlert('ບໍ່ສາມາດໂຫຼດຂໍ້ມູນລູກຄ້າໄດ້', 'warning');
           // Set default customer even if API fails
           setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
         }
         
       } catch (error) {
         console.error('Error loading initial data:', error);
+        showAlert('ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນ', 'error');
       } finally {
         setLoading(false);
       }
@@ -137,7 +164,7 @@ function Sales() {
     loadInitialData();
   }, []);
 
-  // Modify the filter products useEffect to prevent unnecessary updates
+  // Filter products when search term changes
   useEffect(() => {
     if (!products || products.length === 0) return;
     
@@ -152,7 +179,7 @@ function Sales() {
     }
   }, [searchTerm, products]);
 
-  // Modify the filter customers useEffect similarly
+  // Filter customers when search term changes
   useEffect(() => {
     if (!customers || customers.length === 0) return;
     
@@ -181,6 +208,13 @@ function Sales() {
     setAmountPaid(value);
   };
 
+  // Set exact amount 
+  const setExactAmount = () => {
+    if (cartTotal > 0) {
+      setAmountPaid(formatNumber(cartTotal));
+    }
+  };
+
   // Add item to cart
   const addToCart = (product) => {
     const existingItemIndex = cartItems.findIndex(item => item.id === product.proid);
@@ -200,28 +234,49 @@ function Sales() {
         stock: product.qty || 0
       };
       setCartItems([...cartItems, newItem]);
+      
+      // Show quick feedback
+      showAlert(`ເພີ່ມ "${product.ProductName}" ໃສ່ກະຕ່າແລ້ວ`, 'success');
     }
   };
 
+  // Quick view product details
+  const handleQuickView = (product) => {
+    setSelectedProduct(product);
+    setQuickViewOpen(true);
+  };
+
   // Update item quantity in cart
-  const updateQuantity = (id, quantity) => {
+  const updateQuantity = (id, amount) => {
     // Find the product to check stock
     const cartItem = cartItems.find(item => item.id === id);
     if (!cartItem) return;
     
-    // Validate quantity against stock
-    const newQuantity = parseInt(quantity);
-    if (isNaN(newQuantity) || newQuantity <= 0) return;
+    // Calculate the new quantity
+    const currentQty = cartItem.quantity;
+    let newQuantity;
     
-    if (newQuantity > cartItem.stock) {
-      showAlert(`ສິນຄ້າໃນສາງມີພຽງ ${cartItem.stock} ອັນ`, 'warning');
-      const updatedItems = cartItems.map(item => 
-        item.id === id ? { ...item, quantity: cartItem.stock } : item
-      );
-      setCartItems(updatedItems);
+    if (typeof amount === 'string' || typeof amount === 'number') {
+      // Direct quantity assignment (from text field)
+      newQuantity = parseInt(amount);
+    } else {
+      // Increment/decrement
+      newQuantity = currentQty + amount;
+    }
+    
+    // Validate quantity
+    if (isNaN(newQuantity) || newQuantity <= 0) {
+      // If quantity becomes zero or invalid, remove item
+      removeFromCart(id);
       return;
     }
     
+    if (newQuantity > cartItem.stock) {
+      showAlert(`ສິນຄ້າໃນສາງມີພຽງ ${cartItem.stock} ອັນ`, 'warning');
+      newQuantity = cartItem.stock;
+    }
+    
+    // Update the quantity
     const updatedItems = cartItems.map(item => 
       item.id === id ? { ...item, quantity: newQuantity } : item
     );
@@ -231,7 +286,33 @@ function Sales() {
 
   // Remove item from cart
   const removeFromCart = (id) => {
+    // Find item name for feedback
+    const item = cartItems.find(item => item.id === id);
+    const itemName = item ? item.name : '';
+    
+    // Remove item
     setCartItems(cartItems.filter(item => item.id !== id));
+    
+    // Show feedback
+    if (itemName) {
+      showAlert(`ລຶບ "${itemName}" ອອກຈາກກະຕ່າແລ້ວ`, 'info');
+    }
+  };
+  
+  // Clear cart confirmation
+  const handleClearCart = () => {
+    if (cartItems.length > 0) {
+      setConfirmClearCart(true);
+    }
+  };
+  
+  // Confirm clearing cart
+  const confirmClearCartAction = () => {
+    setCartItems([]);
+    setConfirmClearCart(false);
+    setAmountPaid('');
+    setChangeAmount(0);
+    showAlert('ລ້າງກະຕ່າສິນຄ້າແລ້ວ', 'info');
   };
   
   // Handle save sale
@@ -248,7 +329,7 @@ function Sales() {
     }
     
     try {
-      setLoading(true);
+      setSavingOrder(true);
       
       // Use a default customer ID for the generic customer
       const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
@@ -271,16 +352,31 @@ function Sales() {
       // Call the API
       const result = await createSale(saleData);
       
-      // Clear cart and payment info after successful save
+      // Store the completed sale
+      const completedSale = {
+        sale_id: result.sale_id || 'N/A',
+        customer: selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}`.trim() : 'ລູກຄ້າທົ່ວໄປ',
+        totalAmount: cartTotal,
+        amountPaid: paid,
+        changeAmount: changeAmount,
+        items: cartItems,
+        date: new Date().toISOString()
+      };
+      setLastCompletedSale(completedSale);
+      
+      // Show success dialog
+      setSuccessDialogOpen(true);
+      
+      // Clear cart and payment info
       setCartItems([]);
       setAmountPaid('');
       setChangeAmount(0);
-      showAlert('ບັນທຶກການຂາຍສຳເລັດແລ້ວ', 'success');
+      
     } catch (error) {
       console.error('Error saving sale:', error);
       showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
     } finally {
-      setLoading(false);
+      setSavingOrder(false);
     }
   };
   
@@ -328,11 +424,12 @@ function Sales() {
       setSelectedCustomer(customer);
     }
     setCustomerDialogOpen(false);
+    showAlert(`ເລືອກລູກຄ້າ: ${customer.cus_name} ${customer.cus_lname || ''}`, 'success');
   };
 
   return (
     <Layout title="ຂາຍສິນຄ້າ">
-      {/* Loading indicator */}
+      {/* Global loading overlay */}
       {loading && (
         <Box
           sx={{
@@ -352,9 +449,10 @@ function Sales() {
         </Box>
       )}
       
+      {/* Alert notifications */}
       <Snackbar 
         open={alertOpen} 
-        autoHideDuration={6000} 
+        autoHideDuration={3000} 
         onClose={handleAlertClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
@@ -369,26 +467,114 @@ function Sales() {
       </Snackbar>
       
       {/* Header with sales history link */}
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="primary">
-          ການຂາຍສິນຄ້າ
-        </Typography>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          bgcolor: 'background.paper', 
+          p: 2, 
+          borderRadius: 2, 
+          mb: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <ShoppingCartIcon sx={{ color: 'primary.main', mr: 1 }} />
+          <Typography variant="h6" fontWeight="bold" color="primary">
+            ການຂາຍສິນຄ້າ
+          </Typography>
+        </Box>
+        
+        <Box>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            component={Link}
+            to="/SalesHistory"
+            startIcon={<HistoryIcon />}
+            sx={{ borderRadius: 2 }}
+          >
+            {isMobile ? '' : 'ປະຫວັດ'}ການຂາຍ
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* Customer info card */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, md: 0 } }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: 'primary.light', 
+              color: 'primary.contrastText',
+              mr: 2
+            }}
+          >
+            <PersonIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              ລູກຄ້າ
+            </Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              {selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname || ''}`.trim() : 'ລູກຄ້າທົ່ວໄປ'}
+            </Typography>
+          </Box>
+        </Box>
+        
         <Button 
           variant="contained" 
-          color="info" 
-          component={Link}  // ໃຊ້ Link ແທນ onClick
-          to="/SalesHistory"  // ໃຊ້ to ແທນທີ່ onClick
+          size="small"
+          color="primary"
+          startIcon={<PersonIcon />}
+          onClick={() => setCustomerDialogOpen(true)}
+          sx={{ borderRadius: 2 }}
         >
-          ປະຫວັດການຂາຍ
+          ເລືອກລູກຄ້າ
         </Button>
-      </Box>
+      </Paper>
 
       <Grid container spacing={2}>
         {/* Left column - Product selection */}
         <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Box sx={{ bgcolor: 'background.paper', p: 1, borderRadius: 1, mb: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold" color="Black">
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 2, 
+              height: '100%', 
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider' 
+            }}
+          >
+            <Box 
+              sx={{ 
+                bgcolor: 'primary.light', 
+                color: 'primary.contrastText',
+                p: 1.5, 
+                borderRadius: 1, 
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <ShoppingCartIcon sx={{ mr: 1 }} />
+              <Typography variant="subtitle1" fontWeight="bold">
                 ສິນຄ້າໃນສາງ
               </Typography>
             </Box>
@@ -408,15 +594,15 @@ function Sales() {
               }}
             />
 
-            <TableContainer sx={{ maxHeight: 400 }}>
+            <TableContainer sx={{ maxHeight: isTablet ? 300 : 450, borderRadius: 1 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">ລະຫັດ</TableCell>
-                    <TableCell align="center">ຊື່</TableCell>
-                    <TableCell align="center">ລາຄາ</TableCell>
-                    <TableCell align="center">ຄົງເຫຼືອ</TableCell>
-                    <TableCell align="center"></TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>ລະຫັດ</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 'bold' }}>ຊື່ສິນຄ້າ</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>ລາຄາ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>ຄົງເຫຼືອ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -424,19 +610,52 @@ function Sales() {
                     filteredProducts.map((product) => (
                       <TableRow key={product.proid} hover>
                         <TableCell align="center">{product.proid}</TableCell>
-                        <TableCell align="center">{product.ProductName}</TableCell>
-                        <TableCell align="center">{formatNumber(product.retail_price)}</TableCell>
-                        <TableCell align="center">{product.qty}</TableCell>
+                        <TableCell align="left">
+                          <Tooltip title="ຄລິກເພື່ອເບິ່ງລາຍລະອຽດ">
+                            <Typography 
+                              variant="body2" 
+                              onClick={() => handleQuickView(product)}
+                              sx={{ 
+                                cursor: 'pointer',
+                                '&:hover': { 
+                                  textDecoration: 'underline',
+                                  color: 'primary.main'
+                                }
+                              }}
+                            >
+                              {product.ProductName}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography fontWeight="medium">
+                            {formatNumber(product.retail_price)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip 
+                            label={product.qty} 
+                            size="small"
+                            color={product.qty > 0 ? "success" : "error"}
+                            variant={product.qty > 0 ? "filled" : "outlined"}
+                          />
+                        </TableCell>
                         <TableCell align="center">
                           <Button
                             variant="contained"
                             size="small"
                             color="secondary"
                             onClick={() => addToCart(product)}
-                            sx={{ fontSize: '0.7rem', py: 0.5 }}
+                            sx={{ 
+                              borderRadius: 4,
+                              minWidth: 'unset',
+                              width: 32,
+                              height: 32,
+                              p: 0
+                            }}
                             disabled={product.qty <= 0}
                           >
-                            ເລືອກ
+                            <AddIcon fontSize="small" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -444,47 +663,99 @@ function Sales() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
-                        {searchTerm ? 'ບໍ່ພົບສິນຄ້າ' : 'ກຳລັງໂຫຼດຂໍ້ມູນ...'}
+                        {loading ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                            <CircularProgress size={24} />
+                          </Box>
+                        ) : searchTerm ? (
+                          'ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ'
+                        ) : (
+                          'ບໍ່ມີຂໍ້ມູນສິນຄ້າ'
+                        )}
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {!isTablet && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  ສິນຄ້າທັງໝົດ: {products.length} ລາຍການ
+                </Typography>
+                
+                <Button 
+                  size="small" 
+                  onClick={() => setSearchTerm('')}
+                  disabled={!searchTerm}
+                >
+                  ສະແດງທັງໝົດ
+                </Button>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
         {/* Right column - Cart/Order */}
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2 }}>
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 2, 
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" fontWeight="bold">
-                ລາຍການສັ່ງຊື້
-                <Box component="span" sx={{ ml: 2, color: 'text.secondary', fontSize: '0.9rem' }}>
-                  {selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}` : 'ລູກຄ້າທົ່ວໄປ'}
-                </Box>
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="small"
-                color="primary"
-                startIcon={<PersonIcon />}
-                onClick={() => setCustomerDialogOpen(true)}
+              <Box 
+                sx={{ 
+                  bgcolor: 'secondary.light', 
+                  color: 'secondary.contrastText',
+                  p: 1.5, 
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexGrow: 1,
+                  mr: 2
+                }}
               >
-                ເລືອກລູກຄ້າ
+                <ReceiptIcon sx={{ mr: 1 }} />
+                <Typography variant="subtitle1" fontWeight="bold">
+                  ກະຕ່າສິນຄ້າ
+                </Typography>
+                <Badge 
+                  badgeContent={cartItems.length} 
+                  color="error"
+                  sx={{ ml: 1 }}
+                >
+                  <Box />
+                </Badge>
+              </Box>
+              
+              <Button 
+                variant="outlined" 
+                color="error"
+                size="small"
+                onClick={handleClearCart}
+                disabled={cartItems.length === 0}
+                sx={{ borderRadius: 2 }}
+              >
+                ລ້າງກະຕ່າ
               </Button>
             </Box>
 
-            <TableContainer sx={{ maxHeight: 400 }}>
+            <TableContainer sx={{ maxHeight: isTablet ? 250 : 320, borderRadius: 1 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">#</TableCell>
-                    <TableCell align="center">ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ລາຄາ</TableCell>
-                    <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="center">ລວມລາຄາ</TableCell>
-                    <TableCell align="center"></TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>#</TableCell>
+                    <TableCell align="left" sx={{ fontWeight: 'bold' }}>ສິນຄ້າ</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>ລາຄາ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>ຈຳນວນ</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>ລວມລາຄາ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -499,34 +770,71 @@ function Sales() {
                         }}
                       >
                         <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{item.name}</TableCell>
-                        <TableCell align="center">
+                        <TableCell align="left">{item.name}</TableCell>
+                        <TableCell align="right">
                           {formatNumber(item.price)}
                         </TableCell>
-                        <TableCell align="center" width={80}>
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.id, e.target.value)}
-                            sx={{ 
-                              width: 60,
-                              '& input': { 
-                                textAlign: 'center',
-                                p: 1
-                              }
-                            }}
-                            inputProps={{ min: 1, max: item.stock }}
-                          />
-                        </TableCell>
                         <TableCell align="center">
-                          {formatNumber(item.price * item.quantity)}
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => updateQuantity(item.id, -1)}
+                              color="error"
+                              sx={{ 
+                                p: 0.5, 
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                mr: 0.5
+                              }}
+                            >
+                              <RemoveIcon fontSize="small" />
+                            </IconButton>
+                            
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={item.quantity}
+                              onChange={(e) => updateQuantity(item.id, e.target.value)}
+                              sx={{ 
+                                width: 50,
+                                '& input': { 
+                                  textAlign: 'center',
+                                  p: 0.5
+                                }
+                              }}
+                              inputProps={{ min: 1, max: item.stock }}
+                            />
+                            
+                            <IconButton 
+                              size="small" 
+                              onClick={() => updateQuantity(item.id, 1)}
+                              color="success"
+                              sx={{ 
+                                p: 0.5, 
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                ml: 0.5
+                              }}
+                            >
+                              <AddIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography fontWeight="medium">
+                            {formatNumber(item.price * item.quantity)}
+                          </Typography>
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
                             size="small"
                             color="error"
                             onClick={() => removeFromCart(item.id)}
+                            sx={{ 
+                              p: 0.5, 
+                              border: '1px solid',
+                              borderColor: 'divider'
+                            }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -535,8 +843,16 @@ function Sales() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        ບໍ່ມີສິນຄ້າໃນກະຕ່າ
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.7 }}>
+                          <ShoppingCartIcon sx={{ fontSize: 40, mb: 1, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            ຍັງບໍ່ມີສິນຄ້າໃນກະຕ່າ
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            ກະລຸນາເລືອກສິນຄ້າຈາກລາຍການທາງຊ້າຍ
+                          </Typography>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   )}
@@ -545,43 +861,82 @@ function Sales() {
             </TableContainer>
 
             {/* Payment Section */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                mt: 2, 
+                p: 2, 
+                bgcolor: 'background.default', 
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                  ຊຳລະເງິນ
+                </Typography>
+                
+                <Chip 
+                  label={cartItems.length > 0 ? `${cartItems.length} ລາຍການ` : 'ກະຕ່າເປົ່າ'} 
+                  color={cartItems.length > 0 ? "primary" : "default"}
+                  variant="outlined"
+                  size="small"
+                />
+              </Box>
+              
               <Grid container spacing={2} alignItems="center">
-                <Grid item xs={4}>
+                <Grid item xs={5} sm={4}>
                   <Typography variant="subtitle1" fontWeight="bold">
                     ລາຄາລວມ:
                   </Typography>
                 </Grid>
-                <Grid item xs={8}>
-                  <Typography variant="h6" fontWeight="bold" textAlign="right">
+                <Grid item xs={7} sm={8}>
+                  <Typography 
+                    variant="h5" 
+                    fontWeight="bold" 
+                    textAlign="right"
+                    color="primary.main"
+                  >
                     {formatNumber(cartTotal)} ກີບ
                   </Typography>
                 </Grid>
                 
-                <Grid item xs={4}>
+                <Grid item xs={5} sm={4}>
                   <Typography variant="subtitle1">
                     ຈຳນວນເງິນທີ່ຈ່າຍ:
                   </Typography>
                 </Grid>
-                <Grid item xs={8}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    value={amountPaid}
-                    onChange={handleAmountPaidChange}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">ກີບ</InputAdornment>,
-                    }}
-                  />
+                <Grid item xs={7} sm={8}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      value={amountPaid}
+                      onChange={handleAmountPaidChange}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">ກີບ</InputAdornment>,
+                      }}
+                    />
+                    <Button 
+                      size="small" 
+                      variant="outlined"
+                      sx={{ ml: 1, whiteSpace: 'nowrap' }}
+                      onClick={setExactAmount}
+                      disabled={cartTotal <= 0}
+                    >
+                      {isMobile ? 'ເຕັມ' : 'ຈ່າຍເຕັມ'}
+                    </Button>
+                  </Box>
                 </Grid>
                 
-                <Grid item xs={4}>
+                <Grid item xs={5} sm={4}>
                   <Typography variant="subtitle1">
                     ເງິນທອນ:
                   </Typography>
                 </Grid>
-                <Grid item xs={8}>
+                <Grid item xs={7} sm={8}>
                   <Typography 
                     variant="h6" 
                     fontWeight="bold" 
@@ -592,7 +947,7 @@ function Sales() {
                   </Typography>
                 </Grid>
               </Grid>
-            </Box>
+            </Paper>
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
@@ -601,16 +956,26 @@ function Sales() {
                 color="success"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveSale}
-                disabled={loading || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                disabled={savingOrder || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                sx={{ 
+                  py: 1.5,
+                  px: 3,
+                  borderRadius: 2
+                }}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'ບັນທຶກ'}
+                {savingOrder ? <CircularProgress size={24} color="inherit" /> : 'ບັນທຶກການຂາຍ'}
               </Button>
               <Button
                 variant="contained"
                 color="primary"
                 startIcon={<PrintIcon />}
                 onClick={handlePrintReceipt}
-                disabled={loading || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                disabled={savingOrder || cartItems.length === 0 || (parseFloat(amountPaid.replace(/,/g, '')) || 0) < cartTotal}
+                sx={{ 
+                  py: 1.5,
+                  px: 3,
+                  borderRadius: 2
+                }}
               >
                 ພິມໃບບິນ
               </Button>
@@ -624,7 +989,7 @@ function Sales() {
         open={receiptOpen}
         onClose={() => setReceiptOpen(false)}
         items={cartItems}
-        customer={selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}` : 'ລູກຄ້າທົ່ວໄປ'}
+        customer={selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname || ''}`.trim() : 'ລູກຄ້າທົ່ວໄປ'}
         totalAmount={cartTotal}
         amountPaid={parseFloat(amountPaid.replace(/,/g, '')) || 0}
         changeAmount={changeAmount}
@@ -637,8 +1002,23 @@ function Sales() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>ເລືອກລູກຄ້າ</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+          <PersonIcon sx={{ mr: 1 }} />
+          ເລືອກລູກຄ້າ
+          <IconButton
+            aria-label="close"
+            onClick={() => setCustomerDialogOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <TextField
             autoFocus
             margin="dense"
@@ -661,11 +1041,11 @@ function Sales() {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>ລະຫັດ</TableCell>
-                  <TableCell>ຊື່</TableCell>
-                  <TableCell>ນາມສະກຸນ</TableCell>
-                  <TableCell>ເບີໂທ</TableCell>
-                  <TableCell></TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ລະຫັດ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ຊື່</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ນາມສະກຸນ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ເບີໂທ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -680,6 +1060,7 @@ function Sales() {
                       variant="contained"
                       size="small"
                       onClick={() => handleSelectCustomer({ cus_id: 0, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' })}
+                      sx={{ borderRadius: 2 }}
                     >
                       ເລືອກ
                     </Button>
@@ -698,6 +1079,7 @@ function Sales() {
                         variant="contained"
                         size="small"
                         onClick={() => handleSelectCustomer(customer)}
+                        sx={{ borderRadius: 2 }}
                       >
                         ເລືອກ
                       </Button>
@@ -708,7 +1090,21 @@ function Sales() {
                 {filteredCustomers.length === 0 && customerSearch && (
                   <TableRow>
                     <TableCell colSpan={5} align="center">
-                      ບໍ່ພົບຂໍ້ມູນລູກຄ້າ
+                      <Box sx={{ py: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          ບໍ່ພົບຂໍ້ມູນລູກຄ້າ
+                        </Typography>
+                        
+                        <Button 
+                          variant="outlined" 
+                          size="small"
+                          component={Link}
+                          to="/customers"
+                          sx={{ mt: 1 }}
+                        >
+                          ໄປທີ່ໜ້າເພີ່ມລູກຄ້າໃໝ່
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 )}
@@ -717,8 +1113,268 @@ function Sales() {
           </TableContainer>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCustomerDialogOpen(false)}>ຍົກເລີກ</Button>
+          <Button 
+            onClick={() => setCustomerDialogOpen(false)}
+            color="inherit"
+          >
+            ຍົກເລີກ
+          </Button>
         </DialogActions>
+      </Dialog>
+      
+      {/* Product Quick View Dialog */}
+      <Dialog
+        open={quickViewOpen}
+        onClose={() => setQuickViewOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        {selectedProduct && (
+          <>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
+              <InfoIcon sx={{ mr: 1 }} />
+              ຂໍ້ມູນສິນຄ້າ
+              <IconButton
+                aria-label="close"
+                onClick={() => setQuickViewOpen(false)}
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                  color: (theme) => theme.palette.grey[500],
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" color="primary" fontWeight="bold">
+                      {selectedProduct.ProductName}
+                    </Typography>
+                    <Chip 
+                      label={selectedProduct.status === 'Instock' ? 'ມີໃນສາງ' : 'ໝົດສາງ'} 
+                      color={selectedProduct.status === 'Instock' ? "success" : "error"}
+                      variant={selectedProduct.status === 'Instock' ? "filled" : "outlined"}
+                    />
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ລະຫັດສິນຄ້າ
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedProduct.proid}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary">
+                    ຍີ່ຫໍ້
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedProduct.brand || '-'}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary">
+                    ປະເພດສິນຄ້າ
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedProduct.category || '-'}
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ລາຄາຂາຍ
+                  </Typography>
+                  <Typography variant="h6" color="primary" fontWeight="bold" sx={{ mb: 2 }}>
+                    {formatNumber(selectedProduct.retail_price)} ກີບ
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary">
+                    ຈຳນວນໃນສາງ
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedProduct.qty} ອັນ {selectedProduct.qty <= selectedProduct.qty_min && (
+                      <Typography component="span" color="error" variant="body2">
+                        (ໃກ້ຈະໝົດ)
+                      </Typography>
+                    )}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary">
+                    ບ່ອນຈັດວາງ
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedProduct.zone || '-'}
+                  </Typography>
+                </Grid>
+                
+                {selectedProduct.pro_detail && (
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">
+                      ລາຍລະອຽດ
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedProduct.pro_detail}
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={() => setQuickViewOpen(false)}
+                color="inherit"
+              >
+                ປິດ
+              </Button>
+              <Button 
+                variant="contained"
+                color="secondary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  addToCart(selectedProduct);
+                  setQuickViewOpen(false);
+                }}
+                disabled={selectedProduct.qty <= 0}
+              >
+                ເພີ່ມໃສ່ກະຕ່າ
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+      
+      {/* Clear Cart Confirmation Dialog */}
+      <Dialog
+        open={confirmClearCart}
+        onClose={() => setConfirmClearCart(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          ຢືນຢັນການລ້າງກະຕ່າ
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
+            <ShoppingCartIcon sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
+            <Typography variant="body1" align="center">
+              ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການລ້າງກະຕ່າສິນຄ້າທັງໝົດ?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center">
+              ການດຳເນີນການນີ້ບໍ່ສາມາດກັບຄືນໄດ້
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center' }}>
+          <Button 
+            onClick={() => setConfirmClearCart(false)}
+            variant="outlined"
+            color="inherit"
+            sx={{ minWidth: 100 }}
+          >
+            ຍົກເລີກ
+          </Button>
+          <Button 
+            onClick={confirmClearCartAction}
+            variant="contained"
+            color="error"
+            sx={{ minWidth: 100 }}
+          >
+            ລ້າງກະຕ່າ
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Transaction Success Dialog */}
+      <Dialog
+        open={successDialogOpen}
+        onClose={() => setSuccessDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            bgcolor: 'success.main', 
+            color: 'success.contrastText' 
+          }}
+        >
+          <CheckIcon sx={{ mr: 1 }} />
+          ຂາຍສິນຄ້າສຳເລັດແລ້ວ
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          {lastCompletedSale && (
+            <Box sx={{ py: 2 }}>
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Typography variant="h6">
+                  ຂາຍສິນຄ້າສຳເລັດແລ້ວ
+                </Typography>
+              </Box>
+              
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ເລກທີໃບບິນ:
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {lastCompletedSale.sale_id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ລູກຄ້າ:
+                  </Typography>
+                  <Typography variant="body1">
+                    {lastCompletedSale.customer}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ຈຳນວນເງິນທັງໝົດ:
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold" color="primary.main">
+                    {formatNumber(lastCompletedSale.totalAmount)} ກີບ
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    ເງິນທອນ:
+                  </Typography>
+                  <Typography variant="body1" color="success.main">
+                    {formatNumber(lastCompletedSale.changeAmount)} ກີບ
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+                {/* <Button 
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PrintIcon />}
+                  onClick={() => {
+                    setSuccessDialogOpen(false);
+                    setReceiptOpen(true);
+                  }}
+                >
+                  ພິມໃບບິນ
+                </Button> */}
+                <Button 
+                  variant="contained"
+                  color="primary"
+                  startIcon={<ShoppingCartIcon />}
+                  onClick={() => setSuccessDialogOpen(false)}
+                >
+                  ຂາຍສິນຄ້າຕໍ່
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
       </Dialog>
     </Layout>
   );
