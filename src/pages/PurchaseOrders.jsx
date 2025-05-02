@@ -57,6 +57,8 @@ import Layout from '../components/Layout';
 import { DeleteConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 import PurchaseOrderDetail from '../components/PurchaseOrderDetail';
 import { getAllOrders, deleteOrder } from '../services/orderService';
+import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 // Format number with commas
 const formatNumber = (num) => {
@@ -122,6 +124,9 @@ const OrderRow = ({ order, index, onViewDetails, onDelete, onCreateImport }) => 
   
   const formattedDate = order.formattedDate || formatDate(order.order_date);
   
+  // Determine if the order has been imported
+  const hasBeenImported = order.imported;
+  
   return (
     <>
       <TableRow 
@@ -162,11 +167,19 @@ const OrderRow = ({ order, index, onViewDetails, onDelete, onCreateImport }) => 
         <TableCell align="center">{order.supplier}</TableCell>
         <TableCell align="center">{order.employee}</TableCell>
         <TableCell align="center">
-          <Chip 
-            label="ລໍຖ້ານຳເຂົ້າ"
-            color="warning"
-            size="small"
-          />
+          {hasBeenImported ? (
+            <Chip 
+              label="ນຳເຂົ້າແລ້ວ"
+              color="success"
+              size="small"
+            />
+          ) : (
+            <Chip 
+              label="ລໍຖ້ານຳເຂົ້າ"
+              color="warning"
+              size="small"
+            />
+          )}
         </TableCell>
         <TableCell align="center">
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
@@ -200,10 +213,12 @@ const OrderRow = ({ order, index, onViewDetails, onDelete, onCreateImport }) => 
                 <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />
                 ເບິ່ງລາຍລະອຽດ
               </MenuItem>
-              <MenuItem onClick={handleCreateImport}>
-                <LocalShippingIcon fontSize="small" sx={{ mr: 1 }} />
-                ສ້າງການນຳເຂົ້າ
-              </MenuItem>
+              {!hasBeenImported && (
+                <MenuItem onClick={handleCreateImport}>
+                  <LocalShippingIcon fontSize="small" sx={{ mr: 1 }} />
+                  ສ້າງການນຳເຂົ້າ
+                </MenuItem>
+              )}
               <Divider />
               <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                 <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
@@ -242,29 +257,57 @@ const OrderRow = ({ order, index, onViewDetails, onDelete, onCreateImport }) => 
                         <Typography variant="body2" color="text.secondary">ພະນັກງານ:</Typography>
                         <Typography variant="body2">{order.employee}</Typography>
                       </Box>
+                      {order.importId && (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" color="text.secondary">ລະຫັດນຳເຂົ້າ:</Typography>
+                          <Typography variant="body2">#{order.importId}</Typography>
+                        </Box>
+                      )}
                     </Box>
                   </Paper>
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} variant="outlined">
-                    <Typography variant="subtitle2" color="warning.main" gutterBottom>
-                      ສະຖານະ: ລໍຖ້ານຳເຂົ້າ
+                    <Typography 
+                      variant="subtitle2" 
+                      color={hasBeenImported ? "success.main" : "warning.main"} 
+                      gutterBottom
+                    >
+                      ສະຖານະ: {hasBeenImported ? "ນຳເຂົ້າແລ້ວ" : "ລໍຖ້ານຳເຂົ້າ"}
                     </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                      <Button 
-                        variant="contained"
-                        color="primary"
-                        startIcon={<LocalShippingIcon />}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onCreateImport(order);
-                        }}
-                        size="small"
-                      >
-                        ສ້າງການນຳເຂົ້າ
-                      </Button>
-                    </Box>
+                    {hasBeenImported ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                        <Button 
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            // Navigate to import detail page
+                            window.open(`/import-detail?id=${order.importId}`, '_blank');
+                          }}
+                          size="small"
+                        >
+                          ເບິ່ງການນຳເຂົ້າ
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                        <Button 
+                          variant="contained"
+                          color="primary"
+                          startIcon={<LocalShippingIcon />}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onCreateImport(order);
+                          }}
+                          size="small"
+                        >
+                          ສ້າງການນຳເຂົ້າ
+                        </Button>
+                      </Box>
+                    )}
                   </Paper>
                 </Grid>
               </Grid>
@@ -281,13 +324,15 @@ const OrderFilters = ({ onApplyFilters, onClearFilters }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
   const handleApplyFilters = () => {
     onApplyFilters({
       fromDate,
       toDate,
-      supplier: supplierFilter
+      supplier: supplierFilter,
+      status: statusFilter
     });
   };
   
@@ -295,6 +340,7 @@ const OrderFilters = ({ onApplyFilters, onClearFilters }) => {
     setFromDate('');
     setToDate('');
     setSupplierFilter('');
+    setStatusFilter('');
     onClearFilters();
   };
   
@@ -335,7 +381,7 @@ const OrderFilters = ({ onApplyFilters, onClearFilters }) => {
                 size="small"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 fullWidth
                 label="ຜູ້ສະໜອງ"
@@ -344,7 +390,21 @@ const OrderFilters = ({ onApplyFilters, onClearFilters }) => {
                 size="small"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                select
+                label="ສະຖານະ"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                size="small"
+              >
+                <MenuItem value="">ທັງໝົດ</MenuItem>
+                <MenuItem value="imported">ນຳເຂົ້າແລ້ວ</MenuItem>
+                <MenuItem value="pending">ລໍຖ້ານຳເຂົ້າ</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   variant="contained"
@@ -468,6 +528,43 @@ function PurchaseOrders() {
     filterOrders();
   }, [orders, searchTerm]);
   
+  // Check if orders have been imported
+  const checkImportStatus = async (ordersData) => {
+    try {
+      // Get all imports
+      const importsResponse = await axios.get(`${API_BASE_URL}/import/All/Import`);
+      
+      if (importsResponse.data && importsResponse.data.imports) {
+        const imports = importsResponse.data.imports;
+        
+        // Create a map of order_id to import for quick lookup
+        const importsMap = {};
+        imports.forEach(imp => {
+          if (imp.order_id) {
+            importsMap[imp.order_id] = imp;
+          }
+        });
+        
+        // Update orders with import status
+        const updatedOrders = ordersData.map(order => {
+          const matchingImport = importsMap[order.order_id];
+          return {
+            ...order,
+            imported: !!matchingImport,
+            importId: matchingImport ? matchingImport.imp_id : null
+          };
+        });
+        
+        return updatedOrders;
+      }
+      
+      return ordersData;
+    } catch (error) {
+      console.error("Error checking import status:", error);
+      return ordersData;
+    }
+  };
+  
   // Fetch all purchase orders
   const fetchOrders = async () => {
     try {
@@ -475,11 +572,14 @@ function PurchaseOrders() {
       const data = await getAllOrders();
       
       // Process dates in the received data
-      const processedData = Array.isArray(data) ? data.map(order => ({
+      let processedData = Array.isArray(data) ? data.map(order => ({
         ...order,
         // Format the date for display
         formattedDate: formatDate(order.order_date || order.orderDate)
       })) : [];
+      
+      // Check import status for each order
+      processedData = await checkImportStatus(processedData);
       
       setOrders(processedData);
       setFilteredOrders(processedData);
@@ -537,7 +637,7 @@ function PurchaseOrders() {
   
   // Apply custom filters
   const handleApplyFilters = (filters) => {
-    const { fromDate, toDate, supplier } = filters;
+    const { fromDate, toDate, supplier, status } = filters;
     
     let filtered = [...orders];
     
@@ -565,6 +665,18 @@ function PurchaseOrders() {
       filtered = filtered.filter(order =>
         order.supplier && order.supplier.toLowerCase().includes(supplier.toLowerCase())
       );
+    }
+    
+    // Filter by status
+    if (status) {
+      filtered = filtered.filter(order => {
+        if (status === 'imported') {
+          return order.imported;
+        } else if (status === 'pending') {
+          return !order.imported;
+        }
+        return true;
+      });
     }
     
     setFilteredOrders(filtered);
@@ -698,7 +810,6 @@ function PurchaseOrders() {
           </Button>
         </Box>
       </Box>
-      
       {/* Statistics cards */}
       <OrderStatistics orders={orders} />
       
