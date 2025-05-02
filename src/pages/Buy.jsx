@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -19,7 +19,13 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  Tooltip
+  Tooltip,
+  Autocomplete,
+  Card,
+  CardContent,
+  Divider,
+  Badge,
+  Snackbar
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -27,7 +33,12 @@ import {
   Save as SaveIcon,
   Search as SearchIcon,
   Warning as WarningIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  History as HistoryIcon,
+  Refresh as RefreshIcon,
+  ArrowBack as ArrowBackIcon,
+  FilterList as FilterListIcon,
+  ShoppingCart as CartIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { SuccessDialog, ErrorDialog } from '../components/SuccessDialog';
@@ -35,137 +46,221 @@ import { addOrder, getAllSuppliers } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
 import { getAllProducts } from '../services/productService';
 
+// Format number with commas
+const formatNumber = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
 function Buy() {
   const navigate = useNavigate();
+  
+  // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [brandFilter, setBrandFilter] = useState('');
+  
+  // Order states
   const [orderItems, setOrderItems] = useState([]);
   const [supplier, setSupplier] = useState('');
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // UI states
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supplierWarning, setSupplierWarning] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   
-  // ຂໍ້ມູນສິນຄ້າແລະຜູ້ສະໜອງ
+  // Data states
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   
-  // ສະຖານະການເລືອກຜູ້ສະໜອງ
-  const [supplierWarning, setSupplierWarning] = useState(false);
-
-  // ດຶງຂໍ້ມູນເມື່ອໜ້າຖືກໂຫຼດ
+  // Extract unique categories and brands from products for filters
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // ດຶງຂໍ້ມູນສິນຄ້າ
-        const productsData = await getAllProducts();
-        setProducts(productsData || []);
-        
-        // ດຶງຂໍ້ມູນຜູ້ສະໜອງ
-        const suppliersData = await getAllSuppliers();
-        setSuppliers(suppliersData || []);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+    if (products.length > 0) {
+      // Extract unique categories and brands
+      const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+      const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+      
+      setCategories(uniqueCategories);
+      setBrands(uniqueBrands);
+    }
+  }, [products]);
+
+  // Fetch initial data
+  useEffect(() => {
     fetchData();
   }, []);
 
-  // ເມື່ອມີການປ່ຽນແປງທີ່ supplier, ກວດສອບວ່າມີການເລືອກຜູ້ສະໜອງຫຼືບໍ່
+  // Supplier warning effect
   useEffect(() => {
     setSupplierWarning(!supplier && orderItems.length > 0);
   }, [supplier, orderItems]);
 
-  // ຈັດຮູບແບບວັນທີເປັນ DD/MM/YYYY
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  // Fetch all necessary data
+  const fetchData = async () => {
+    try {
+      setDataLoading(true);
+      
+      // Fetch products and suppliers in parallel
+      const [productsData, suppliersData] = await Promise.all([
+        getAllProducts(),
+        getAllSuppliers()
+      ]);
+      
+      setProducts(productsData || []);
+      setSuppliers(suppliersData || []);
+      
+      // Show success message
+      setSnackbarMessage('ຂໍ້ມູນຖືກໂຫລດສຳເລັດແລ້ວ');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setErrorMessage(err.message || 'ເກີດຂໍ້ຜິດພາດໃນການໂຫລດຂໍ້ມູນ');
+      setSnackbarMessage('ເກີດຂໍ້ຜິດພາດໃນການໂຫລດຂໍ້ມູນ');
+      setSnackbarOpen(true);
+    } finally {
+      setDataLoading(false);
+    }
   };
 
-  // ຄົ້ນຫາສິນຄ້າຕາມຄຳຄົ້ນຫາ
-  const filteredProducts = products.filter(product =>
-    product.ProductName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.code && product.code.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter products based on search term and filters
+  const filteredProducts = products.filter(product => {
+    // Search term filter
+    const matchesSearch = product.ProductName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (product.code && product.code.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Category filter
+    const matchesCategory = !categoryFilter || product.category === categoryFilter;
+    
+    // Brand filter
+    const matchesBrand = !brandFilter || product.brand === brandFilter;
+    
+    return matchesSearch && matchesCategory && matchesBrand;
+  });
 
-  // ເພີ່ມສິນຄ້າເຂົ້າລາຍການສັ່ງຊື້
-  const addToOrder = (product) => {
+  // Handle adding product to order
+  const addToOrder = useCallback((product) => {
+    // Check if product already exists in order
     const existingItemIndex = orderItems.findIndex(item => item.id === product.proid);
     
     if (existingItemIndex >= 0) {
-      // ສິນຄ້າມີຢູ່ແລ້ວໃນລາຍການສັ່ງຊື້, ເພີ່ມຈຳນວນ
+      // Update quantity if product already in order
       const updatedItems = [...orderItems];
       updatedItems[existingItemIndex].quantity += 1;
       setOrderItems(updatedItems);
+      
+      // Show notification
+      setSnackbarMessage(`ເພີ່ມຈຳນວນ ${product.ProductName} ເປັນ ${updatedItems[existingItemIndex].quantity}`);
+      setSnackbarOpen(true);
     } else {
-      // ເພີ່ມສິນຄ້າໃໝ່ເຂົ້າລາຍການສັ່ງຊື້
-      setOrderItems([...orderItems, {
+      // Add new product to order
+      setOrderItems(prev => [...prev, {
         id: product.proid,
         code: product.code || '',
         name: product.ProductName,
         quantity: 1,
-        stock: product.qty || 0 // ເກັບຂໍ້ມູນຈຳນວນທີ່ມີໃນສາງ
+        stock: product.qty || 0,
+        price: product.cost_price || 0
       }]);
+      
+      // Show notification
+      setSnackbarMessage(`ເພີ່ມ ${product.ProductName} ເຂົ້າລາຍການສັ່ງຊື້ແລ້ວ`);
+      setSnackbarOpen(true);
     }
     
-    // ກວດສອບຖ້າຍັງບໍ່ໄດ້ເລືອກຜູ້ສະໜອງ, ສະແດງການເຕືອນ
+    // Show supplier warning if no supplier selected
     if (!supplier) {
       setSupplierWarning(true);
     }
-  };
+  }, [orderItems, supplier]);
 
-  // ອັບເດດຈຳນວນສິນຄ້າໃນລາຍການສັ່ງຊື້
-  const updateQuantity = (id, quantity) => {
-    if (quantity <= 0) return;
+  // Update quantity of item in order
+  const updateQuantity = useCallback((id, quantity) => {
+    // Validate quantity
+    const parsedQuantity = parseInt(quantity);
+    if (isNaN(parsedQuantity) || parsedQuantity <= 0) return;
     
+    // Update quantity
     const updatedItems = orderItems.map(item => 
-      item.id === id ? { ...item, quantity: parseInt(quantity) } : item
+      item.id === id ? { ...item, quantity: parsedQuantity } : item
     );
     
     setOrderItems(updatedItems);
-  };
+    
+    // Show notification for quantity update
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      setSnackbarMessage(`ອັບເດດຈຳນວນ ${updatedItem.name} ເປັນ ${parsedQuantity}`);
+      setSnackbarOpen(true);
+    }
+  }, [orderItems]);
 
-  // ລຶບສິນຄ້າອອກຈາກລາຍການສັ່ງຊື້
-  const removeFromOrder = (id) => {
+  // Remove item from order
+  const removeFromOrder = useCallback((id) => {
+    const itemToRemove = orderItems.find(item => item.id === id);
     setOrderItems(orderItems.filter(item => item.id !== id));
-  };
+    
+    if (itemToRemove) {
+      setSnackbarMessage(`ລຶບ ${itemToRemove.name} ອອກຈາກລາຍການແລ້ວ`);
+      setSnackbarOpen(true);
+    }
+  }, [orderItems]);
 
-  // ບັນທຶກລາຍການສັ່ງຊື້
+  // Clear all items in order
+  const clearOrder = useCallback(() => {
+    if (orderItems.length === 0) return;
+    
+    setOrderItems([]);
+    setSnackbarMessage('ລ້າງລາຍການສັ່ງຊື້ແລ້ວ');
+    setSnackbarOpen(true);
+  }, [orderItems]);
+
+  // Calculate total order amount
+  const totalOrderAmount = orderItems.reduce((sum, item) => 
+    sum + (parseInt(item.price) || 0) * item.quantity, 0
+  );
+
+  // Save order to database
   const handleSaveOrder = async () => {
-    // ກວດສອບເງື່ອນໄຂຕ່າງໆກ່ອນ
+    // Validate order
     if (orderItems.length === 0) {
-      alert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການສັ່ງຊື້');
+      setSnackbarMessage('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການສັ່ງຊື້');
+      setSnackbarOpen(true);
       return;
     }
   
     if (!supplier) {
-      alert('ກະລຸນາເລືອກຜູ້ສະໜອງກ່ອນບັນທຶກການສັ່ງຊື້');
+      setSnackbarMessage('ກະລຸນາເລືອກຜູ້ສະໜອງກ່ອນບັນທຶກການສັ່ງຊື້');
+      setSnackbarOpen(true);
       setSupplierWarning(true);
       return;
     }
     
-    // ປ້ອງກັນການສົ່ງຊໍ້າ - ຈຸດສຳຄັນທີ່ສຸດ!
+    // Prevent duplicate submissions
     if (isSubmitting) {
       console.log('ກຳລັງດຳເນີນການ, ກະລຸນາລໍຖ້າ...');
       return;
     }
     
-    // ກຳນົດສະຖານະການສົ່ງເປັນ true ກ່ອນເລີ່ມການສົ່ງ
+    // Start submission
     setIsSubmitting(true);
     setLoading(true);
     
     try {
+      // Get current user
       const currentUser = getCurrentUser();
       if (!currentUser || !currentUser.emp_id) {
         throw new Error("ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້. ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່.");
       }
       
-      // ກະກຽມຂໍ້ມູນສຳລັບສົ່ງ - ຮັບປະກັນວ່າຂໍ້ມູນຖືກຕ້ອງ
+      // Prepare order data
       const orderData = {
         sup_id: parseInt(supplier),
         emp_id: parseInt(currentUser.emp_id),
@@ -178,15 +273,14 @@ function Buy() {
       
       console.log('ກຳລັງສົ່ງຂໍ້ມູນການສັ່ງຊື້:', orderData);
       
-      // ສົ່ງຂໍ້ມູນໄປຫາ API
+      // Send order to API
       const result = await addOrder(orderData);
-      
       console.log('ບັນທຶກການສັ່ງຊື້ສຳເລັດ:', result);
       
-      // ສະແດງກ່ອງຂໍ້ຄວາມສຳເລັດ
+      // Show success dialog
       setShowSuccessDialog(true);
       
-      // ລ້າງຟອມຫຼັງຈາກບັນທຶກສຳເລັດ
+      // Clear form after successful save
       setOrderItems([]);
       setSupplier('');
       setSupplierWarning(false);
@@ -197,22 +291,17 @@ function Buy() {
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
-      // ສຳຄັນ: ຕ້ອງຮັບປະກັນວ່າລະບົບຕັ້ງຄ່າກັບຄືນສູ່ສະຖານະປົກກະຕິເມື່ອສຳເລັດ ຫຼື ເກີດຂໍ້ຜິດພາດ
       setIsSubmitting(false);
     }
   };
 
-  // ຈັດການກ່ອງຂໍ້ຄວາມ dialog
+  // Handle dialogs
   const handleCloseSuccessDialog = () => {
     setShowSuccessDialog(false);
-    // ຟອມຖືກລ້າງແລ້ວຫຼັງຈາກ dialog ປິດ
   };
 
   const handleNavigateToPurchaseOrders = () => {
     setShowSuccessDialog(false);
-    // ລ້າງຟອມແລະນຳທາງໄປຍັງໜ້າລາຍການສັ່ງຊື້
-    setOrderItems([]);
-    setSupplier('');
     navigate('/purchase-orders');
   };
 
@@ -222,12 +311,10 @@ function Buy() {
 
   const handleTryAgain = () => {
     setShowErrorDialog(false);
-    // ຜູ້ໃຊ້ສາມາດພະຍາຍາມບັນທຶກອີກຄັ້ງ
   };
 
-  // ຈັດຮູບແບບຈຳນວນເປັນຕົວເລກມີຈຸດນິຍົມ
-  const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -246,28 +333,62 @@ function Buy() {
         onTryAgain={handleTryAgain} 
       />
       
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          severity="success" 
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      
+      {/* Header with navigation and info */}
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ຟອມສັ່ງຊື້ສິນຄ້າ
         </Typography>
-        <Button 
-          variant="contained" 
-          color="info" 
-          onClick={() => navigate('/purchase-orders')}
-        >
-          ລາຍການສັ່ງຊື້ທັງໝົດ
-        </Button>
+        <Box>
+          <Button 
+            variant="outlined" 
+            startIcon={<RefreshIcon />}
+            onClick={fetchData}
+            sx={{ mr: 1 }}
+            disabled={dataLoading}
+          >
+            {dataLoading ? 'ກຳລັງໂຫລດ...' : 'ໂຫລດຄືນໃໝ່'}
+          </Button>
+          
+          <Button 
+            variant="contained" 
+            color="info" 
+            startIcon={<HistoryIcon />}
+            onClick={() => navigate('/purchase-orders')}
+          >
+            ລາຍການສັ່ງຊື້ທັງໝົດ
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={2}>
-        {/* Header - Order information */}
+        {/* Order information card */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              ຂໍ້ມູນການສັ່ງຊື້
+            </Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="ວັນເວລາ"
+                  label="ວັນທີສັ່ງຊື້"
                   type="date"
                   value={orderDate}
                   onChange={(e) => setOrderDate(e.target.value)}
@@ -298,185 +419,387 @@ function Buy() {
                   <MenuItem value="">ເລືອກຜູ້ສະໜອງ</MenuItem>
                   {suppliers.map((sup) => (
                     <MenuItem key={sup.sup_id} value={sup.sup_id}>
-                      {sup.sup_name}
+                      {sup.sup_name} - {sup.contract_name}
                     </MenuItem>
                   ))}
                 </TextField>
               </Grid>
             </Grid>
-          </Paper>
-        </Grid>
-
-        {/* Left column - Product selection */}
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <TextField
-              fullWidth
-              placeholder="ຄົ້ນຫາ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-                <CircularProgress />
+            
+            {/* Order summary */}
+            {orderItems.length > 0 && (
+              <Box sx={{ mt: 2, p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
+                <Grid container spacing={1} alignItems="center">
+                  <Grid item xs>
+                    <Typography variant="body2">
+                      ລາຍການທັງໝົດ: <strong>{orderItems.length}</strong> ລາຍການ
+                    </Typography>
+                  </Grid>
+                  <Grid item xs>
+                    <Typography variant="body2">
+                      ຈຳນວນທັງໝົດ: <strong>{orderItems.reduce((sum, item) => sum + item.quantity, 0)}</strong> ອັນ
+                    </Typography>
+                  </Grid>
+                  <Grid item xs>
+                    <Typography variant="body2">
+                      ມູນຄ່າລວມ: <strong>{formatNumber(totalOrderAmount)}</strong> ກີບ
+                    </Typography>
+                  </Grid>
+                </Grid>
               </Box>
-            ) : (
-              <TableContainer sx={{ maxHeight: 400 }}>
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell align="center">ລະຫັດ</TableCell>
-                      <TableCell align="center">ຊື່</TableCell>
-                      <TableCell align="center">ຈຳນວນ</TableCell>
-                      <TableCell align="center"></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.proid} hover>
-                        <TableCell align="center">{product.proid}</TableCell>
-                        <TableCell align="center">{product.ProductName}</TableCell>
-                        <TableCell align="center">
-                          <Chip 
-                            label={formatNumber(product.qty)} 
-                            color={product.qty <= product.qty_min ? "warning" : "primary"} 
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="primary"
-                            onClick={() => addToOrder(product)}
-                            sx={{ fontSize: '0.7rem', py: 0.5 }}
-                          >
-                            ເລືອກ
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
             )}
           </Paper>
         </Grid>
 
-        {/* Right column - Order items */}
-        <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2 }}>
+        {/* Product selection panel */}
+        <Grid item xs={12} md={5}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              ເລືອກສິນຄ້າ
+            </Typography>
+            
+            {/* Search and filter */}
             <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" fontWeight="bold">
-                ລາຍການສັ່ງຊື້
-              </Typography>
+              <TextField
+                fullWidth
+                placeholder="ຄົ້ນຫາສິນຄ້າ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ mb: 1 }}
+              />
+              
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    label="ກອງປະເພດ"
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FilterListIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  >
+                    <MenuItem value="">ທັງໝົດ</MenuItem>
+                    {categories.map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    label="ກອງຍີ່ຫໍ້"
+                    value={brandFilter}
+                    onChange={(e) => setBrandFilter(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FilterListIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  >
+                    <MenuItem value="">ທັງໝົດ</MenuItem>
+                    {brands.map((brand) => (
+                      <MenuItem key={brand} value={brand}>
+                        {brand}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </Grid>
             </Box>
 
-            {/* Supplier warning alert */}
+            {/* Products table */}
+            {dataLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 3, flexGrow: 1, alignItems: 'center' }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  ພົບ {filteredProducts.length} ລາຍການ
+                </Typography>
+                
+                <TableContainer sx={{ flexGrow: 1, overflow: 'auto' }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="center">ລະຫັດ</TableCell>
+                        <TableCell align="left">ຊື່ສິນຄ້າ</TableCell>
+                        <TableCell align="center">ຈຳນວນໃນສາງ</TableCell>
+                        <TableCell align="center">ລາຄາຕົ້ນທຶນ</TableCell>
+                        <TableCell align="center"></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map((product) => (
+                          <TableRow key={product.proid} hover>
+                            <TableCell align="center">
+                              {product.proid}
+                            </TableCell>
+                            <TableCell align="left">
+                              <Tooltip title={`${product.ProductName} - ${product.brand || ''}`}>
+                                <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                                  {product.ProductName}
+                                </Typography>
+                              </Tooltip>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="bold"
+                                color={product.qty <= product.qty_min ? "warning.main" : "primary.main"}
+                                sx={{ 
+                                  border: '1px solid',
+                                  borderColor: product.qty <= product.qty_min ? "warning.main" : "primary.main",
+                                  borderRadius: 1,
+                                  px: 1,
+                                  py: 0.5,
+                                  display: 'inline-block',
+                                  minWidth: '60px',
+                                  textAlign: 'center'
+                                }}
+                              >
+                                {formatNumber(product.qty)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatNumber(product.cost_price)}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Button
+                                variant="contained"
+                                size="small"
+                                color="primary"
+                                onClick={() => addToOrder(product)}
+                                sx={{ 
+                                  minWidth: '36px', 
+                                  height: '36px',
+                                  borderRadius: '18px',
+                                  boxShadow: 2
+                                }}
+                              >
+                                <AddIcon fontSize="small" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            <Typography variant="body2" sx={{ py: 2, color: 'text.secondary' }}>
+                              ບໍ່ພົບຂໍ້ມູນສິນຄ້າ
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Order items panel */}
+        <Grid item xs={12} md={7}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="subtitle2" color="primary">
+                <Badge badgeContent={orderItems.length} color="primary" sx={{ mr: 1 }}>
+                  <CartIcon color="primary" />
+                </Badge>
+                ລາຍການສັ່ງຊື້
+              </Typography>
+              
+              {orderItems.length > 0 && (
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  size="small"
+                  onClick={clearOrder}
+                >
+                  ລ້າງລາຍການ
+                </Button>
+              )}
+            </Box>
+
+            {/* Supplier warning */}
             {supplierWarning && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 ກະລຸນາເລືອກຜູ້ສະໜອງກ່ອນດຳເນີນການບັນທຶກການສັ່ງຊື້
               </Alert>
             )}
 
-            <TableContainer sx={{ maxHeight: 400 }}>
+            {/* Order items table */}
+            <TableContainer sx={{ flexGrow: 1, overflow: 'auto' }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">#</TableCell>
-                    <TableCell align="center">ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="center">ຈຳນວນເດີມ</TableCell>
-                    <TableCell align="center"></TableCell>
+                    <TableCell align="center" width="5%">#</TableCell>
+                    <TableCell align="left">ສິນຄ້າ</TableCell>
+                    <TableCell align="center" width="15%">ລາຄາ</TableCell>
+                    <TableCell align="center" width="15%">ຈຳນວນ</TableCell>
+                    <TableCell align="right" width="20%">ລວມ</TableCell>
+                    <TableCell align="center" width="10%"></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {orderItems.length > 0 ? (
-                    orderItems.map((item, index) => (
-                      <TableRow 
-                        key={item.id} 
-                        sx={{ 
-                          "&:nth-of-type(odd)": { 
-                            bgcolor: 'action.hover' 
-                          } 
-                        }}
-                      >
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{item.name}</TableCell>
-                        <TableCell align="center" width={80}>
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.id, e.target.value)}
-                            sx={{ 
-                              width: 60,
-                              '& input': { 
-                                textAlign: 'center',
-                                p: 1
-                              }
-                            }}
-                            inputProps={{ min: 1 }}
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Tooltip title="ຈຳນວນທີ່ຍັງເຫຼືອໃນສາງ">
-                            <Chip 
-                              label={formatNumber(item.stock)} 
-                              color={item.stock <= 5 ? "warning" : "default"}
+                    orderItems.map((item, index) => {
+                      const itemTotal = (parseInt(item.price) || 0) * item.quantity;
+                      
+                      return (
+                        <TableRow 
+                          key={item.id} 
+                          sx={{ 
+                            "&:nth-of-type(odd)": { 
+                              bgcolor: 'action.hover' 
+                            } 
+                          }}
+                        >
+                          <TableCell align="center">{index + 1}</TableCell>
+                          <TableCell align="left">
+                            <Typography variant="body2">{item.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              ລະຫັດ: {item.id}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            {formatNumber(item.price)}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                                sx={{ 
+                                  border: '1px solid',
+                                  borderColor: 'primary.main',
+                                  borderRadius: '4px 0 0 4px',
+                                  height: 30,
+                                  p: 0,
+                                  minWidth: 30
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight="bold">−</Typography>
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={item.quantity}
+                                onChange={(e) => updateQuantity(item.id, e.target.value)}
+                                sx={{ 
+                                  width: 50,
+                                  '& input': { 
+                                    textAlign: 'center',
+                                    p: 0,
+                                    height: 28,
+                                    fontSize: '1rem',
+                                    fontWeight: 'bold'
+                                  },
+                                  '& fieldset': {
+                                    borderRadius: 0,
+                                    borderLeft: 'none',
+                                    borderRight: 'none'
+                                  }
+                                }}
+                                inputProps={{ min: 1 }}
+                              />
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                sx={{ 
+                                  border: '1px solid',
+                                  borderColor: 'primary.main',
+                                  borderRadius: '0 4px 4px 0',
+                                  height: 30,
+                                  p: 0,
+                                  minWidth: 30
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight="bold">+</Typography>
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight="bold">
+                              {formatNumber(itemTotal)} ກີບ
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
                               size="small"
-                              variant="outlined"
-                              icon={<InfoIcon />}
-                            />
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => removeFromOrder(item.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                              color="error"
+                              onClick={() => removeFromOrder(item.id)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography variant="body2" sx={{ py: 2, color: 'text.secondary' }}>
-                          ຍັງບໍ່ມີລາຍການສັ່ງຊື້. ກະລຸນາເລືອກສິນຄ້າ
+                          ຍັງບໍ່ມີລາຍການສັ່ງຊື້. ກະລຸນາເລືອກສິນຄ້າຈາກລາຍການທາງຊ້າຍ
                         </Typography>
                       </TableCell>
+                    </TableRow>
+                  )}
+                  
+                  {/* Total row */}
+                  {orderItems.length > 0 && (
+                    <TableRow sx={{ bgcolor: 'primary.main' }}>
+                      <TableCell colSpan={4} align="right">
+                        <Typography variant="subtitle2" color="white">
+                          ລວມມູນຄ່າທັງໝົດ:
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="subtitle1" fontWeight="bold" color="white">
+                          {formatNumber(totalOrderAmount)} ກີບ
+                        </Typography>
+                      </TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
 
-            {/* Action Buttons */}
+            {/* Action buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
               <Button
-                variant="contained"
-                color="error"
-                onClick={() => {
-                  setOrderItems([]);
-                  setSupplier('');
-                  setSupplierWarning(false);
-                }}
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate('/dashboard')}
               >
-                ຍົກເລີກ
+                ກັບຄືນ
               </Button>
+
               <Tooltip title={!supplier ? "ກະລຸນາເລືອກຜູ້ສະໜອງກ່ອນ" : "ບັນທຶກການສັ່ງຊື້"}>
                 <span>
                   <Button
@@ -486,7 +809,7 @@ function Buy() {
                     onClick={handleSaveOrder}
                     disabled={orderItems.length === 0 || !supplier || loading}
                   >
-                    ບັນທຶກ
+                    ບັນທຶກການສັ່ງຊື້
                   </Button>
                 </span>
               </Tooltip>
