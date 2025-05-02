@@ -25,14 +25,39 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip
+  Chip,
+  Card,
+  CardContent,
+  Skeleton,
+  Stack,
+  Divider,
+  Tooltip,
+  useMediaQuery,
+  useTheme,
+  Badge,
+  Avatar,
+  LinearProgress,
+  Collapse,
+  Fade,
+  MenuItem
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Search as SearchIcon,
   Print as PrintIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  History as HistoryIcon,
+  Inventory as InventoryIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Info as InfoIcon,
+  FilterList as FilterListIcon,
+  Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { SuccessDialog, ErrorDialog } from '../components/SuccessDialog';
@@ -41,6 +66,11 @@ import ExportFormDialog from '../components/ExportFormDialog';
 
 function Export() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // State for product selection
   const [searchTerm, setSearchTerm] = useState('');
   const [exportItems, setExportItems] = useState([]);
   const [exportDate, setExportDate] = useState(new Date().toISOString().split('T')[0]);
@@ -55,6 +85,7 @@ function Export() {
   const [exportLocation, setExportLocation] = useState('');
   const [exportReason, setExportReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const [productLoading, setProductLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
   
   // Print dialog state
@@ -68,23 +99,59 @@ function Export() {
     severity: 'success'
   });
   
+  // Filter state
+  const [filterExpanded, setFilterExpanded] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  
   // Get current user
   const currentUser = getCurrentUser();
   
   // Products state
   const [products, setProducts] = useState([]);
   const [zones, setZones] = useState([]);
+  const [categories, setCategories] = useState([]);
   
   // Load products and zones when component mounts
   useEffect(() => {
     fetchProducts();
     fetchZones();
+    fetchCategories();
   }, []);
+  
+  // Function to fetch categories
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/All/Category`);
+      
+      if (response.data && response.data.result_code === "200") {
+        setCategories(response.data.categories || []);
+      } else {
+        // Use sample data if API returns unexpected format
+        setCategories([
+          { cat_id: 1, category: 'ແອ' },
+          { cat_id: 2, category: 'ຕູ້ເຢັນ' },
+          { cat_id: 5, category: 'ໂທລະທັດ' },
+          { cat_id: 4, category: 'ຈັກຊັກເຄື່ອງ' }
+        ]);
+      }
+    } catch (error) {
+      console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນໝວດໝູ່:', error);
+      // Set sample categories if API fails
+      setCategories([
+        { cat_id: 1, category: 'ແອ' },
+        { cat_id: 2, category: 'ຕູ້ເຢັນ' },
+        { cat_id: 5, category: 'ໂທລະທັດ' },
+        { cat_id: 4, category: 'ຈັກຊັກເຄື່ອງ' }
+      ]);
+    }
+  };
   
   // Function to fetch products
   const fetchProducts = async () => {
     try {
-      setLoading(true);
+      setProductLoading(true);
       const response = await axios.get(`${API_BASE_URL}/All/Product`);
       
       if (response.data && response.data.result_code === "200") {
@@ -99,9 +166,12 @@ function Export() {
           id: product.proid,
           name: product.ProductName,
           stock: parseInt(product.qty) || 0,
+          minStock: parseInt(product.qty_min) || 0,
           location: product.zone || (product.zone_id && zoneMap[product.zone_id]) || 'ບໍ່ລະບຸ',
+          zone_id: product.zone_id,
           brand: product.brand,
-          category: product.category
+          category: product.category,
+          cat_id: product.cat_id
         }));
         
         setProducts(formattedProducts);
@@ -115,13 +185,16 @@ function Export() {
       
       // Use sample data in case of API failure
       setProducts([
-        { id: 1, name: 'ຕູ້ເຢັນ Samsung', stock: 10, location: 'B-05', brand: 'Samsung', category: 'ຕູ້ເຢັນ' },
-        { id: 2, name: 'ໂທລະທັດ LG', stock: 15, location: 'A-01', brand: 'LG', category: 'ໂທລະທັດ' },
-        { id: 3, name: 'ແອ Samsung', stock: 20, location: 'A-02', brand: 'Samsung', category: 'ແອ' },
-        { id: 4, name: 'ຈັກຊັກຜ້າ Panasonic', stock: 8, location: 'C-03', brand: 'Panasonic', category: 'ຈັກຊັກເຄື່ອງ' },
+        { id: 1, name: 'ຕູ້ເຢັນ Samsung', stock: 10, minStock: 5, location: 'B-05', zone_id: 2, brand: 'Samsung', category: 'ຕູ້ເຢັນ', cat_id: 2 },
+        { id: 2, name: 'ໂທລະທັດ LG', stock: 15, minStock: 3, location: 'A-01', zone_id: 1, brand: 'LG', category: 'ໂທລະທັດ', cat_id: 5 },
+        { id: 3, name: 'ແອ Samsung', stock: 20, minStock: 5, location: 'A-02', zone_id: 1, brand: 'Samsung', category: 'ແອ', cat_id: 1 },
+        { id: 4, name: 'ຈັກຊັກຜ້າ Panasonic', stock: 8, minStock: 2, location: 'C-03', zone_id: 3, brand: 'Panasonic', category: 'ຈັກຊັກເຄື່ອງ', cat_id: 4 },
+        { id: 5, name: 'ໂທລະທັດ Samsung 55"', stock: 3, minStock: 3, location: 'A-03', zone_id: 1, brand: 'Samsung', category: 'ໂທລະທັດ', cat_id: 5 },
+        { id: 6, name: 'ຕູ້ເຢັນ LG Smart', stock: 2, minStock: 5, location: 'B-06', zone_id: 2, brand: 'LG', category: 'ຕູ້ເຢັນ', cat_id: 2 },
+        { id: 7, name: 'ໄມໂຄເວັບ Panasonic', stock: 7, minStock: 3, location: 'C-01', zone_id: 3, brand: 'Panasonic', category: 'ໄມໂຄເວັບ', cat_id: 6 }
       ]);
     } finally {
-      setLoading(false);
+      setProductLoading(false);
     }
   };
   
@@ -150,12 +223,35 @@ function Export() {
     return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
   };
 
-  // Filter products based on search term
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter products based on search term and filters
+  const filteredProducts = products.filter(product => {
+    // Text search filtering
+    const matchesSearch = 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Category filtering
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    
+    // Location filtering
+    const matchesLocation = locationFilter === 'all' || product.location === locationFilter;
+    
+    // Stock filtering
+    const matchesStock = 
+      stockFilter === 'all' || 
+      (stockFilter === 'low' && product.stock <= product.minStock) ||
+      (stockFilter === 'out' && product.stock === 0) ||
+      (stockFilter === 'available' && product.stock > 0);
+    
+    return matchesSearch && matchesCategory && matchesLocation && matchesStock;
+  });
+
+  // Get unique categories from products
+  const uniqueCategories = [...new Set(products.map(product => product.category))].filter(Boolean);
+  
+  // Get unique locations from products
+  const uniqueLocations = [...new Set(products.map(product => product.location))].filter(Boolean);
 
   // Open dialog to add product to export
   const handleOpenFormDialog = (product) => {
@@ -191,7 +287,8 @@ function Export() {
         ...currentProduct,
         exportQuantity,
         exportLocation,
-        exportReason
+        exportReason,
+        zone_id: currentProduct.zone_id // Ensure zone_id is included
       };
 
       // Check if product already exists in export list
@@ -241,9 +338,11 @@ function Export() {
           id: item.id,
           proid: item.id || item.proid,
           name: item.name,
+          qty: item.exportQuantity,
           exportQuantity: item.exportQuantity,
           exportLocation: item.exportLocation || item.location || '',
           zone_id: item.zone_id || 1, // Make sure zone_id is always available
+          reason: item.exportReason,
           exportReason: item.exportReason
         }))
       };
@@ -321,6 +420,10 @@ function Export() {
         .signatures { display: flex; justify-content: space-around; margin-top: 50px; }
         .signature-box { width: 200px; text-align: center; }
         .signature-line { border-top: 1px solid #000; margin-top: 70px; padding-top: 10px; }
+        @media print {
+          body { margin: 0; padding: 0.5cm; }
+          table { page-break-inside: avoid; }
+        }
       `);
       printWindow.document.write('</style></head><body>');
       printWindow.document.write(printContent.innerHTML);
@@ -356,6 +459,24 @@ function Export() {
       open: false
     });
   };
+  
+  // Get total export quantity
+  const getTotalExportQuantity = () => {
+    return exportItems.reduce((total, item) => total + item.exportQuantity, 0);
+  };
+  
+  // Handle filter expansion toggle
+  const toggleFilterExpansion = () => {
+    setFilterExpanded(!filterExpanded);
+  };
+  
+  // Reset all filters
+  const resetFilters = () => {
+    setCategoryFilter('all');
+    setLocationFilter('all');
+    setStockFilter('all');
+    setSearchTerm('');
+  };
 
   return (
     <Layout title="ນຳອອກສິນຄ້າ">
@@ -388,6 +509,7 @@ function Export() {
         open={showErrorDialog} 
         onClose={handleCloseErrorDialog} 
         onTryAgain={handleTryAgain} 
+        errorMessage={errorMessage}
       />
       
       {/* Product selection dialog */}
@@ -420,6 +542,7 @@ function Export() {
               variant="contained" 
               color="error" 
               onClick={handleClosePrintDialog}
+              size="small"
             >
               ປິດ
             </Button>
@@ -488,224 +611,454 @@ function Export() {
         </DialogActions>
       </Dialog>
       
-      <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="primary">
-          ຟອມນຳອອກສິນຄ້າ
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="info" 
-          onClick={() => navigate('/export-detail')}
-        >
-          ເບິ່ງປະຫວັດການນຳອອກ
-        </Button>
-      </Box>
+      {/* Header section */}
+      <Card sx={{ mb: 2, borderRadius: 2, boxShadow: 2 }}>
+        <CardContent sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, sm: 0 } }}>
+              <InventoryIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold" color="primary">
+                ຟອມນຳອອກສິນຄ້າ
+              </Typography>
+            </Box>
+            
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button 
+                variant="outlined" 
+                color="info" 
+                startIcon={<HistoryIcon />}
+                onClick={() => navigate('/export-detail')}
+                size={isMobile ? "small" : "medium"}
+              >
+                ປະຫວັດການນຳອອກ
+              </Button>
+              
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  fetchProducts();
+                  fetchZones();
+                  fetchCategories();
+                }}
+                size={isMobile ? "small" : "medium"}
+              >
+                ໂຫຼດຂໍ້ມູນໃໝ່
+              </Button>
+            </Stack>
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Export form */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={12}>
-            <TextField
-              fullWidth
-              label="ວັນເວລາ"
-              type="date"
-              value={exportDate}
-              onChange={(e) => setExportDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2 }}>
+        <CardContent sx={{ p: 2 }}>
+          <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+            ຂໍ້ມູນການນຳອອກ
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                fullWidth
+                label="ວັນເວລາ"
+                type="date"
+                value={exportDate}
+                onChange={(e) => setExportDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={8}>
+              <Box sx={{ bgcolor: 'info.50', p: 1, borderRadius: 1, display: 'flex', alignItems: 'center' }}>
+                <InfoIcon color="info" sx={{ mr: 1 }} />
+                <Typography variant="body2" color="info.main">
+                  ການນຳອອກຈະໄດ້ຮັບການອະນຸມັດກ່ອນຈຶ່ງສາມາດຢືນຢັນການນຳອອກສິນຄ້າຈາກສາງໄດ້
+                </Typography>
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
-      </Paper>
+          
+          {/* Summary of selected products */}
+          {exportItems.length > 0 && (
+            <Box sx={{ mt: 2, p: 1, bgcolor: 'success.50', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="success.dark">
+                  <CheckCircleIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                  ເລືອກສິນຄ້າແລ້ວ {exportItems.length} ລາຍການ ຈຳນວນລວມ {getTotalExportQuantity()} ອັນ
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  size="small"
+                  onClick={handleOpenPrintDialog}
+                  startIcon={<PrintIcon />}
+                >
+                  ພິມຟອມ
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
       <Grid container spacing={2}>
         {/* Left column - Product selection */}
         <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                ເລືອກສິນຄ້າ
-              </Typography>
+          <Card sx={{ height: '100%', borderRadius: 2, boxShadow: 2 }}>
+            <CardContent sx={{ p: 2 }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  ເລືອກສິນຄ້າ
+                </Typography>
+                
+                <Button
+                  variant="text"
+                  size="small"
+                  color="primary"
+                  onClick={toggleFilterExpansion}
+                  endIcon={filterExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                >
+                  ຕົວກອງ
+                </Button>
+              </Box>
               
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={fetchProducts}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={20} /> : 'ໂຫຼດຄືນໃໝ່'}
-              </Button>
-            </Box>
-            
-            <TextField
-              fullWidth
-              placeholder="ຄົ້ນຫາສິນຄ້າ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
+              <TextField
+                fullWidth
+                placeholder="ຄົ້ນຫາສິນຄ້າ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearchTerm('')}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+              
+              {/* Filter options */}
+              <Collapse in={filterExpanded}>
+                <Box sx={{ mb: 2, p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="body2" fontWeight="medium" gutterBottom>
+                    ກອງຂໍ້ມູນສິນຄ້າ
+                  </Typography>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="ໝວດໝູ່"
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                      >
+                        <MenuItem value="all">- ທັງໝົດ -</MenuItem>
+                        {uniqueCategories.map((category) => (
+                          <MenuItem key={category} value={category}>{category}</MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="ບ່ອນຈັດວາງ"
+                        value={locationFilter}
+                        onChange={(e) => setLocationFilter(e.target.value)}
+                      >
+                        <MenuItem value="all">- ທັງໝົດ -</MenuItem>
+                        {uniqueLocations.map((location) => (
+                          <MenuItem key={location} value={location}>{location}</MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="ສະຖານະສິນຄ້າ"
+                        value={stockFilter}
+                        onChange={(e) => setStockFilter(e.target.value)}
+                      >
+                        <MenuItem value="all">- ທັງໝົດ -</MenuItem>
+                        <MenuItem value="available">ມີໃນສາງ</MenuItem>
+                        <MenuItem value="low">ໃກ້ໝົດສາງ</MenuItem>
+                        <MenuItem value="out">ໝົດສາງ</MenuItem>
+                      </TextField>
+                    </Grid>
+                  </Grid>
+                  
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button 
+                      size="small" 
+                      onClick={resetFilters}
+                      startIcon={<RefreshIcon />}
+                    >
+                      ລ້າງຕົວກອງ
+                    </Button>
+                  </Box>
+                </Box>
+              </Collapse>
 
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ຊື່ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ຈຳນວນຄົງຄັງ</TableCell>
-                    <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
-                    <TableCell align="center"></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                        <CircularProgress size={24} />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
-                      <TableRow key={product.id} hover>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell align="center">
-                          <Chip 
-                            label={product.stock} 
-                            color={product.stock > 0 ? "success" : "error"}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="center">{product.location}</TableCell>
-                        <TableCell align="center">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenFormDialog(product)}
-                            sx={{ fontSize: '0.7rem', py: 0.5 }}
-                            disabled={product.stock <= 0}
+              {productLoading ? (
+                <Stack spacing={1}>
+                  {[1, 2, 3, 4].map((item) => (
+                    <Box key={item} sx={{ display: 'flex', p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
+                      <Skeleton variant="rectangular" width="60%" height={40} />
+                      <Skeleton variant="rectangular" width="20%" height={40} sx={{ ml: 1 }} />
+                      <Skeleton variant="rectangular" width="20%" height={40} sx={{ ml: 1 }} />
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <>
+                  {filteredProducts.length > 0 ? (
+                    <Box sx={{ maxHeight: 'calc(100vh - 450px)', overflow: 'auto' }}>
+                      <Stack spacing={1}>
+                        {filteredProducts.map((product) => (
+                          <Card 
+                            key={product.id} 
+                            variant="outlined"
+                            sx={{ 
+                              p: 1, 
+                              bgcolor: product.stock <= product.minStock ? 'error.50' : 'background.default',
+                              borderColor: product.stock <= 0 ? 'error.main' : 'divider',
+                              '&:hover': {
+                                boxShadow: 1
+                              }
+                            }}
                           >
-                            ເລືອກ
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Box sx={{ overflow: 'hidden', mr: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'medium', mb: 0.5 }} noWrap>
+                                  {product.stock <= product.minStock && (
+                                    <WarningIcon fontSize="small" color="error" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                                  )}
+                                  {product.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                  {product.category} • {product.location}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                <Chip 
+                                  label={product.stock} 
+                                  color={product.stock > 0 ? 
+                                        (product.stock <= product.minStock ? "warning" : "success") 
+                                        : "error"}
+                                  size="small"
+                                  sx={{ minWidth: 40, mr: 1 }}
+                                />
+                                
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => handleOpenFormDialog(product)}
+                                  sx={{ minWidth: 0, px: 1 }}
+                                  disabled={product.stock <= 0}
+                                >
+                                  <AddIcon fontSize="small" />
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Card>
+                        ))}
+                      </Stack>
+                    </Box>
                   ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        ບໍ່ພົບສິນຄ້າ
-                      </TableCell>
-                    </TableRow>
+                    <Box sx={{ py: 4, textAlign: 'center', bgcolor: 'background.default', borderRadius: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ
+                      </Typography>
+                      <Button 
+                        sx={{ mt: 1 }} 
+                        size="small" 
+                        startIcon={<RefreshIcon />} 
+                        onClick={resetFilters}
+                      >
+                        ລ້າງຕົວກອງ
+                      </Button>
+                    </Box>
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
 
         {/* Right column - Export details */}
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" fontWeight="bold">
-                ລາຍລະອຽດນຳອອກສິນຄ້າ
-              </Typography>
-            </Box>
-
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center">#</TableCell>
-                    <TableCell align="left">ສິນຄ້າ</TableCell>
-                    <TableCell align="center">ຈຳນວນ</TableCell>
-                    <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
-                    <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
-                    <TableCell align="center"></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {exportItems.length > 0 ? (
-                    exportItems.map((item, index) => (
-                      <TableRow 
-                        key={item.id} 
-                        sx={{ 
-                          "&:nth-of-type(odd)": { 
-                            bgcolor: 'action.hover' 
-                          } 
-                        }}
-                      >
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="left">{item.name}</TableCell>
-                        <TableCell align="center">{item.exportQuantity}</TableCell>
-                        <TableCell align="center">{item.exportLocation}</TableCell>
-                        <TableCell align="center">
-                          {item.exportReason.length > 20 
-                            ? `${item.exportReason.substring(0, 20)}...` 
-                            : item.exportReason}
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleRemoveFromExport(item.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                        <Typography color="text.secondary">
-                          ບໍ່ມີລາຍການສິນຄ້າທີ່ຈະນຳອອກ
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
+            <CardContent sx={{ p: 2 }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  <Badge 
+                    badgeContent={exportItems.length} 
+                    color="primary"
+                    sx={{ '& .MuiBadge-badge': { fontSize: 12, height: 20, minWidth: 20 } }}
+                  >
+                    ລາຍການນຳອອກ
+                  </Badge>
+                </Typography>
+                
+                <Box>
+                  {exportItems.length > 0 && (
+                    <Button
+                      variant="text"
+                      color="error"
+                      size="small"
+                      onClick={() => setExportItems([])}
+                      sx={{ mr: 1 }}
+                    >
+                      ລ້າງລາຍການ
+                    </Button>
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </Box>
+              </Box>
 
-            {/* Action buttons */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => {
-                  setExportItems([]);
-                }}
-                disabled={exportItems.length === 0 || loading}
-              >
-                ຍົກເລີກ
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<PrintIcon />}
-                onClick={handleOpenPrintDialog}
-                disabled={exportItems.length === 0 || loading}
-                sx={{ mr: 1 }}
-              >
-                ພິມ
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={loading ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
-                onClick={handleSaveExport}
-                disabled={exportItems.length === 0 || loading}
-              >
-                ບັນທຶກ
-              </Button>
-            </Box>
-          </Paper>
+              {exportItems.length > 0 ? (
+                <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="center" width="5%">#</TableCell>
+                        <TableCell align="left">ສິນຄ້າ</TableCell>
+                        <TableCell align="center">ຈຳນວນ</TableCell>
+                        <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
+                        <TableCell align="center">ສາເຫດ</TableCell>
+                        <TableCell align="center" width="60px"></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {exportItems.map((item, index) => (
+                        <TableRow 
+                          key={item.id} 
+                          sx={{ 
+                            "&:nth-of-type(odd)": { 
+                              bgcolor: 'action.hover' 
+                            } 
+                          }}
+                        >
+                          <TableCell align="center">{index + 1}</TableCell>
+                          <TableCell align="left">
+                            <Typography variant="body2" noWrap>
+                              {item.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip 
+                              label={item.exportQuantity}
+                              color="primary"
+                              size="small"
+                              sx={{ minWidth: 30 }}
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2">{item.exportLocation}</Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Tooltip title={item.exportReason}>
+                              <Typography variant="body2" noWrap>
+                                {item.exportReason.length > 20 
+                                  ? `${item.exportReason.substring(0, 20)}...` 
+                                  : item.exportReason}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleRemoveFromExport(item.id)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box 
+                  sx={{ 
+                    py: 10, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    bgcolor: 'background.default',
+                    borderRadius: 1
+                  }}
+                >
+                  <InventoryIcon color="disabled" sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
+                  <Typography color="text.secondary" align="center" gutterBottom>
+                    ຍັງບໍ່ມີລາຍການສິນຄ້າທີ່ຈະນຳອອກ
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" align="center">
+                    ກະລຸນາເລືອກສິນຄ້າຈາກລາຍການຢູ່ດ້ານຊ້າຍ
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Action buttons */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PrintIcon />}
+                  onClick={handleOpenPrintDialog}
+                  disabled={exportItems.length === 0 || loading}
+                >
+                  ພິມ
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={loading ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
+                  onClick={handleSaveExport}
+                  disabled={exportItems.length === 0 || loading}
+                >
+                  ບັນທຶກການນຳອອກ
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+          
+          {/* Informational card */}
+          {exportItems.length > 0 && (
+            <Card sx={{ mt: 2, borderRadius: 2, boxShadow: 1, border: '1px dashed', borderColor: 'warning.main' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <WarningIcon color="warning" sx={{ mr: 1, mt: 0.5 }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium" color="warning.dark">
+                      ໝາຍເຫດສຳຄັນ
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ການນຳອອກສິນຄ້າຕ້ອງໄດ້ຮັບການອະນຸມັດຈາກຜູ້ມີສິດກ່ອນ. 
+                      ກະລຸນາເຂົ້າໄປກວດສອບການອະນຸມັດໃນໜ້າປະຫວັດການນຳອອກຫຼັງຈາກສົ່ງຟອມແລ້ວ
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
         </Grid>
       </Grid>
     </Layout>

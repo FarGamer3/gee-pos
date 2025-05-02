@@ -1,10 +1,5 @@
-// This is a modified version of the ExportDetail.jsx file
-// Changes focus on the getItemCount function and how exports are processed
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
 import {
   Box,
   Paper,
@@ -27,7 +22,20 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
-  IconButton
+  IconButton,
+  Card,
+  CardContent,
+  Divider,
+  MenuItem,
+  Menu,
+  useTheme,
+  useMediaQuery,
+  Tabs,
+  Tab,
+  Badge,
+  Tooltip,
+  Collapse,
+  Pagination
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -37,47 +45,82 @@ import {
   Print as PrintIcon,
   Refresh as RefreshIcon,
   FilterAlt as FilterIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Sort as SortIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { DeleteConfirmDialog, ApproveConfirmDialog, ActionSuccessDialog } from '../components/ConfirmationDialog';
 import { getAllExports, getExportDetails, updateExportStatus, deleteExport } from '../services/exportService';
+import API_BASE_URL from '../config/api';
+
+// Status chip color mapping
+const STATUS_COLORS = {
+  'ລໍຖ້າອະນຸມັດ': {
+    backgroundColor: '#FFA726'  // Orange for pending
+  },
+  'ນຳອອກແລ້ວ': {
+    backgroundColor: '#66BB6A'  // Green for approved
+  },
+  'ຍົກເລີກ': {
+    backgroundColor: '#F44336'  // Red for canceled
+  }
+};
 
 function ExportDetail() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // States for exports data
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Export history state
   const [exportHistory, setExportHistory] = useState([]);
-
-  // Selected export for viewing details
+  const [filteredExports, setFilteredExports] = useState([]);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
+  // Filter states
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [filterExpanded, setFilterExpanded] = useState(false);
+  
+  // Sort states
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [sortAnchorEl, setSortAnchorEl] = useState(null);
+  
+  // Tab state
+  const [tabValue, setTabValue] = useState(0);
+  
+  // Selected export states
   const [selectedExport, setSelectedExport] = useState(null);
   const [selectedExportItems, setSelectedExportItems] = useState([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
-  // Filter state
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  
-  // Delete confirmation dialog state
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedExportId, setSelectedExportId] = useState(null);
-  
-  // Approve confirmation dialog state
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [selectedApproveId, setSelectedApproveId] = useState(null);
-  
-  // Success action dialog state
-  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState('');
-  
   // Print dialog state
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const printRef = useRef(null);
+  
+  // Action menu state
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuExportId, setMenuExportId] = useState(null);
+  
+  // Confirmation dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedExportId, setSelectedExportId] = useState(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [selectedApproveId, setSelectedApproveId] = useState(null);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState('');
   
   // Snackbar state
   const [snackbar, setSnackbar] = useState({
@@ -85,6 +128,37 @@ function ExportDetail() {
     message: '',
     severity: 'success'
   });
+
+  // Fetch export history when component mounts
+  useEffect(() => {
+    fetchExportHistory();
+  }, []);
+  
+  // Update filtered exports when filters change
+  useEffect(() => {
+    applyFiltersAndSort(exportHistory, searchTerm, statusFilter, startDate, endDate, sortField, sortDirection);
+  }, [searchTerm, statusFilter, startDate, endDate, sortField, sortDirection, exportHistory]);
+  
+  // Update filter based on tab selection
+  useEffect(() => {
+    let status = 'all';
+    
+    switch (tabValue) {
+      case 0: // All
+        status = 'all';
+        break;
+      case 1: // Pending
+        status = 'ລໍຖ້າອະນຸມັດ';
+        break;
+      case 2: // Approved
+        status = 'ນຳອອກແລ້ວ';
+        break;
+      default:
+        status = 'all';
+    }
+    
+    setStatusFilter(status);
+  }, [tabValue]);
 
   // ດຶງຂໍ້ມູນປະຫວັດການນຳອອກສິນຄ້າ
   const fetchExportHistory = async () => {
@@ -110,7 +184,6 @@ function ExportDetail() {
           
           // For exports without item info, try to get item count from API
           try {
-            console.log(`Fetching details for export ${exportId}`);
             const details = await getExportDetails(exportId);
             if (details && details.length > 0) {
               return {
@@ -121,15 +194,17 @@ function ExportDetail() {
               };
             }
           } catch (detailError) {
-            console.log(`Could not load details for export ${exportId}:`, detailError);
+            console.error(`Could not load details for export ${exportId}:`, detailError);
           }
           
           return exportItem;
         }));
         
         setExportHistory(processedExports);
+        applyFiltersAndSort(processedExports, searchTerm, statusFilter, startDate, endDate, sortField, sortDirection);
       } else {
         setExportHistory([]);
+        setFilteredExports([]);
         setError("ບໍ່ພົບຂໍ້ມູນການນຳອອກສິນຄ້າ");
       }
     } catch (error) {
@@ -161,26 +236,104 @@ function ExportDetail() {
       setDetailsLoading(false);
     }
   };
-
-  // Load export history on mount
-  useEffect(() => {
-    fetchExportHistory();
-  }, []);
-
-  // Filter exports based on search term
-  const filteredExports = exportHistory.filter(item =>
-    (item.id && item.id.toString().includes(searchTerm)) ||
-    (item.export_id && item.export_id.toString().includes(searchTerm)) ||
-    (item.date && item.date.includes(searchTerm)) ||
-    (item.export_date && item.export_date.includes(searchTerm)) ||
-    (item.items && item.items.some(product => 
-      (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (product.ProductName && product.ProductName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (product.exportReason && product.exportReason.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (product.reason && product.reason.toLowerCase().includes(searchTerm.toLowerCase()))
-    ))
-  );
-
+  
+  // Apply filters and sorting function
+  const applyFiltersAndSort = (exports, search, status, dateStart, dateEnd, field, direction) => {
+    if (!exports || exports.length === 0) {
+      setFilteredExports([]);
+      return;
+    }
+    
+    // Apply filters
+    let filtered = exports.filter(exportItem => {
+      // Text search filtering
+      const matchesSearch = !search || 
+        (exportItem.id && exportItem.id.toString().includes(search)) ||
+        (exportItem.export_id && exportItem.export_id.toString().includes(search)) ||
+        (exportItem.date && exportItem.date.includes(search)) ||
+        (exportItem.export_date && exportItem.export_date.includes(search)) ||
+        (exportItem.items && exportItem.items.some(product => 
+          (product.name && product.name.toLowerCase().includes(search.toLowerCase())) ||
+          (product.ProductName && product.ProductName.toLowerCase().includes(search.toLowerCase())) ||
+          (product.exportReason && product.exportReason.toLowerCase().includes(search.toLowerCase())) ||
+          (product.reason && product.reason.toLowerCase().includes(search.toLowerCase()))
+        ));
+      
+      // Status filtering
+      const exportStatus = getExportStatus(exportItem);
+      const matchesStatus = status === 'all' || exportStatus === status;
+      
+      // Date filtering
+      let matchesDateRange = true;
+      if (dateStart || dateEnd) {
+        const exportDate = new Date(exportItem.date || exportItem.export_date || exportItem.exp_date);
+        
+        if (dateStart) {
+          const startDateObj = new Date(dateStart);
+          matchesDateRange = matchesDateRange && exportDate >= startDateObj;
+        }
+        
+        if (dateEnd) {
+          const endDateObj = new Date(dateEnd);
+          // Set time to end of day for inclusive end date
+          endDateObj.setHours(23, 59, 59, 999);
+          matchesDateRange = matchesDateRange && exportDate <= endDateObj;
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesDateRange;
+    });
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (field) {
+        case 'date':
+          aValue = new Date(a.date || a.export_date || a.exp_date);
+          bValue = new Date(b.date || b.export_date || b.exp_date);
+          break;
+        case 'status':
+          aValue = getExportStatus(a);
+          bValue = getExportStatus(b);
+          break;
+        case 'items':
+          aValue = getItemCount(a);
+          bValue = getItemCount(b);
+          break;
+        default:
+          aValue = new Date(a.date || a.export_date || a.exp_date);
+          bValue = new Date(b.date || b.export_date || b.exp_date);
+      }
+      
+      // Handle numeric values
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Handle date objects
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Handle strings
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      return 0;
+    });
+    
+    setFilteredExports(filtered);
+  };
+  
+  // Calculate pagination indexes
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredExports.slice(indexOfFirstItem, indexOfLastItem);
+  
   // Format date for display
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -189,7 +342,7 @@ function ExportDetail() {
       // Check if it's ISO format
       if (dateStr.includes('T')) {
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+        if (isNaN(date.getTime())) return dateStr;
         
         return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
       }
@@ -201,50 +354,107 @@ function ExportDetail() {
       
       // Try to convert other string formats
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr; // Return original if invalid date
+      if (isNaN(date.getTime())) return dateStr;
       
       return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     } catch (error) {
       console.error("Date formatting error:", error);
-      return dateStr; // Return original on error
+      return dateStr;
     }
   };
-
-  // IMPROVED: Get item count from export item - handles multiple data structures
+  
+  // Utility functions for accessing export data with different possible field names
+  
+  // Get item count from export item
   const getItemCount = (exportItem) => {
-    // Check for items array (most common case)
     if (exportItem.items && Array.isArray(exportItem.items)) {
       return exportItem.items.length;
     }
     
-    // Check for export_details array
     if (exportItem.export_details && Array.isArray(exportItem.export_details)) {
       return exportItem.export_details.length;
     }
     
-    // Check for item_count field
     if (typeof exportItem.item_count === 'number') {
       return exportItem.item_count;
     }
     
-    // Check for count field
     if (typeof exportItem.count === 'number') {
       return exportItem.count;
     }
     
-    // If no count info is available, show a placeholder
     return "—";
   };
 
+  // Get export date from different possible properties
+  const getExportDate = (exportItem) => {
+    return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
+  };
+
+  // Get export id from different possible properties
+  const getExportId = (exportItem) => {
+    return exportItem.id || exportItem.export_id || exportItem.exp_id;
+  };
+
+  // Get status from export item
+  const getExportStatus = (exportItem) => {
+    return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
+  };
+
+  // Get product name from item
+  const getProductName = (item) => {
+    const nameFields = ['name', 'ProductName', 'product_name'];
+    
+    for (const field of nameFields) {
+      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+        return item[field];
+      }
+    }
+    
+    return 'ບໍ່ລະບຸຊື່ສິນຄ້າ';
+  };
+
+  // Get export quantity from item
+  const getExportQuantity = (item) => {
+    return item.exportQuantity || item.qty || 0;
+  };
+
+  // Get export location from item
+  const getExportLocation = (item) => {
+    const locationFields = ['exportLocation', 'location', 'zone'];
+    
+    for (const field of locationFields) {
+      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
+        return item[field];
+      }
+    }
+    
+    if (item.zone_id) {
+      return `Zone ${item.zone_id}`;
+    }
+    
+    return 'ບໍ່ລະບຸສະຖານທີ່';
+  };
+
+  // Get export reason from item
+  const getExportReason = (item) => {
+    return item.exportReason || item.reason || '-';
+  };
+  
+  // Get status chip color
+  const getStatusChipColor = (status) => {
+    return STATUS_COLORS[status]?.backgroundColor || '#9E9E9E';
+  };
+  
+  // Event handlers
+  
   // Handle view export details
   const handleViewExport = (exportData) => {
     setSelectedExport(exportData);
     setDetailDialogOpen(true);
     
-    // Get export id from either export_id or id field
     const exportId = exportData.export_id || exportData.id;
     
-    // Fetch details if export has no items or items.length is 0
     if (!exportData.items || exportData.items.length === 0) {
       fetchExportDetails(exportId);
     } else {
@@ -256,7 +466,6 @@ function ExportDetail() {
   const handlePrintExport = (exportData) => {
     setSelectedExport(exportData);
     
-    // Get details if needed
     if (!exportData.items || exportData.items.length === 0) {
       const exportId = exportData.export_id || exportData.id;
       fetchExportDetails(exportId);
@@ -278,19 +487,93 @@ function ExportDetail() {
     setSelectedApproveId(id);
     setApproveDialogOpen(true);
   };
+  
+  // Handle sort menu
+  const handleOpenSortMenu = (event) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+  
+  const handleCloseSortMenu = () => {
+    setSortAnchorEl(null);
+  };
+  
+  // Handle sort selection
+  const handleSort = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setSortAnchorEl(null);
+  };
+  
+  // Toggle filter expansion
+  const toggleFilterExpansion = () => {
+    setFilterExpanded(!filterExpanded);
+  };
+  
+  // Handle action menu
+  const handleOpenActionMenu = (event, exportId) => {
+    setAnchorEl(event.currentTarget);
+    setMenuExportId(exportId);
+  };
+  
+  const handleCloseActionMenu = () => {
+    setAnchorEl(null);
+    setMenuExportId(null);
+  };
 
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+  
+  // Handle pagination
+  const handlePageChange = (event, page) => {
+    setCurrentPage(page);
+  };
+  
+  // Open filter dialog
+  const handleOpenFilterDialog = () => {
+    setFilterDialogOpen(true);
+  };
+  
+  const handleCloseFilterDialog = () => {
+    setFilterDialogOpen(false);
+  };
+  
+  // Apply filters
+  const applyFilters = () => {
+    applyFiltersAndSort(exportHistory, searchTerm, statusFilter, startDate, endDate, sortField, sortDirection);
+    setFilterDialogOpen(false);
+    showSnackbar("ການກັ່ນຕອງສຳເລັດແລ້ວ", "success");
+  };
+  
+  // Reset filters
+  const resetFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    setSearchTerm('');
+    setStatusFilter('all');
+    setTabValue(0);
+    setCurrentPage(1);
+    setFilterDialogOpen(false);
+    applyFiltersAndSort(exportHistory, '', 'all', '', '', sortField, sortDirection);
+  };
+  
   // Confirm delete action
   const confirmDelete = async (id) => {
     try {
       setLoading(true);
       const exportIdToDelete = id || selectedExportId;
       
-      // Delete export through API
       await deleteExport(exportIdToDelete);
       
-      // Update local state after successful API call
       setExportHistory(prevHistory => 
         prevHistory.filter(item => 
+          (item.id !== exportIdToDelete) && (item.export_id !== exportIdToDelete)
+        )
+      );
+      
+      setFilteredExports(prevFiltered => 
+        prevFiltered.filter(item => 
           (item.id !== exportIdToDelete) && (item.export_id !== exportIdToDelete)
         )
       );
@@ -313,12 +596,19 @@ function ExportDetail() {
       setLoading(true);
       const exportIdToApprove = id || selectedApproveId;
       
-      // Update export status through API
       await updateExportStatus(exportIdToApprove, 'ນຳອອກແລ້ວ');
       
-      // Update local state after successful API call
       setExportHistory(prevHistory => 
         prevHistory.map(item => {
+          if ((item.id === exportIdToApprove) || (item.export_id === exportIdToApprove)) {
+            return {...item, status: 'ນຳອອກແລ້ວ'};
+          }
+          return item;
+        })
+      );
+      
+      setFilteredExports(prevFiltered => 
+        prevFiltered.map(item => {
           if ((item.id === exportIdToApprove) || (item.export_id === exportIdToApprove)) {
             return {...item, status: 'ນຳອອກແລ້ວ'};
           }
@@ -338,40 +628,6 @@ function ExportDetail() {
     }
   };
   
-  // Apply filters
-  const applyFilters = () => {
-    // Implement date filtering logic here
-    // This would typically filter the history based on startDate and endDate
-    
-    setFilterDialogOpen(false);
-    showSnackbar("ການກັ່ນຕອງສຳເລັດແລ້ວ", "success");
-  };
-  
-  // Reset filters
-  const resetFilters = () => {
-    setStartDate(null);
-    setEndDate(null);
-    fetchExportHistory();
-    setFilterDialogOpen(false);
-  };
-
-  // Show snackbar notification
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity
-    });
-  };
-  
-  // Close snackbar
-  const handleCloseSnackbar = () => {
-    setSnackbar({
-      ...snackbar,
-      open: false
-    });
-  };
-
   // Dialog handlers
   const handleCloseDetailDialog = () => {
     setDetailDialogOpen(false);
@@ -399,15 +655,7 @@ function ExportDetail() {
     setSuccessDialogOpen(false);
   };
   
-  const handleOpenFilterDialog = () => {
-    setFilterDialogOpen(true);
-  };
-  
-  const handleCloseFilterDialog = () => {
-    setFilterDialogOpen(false);
-  };
-
-  // Handle print functionality
+  // Handle print
   const handlePrint = () => {
     if (printRef.current) {
       const printContent = printRef.current;
@@ -428,6 +676,10 @@ function ExportDetail() {
         .signatures { display: flex; justify-content: space-around; margin-top: 50px; }
         .signature-box { width: 200px; text-align: center; }
         .signature-line { border-top: 1px solid #000; margin-top: 70px; padding-top: 10px; }
+        @media print {
+          body { margin: 0; padding: 0.5cm; }
+          table { page-break-inside: avoid; }
+        }
       `);
       printWindow.document.write('</style></head><body>');
       printWindow.document.write(printContent.innerHTML);
@@ -444,78 +696,21 @@ function ExportDetail() {
     }
   };
   
-  // Get status chip color based on status
-  const getStatusChipColor = (status) => {
-    switch(status) {
-      case 'ລໍຖ້າອະນຸມັດ':
-        return '#FFA726'; // Orange for waiting
-      case 'ນຳອອກແລ້ວ':
-        return '#9ACD32'; // Green for approved
-      default:
-        return '#9E9E9E'; // Gray for other statuses
-    }
+  // Show snackbar notification
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
   };
-
-  // IMPROVED: Get export date from different possible properties
-  const getExportDate = (exportItem) => {
-    return formatDate(exportItem.date || exportItem.export_date || exportItem.exp_date);
-  };
-
-  // IMPROVED: Get export id from different possible properties
-  const getExportId = (exportItem) => {
-    return exportItem.id || exportItem.export_id || exportItem.exp_id;
-  };
-
-  // IMPROVED: Get status from export item
-  const getExportStatus = (exportItem) => {
-    return exportItem.status || 'ລໍຖ້າອະນຸມັດ';
-  };
-
-  // Get product name from item
-  const getProductName = (item) => {
-    // Try all possible field names where product name might be stored
-    const nameFields = ['name', 'ProductName', 'product_name'];
-    
-    // Find the first non-empty value
-    for (const field of nameFields) {
-      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
-        return item[field];
-      }
-    }
-    
-    // Default value if no name found
-    return 'ບໍ່ລະບຸຊື່ສິນຄ້າ';
-  };
-
-  // Get export quantity from item
-  const getExportQuantity = (item) => {
-    return item.exportQuantity || item.qty || 0;
-  };
-
-  // Get export location from item - handle multiple possible field names
-  const getExportLocation = (item) => {
-    // Try to get location from various possible fields
-    const locationFields = ['exportLocation', 'location', 'zone'];
-    
-    // Find the first non-empty value
-    for (const field of locationFields) {
-      if (item[field] && typeof item[field] === 'string' && item[field].trim() !== '') {
-        return item[field];
-      }
-    }
-    
-    // If no location found but we have zone_id, generate location from it
-    if (item.zone_id) {
-      return `Zone ${item.zone_id}`;
-    }
-    
-    // Default value if no location info found
-    return 'ບໍ່ລະບຸສະຖານທີ່';
-  };
-
-  // Get export reason from item
-  const getExportReason = (item) => {
-    return item.exportReason || item.reason || '-';
+  
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
   };
 
   return (
@@ -571,20 +766,17 @@ function ExportDetail() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          ຕົວກັ່ນຕອງຂໍ້ມູນ
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseFilterDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">ຕົວກັ່ນຕອງຂໍ້ມູນ</Typography>
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseFilterDialog}
+              sx={{ color: 'white' }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </DialogTitle>
         
         <DialogContent dividers>
@@ -594,7 +786,7 @@ function ExportDetail() {
                 fullWidth
                 label="ວັນທີເລີ່ມຕົ້ນ"
                 type="date"
-                value={startDate || ''}
+                value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
@@ -605,10 +797,25 @@ function ExportDetail() {
                 fullWidth
                 label="ວັນທີສິ້ນສຸດ"
                 type="date"
-                value={endDate || ''}
+                value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                select
+                fullWidth
+                label="ສະຖານະການນຳອອກ"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="all">- ທັງໝົດ -</MenuItem>
+                <MenuItem value="ລໍຖ້າອະນຸມັດ">ລໍຖ້າອະນຸມັດ</MenuItem>
+                <MenuItem value="ນຳອອກແລ້ວ">ນຳອອກແລ້ວ</MenuItem>
+                <MenuItem value="ຍົກເລີກ">ຍົກເລີກ</MenuItem>
+              </TextField>
             </Grid>
           </Grid>
         </DialogContent>
@@ -617,6 +824,7 @@ function ExportDetail() {
           <Button 
             onClick={resetFilters} 
             color="error"
+            startIcon={<RefreshIcon />}
           >
             ລ້າງຂໍ້ມູນ
           </Button>
@@ -624,6 +832,7 @@ function ExportDetail() {
             variant="contained"
             color="primary"
             onClick={applyFilters}
+            startIcon={<FilterIcon />}
           >
             ນຳໃຊ້ຕົວກັ່ນຕອງ
           </Button>
@@ -644,20 +853,55 @@ function ExportDetail() {
               variant="contained" 
               color="error" 
               onClick={handleCloseDetailDialog}
+              size="small"
             >
               ປິດ
             </Button>
           </Box>
         </DialogTitle>
         
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent>
           {selectedExport && (
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
-                ລາຍລະອຽດນຳອອກສິນຄ້າ
-              </Typography>
-              <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                ວັນທີ: {getExportDate(selectedExport)}
+            <Box sx={{ mt: 2, mb: 3 }}>
+              <Card variant="outlined" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">ລະຫັດການນຳອອກ</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {getExportId(selectedExport)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">ວັນທີ</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {getExportDate(selectedExport)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">ສະຖານະ</Typography>
+                      <Chip 
+                        label={getExportStatus(selectedExport)}
+                        sx={{ 
+                          bgcolor: getStatusChipColor(getExportStatus(selectedExport)), 
+                          color: 'white',
+                          mt: 0.5
+                        }}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">ຈຳນວນລາຍການ</Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {getItemCount(selectedExport)} ລາຍການ
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+              
+              <Typography variant="h6" gutterBottom>
+                ລາຍການສິນຄ້າທີ່ນຳອອກ
               </Typography>
               
               {detailsLoading ? (
@@ -683,7 +927,13 @@ function ExportDetail() {
                           <TableCell align="center">{getProductName(item)}</TableCell>
                           <TableCell align="center">{getExportQuantity(item)}</TableCell>
                           <TableCell align="center">{getExportLocation(item)}</TableCell>
-                          <TableCell align="center">{getExportReason(item)}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title={getExportReason(item)}>
+                              <Typography variant="body2" sx={{ maxWidth: 200 }} noWrap>
+                                {getExportReason(item)}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -693,7 +943,9 @@ function ExportDetail() {
                 <Alert severity="info" sx={{ mb: 3 }}>ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດສິນຄ້າ</Alert>
               )}
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }}>
+              <Divider sx={{ my: 3 }} />
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
                 <Box sx={{ textAlign: 'center', width: '200px' }}>
                   <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
                   <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
@@ -706,6 +958,43 @@ function ExportDetail() {
                     <Typography variant="body2">ລາຍເຊັນ</Typography>
                   </Box>
                 </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4, gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  startIcon={<PrintIcon />}
+                  onClick={() => handlePrintExport(selectedExport)}
+                >
+                  ພິມ
+                </Button>
+                
+                {getExportStatus(selectedExport) === 'ລໍຖ້າອະນຸມັດ' && (
+                  <Button 
+                    variant="contained" 
+                    color="success" 
+                    startIcon={<CheckCircleIcon />}
+                    onClick={() => {
+                      handleCloseDetailDialog();
+                      handleApproveExport(getExportId(selectedExport));
+                    }}
+                  >
+                    ອະນຸມັດ
+                  </Button>
+                )}
+                
+                <Button 
+                  variant="contained" 
+                  color="error" 
+                  startIcon={<DeleteIcon />}
+                  onClick={() => {
+                    handleCloseDetailDialog();
+                    handleDeleteExport(getExportId(selectedExport));
+                  }}
+                >
+                  ລຶບ
+                </Button>
               </Box>
             </Box>
           )}
@@ -726,6 +1015,7 @@ function ExportDetail() {
               variant="contained" 
               color="error" 
               onClick={handleClosePrintDialog}
+              size="small"
             >
               ປິດ
             </Button>
@@ -735,7 +1025,7 @@ function ExportDetail() {
         <DialogContent sx={{ mt: 2 }}>
           {selectedExport && (
             <div ref={printRef}>
-              <Box sx={{ mb: 4 }} className="export-header">
+              <Box sx={{ mb: 4 }}>
                 <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
                   ໃບນຳອອກສິນຄ້າ
                 </Typography>
@@ -776,10 +1066,16 @@ function ExportDetail() {
                   <Alert severity="info" sx={{ mb: 3 }}>ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດສິນຄ້າ</Alert>
                 )}
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }} className="signatures">
-                  <Box sx={{ textAlign: 'center', width: '200px' }} className="signature-box">
+                <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }}>
+                  <Box sx={{ textAlign: 'center', width: '200px' }}>
+                    <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
+                    <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
+                      <Typography variant="body2">ລາຍເຊັນ</Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ textAlign: 'center', width: '200px' }}>
                     <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
-                    <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }} className="signature-line">
+                    <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
                       <Typography variant="body2">ລາຍເຊັນ</Typography>
                     </Box>
                   </Box>
@@ -800,6 +1096,84 @@ function ExportDetail() {
         </DialogActions>
       </Dialog>
       
+      {/* Sort menu */}
+      <Menu
+        anchorEl={sortAnchorEl}
+        open={Boolean(sortAnchorEl)}
+        onClose={handleCloseSortMenu}
+      >
+        <MenuItem onClick={() => handleSort('date', 'desc')}>
+          <Typography variant="body2" sx={{ mr: 1 }}>ວັນທີ (ຫຼ້າສຸດ)</Typography>
+          {sortField === 'date' && sortDirection === 'desc' && <CheckCircleIcon color="primary" fontSize="small" />}
+        </MenuItem>
+        <MenuItem onClick={() => handleSort('date', 'asc')}>
+          <Typography variant="body2" sx={{ mr: 1 }}>ວັນທີ (ເກົ່າສຸດ)</Typography>
+          {sortField === 'date' && sortDirection === 'asc' && <CheckCircleIcon color="primary" fontSize="small" />}
+        </MenuItem>
+        <MenuItem onClick={() => handleSort('items', 'desc')}>
+          <Typography variant="body2" sx={{ mr: 1 }}>ລາຍການ (ຫຼາຍ-ໜ້ອຍ)</Typography>
+          {sortField === 'items' && sortDirection === 'desc' && <CheckCircleIcon color="primary" fontSize="small" />}
+        </MenuItem>
+        <MenuItem onClick={() => handleSort('items', 'asc')}>
+          <Typography variant="body2" sx={{ mr: 1 }}>ລາຍການ (ໜ້ອຍ-ຫຼາຍ)</Typography>
+          {sortField === 'items' && sortDirection === 'asc' && <CheckCircleIcon color="primary" fontSize="small" />}
+        </MenuItem>
+      </Menu>
+      
+      {/* Action menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseActionMenu}
+      >
+        <MenuItem onClick={() => {
+          const export_item = exportHistory.find(item => getExportId(item) === menuExportId);
+          if (export_item) {
+            handleViewExport(export_item);
+          }
+          handleCloseActionMenu();
+        }}>
+          <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />
+          <Typography variant="body2">ເບິ່ງລາຍລະອຽດ</Typography>
+        </MenuItem>
+        
+        <MenuItem onClick={() => {
+          const export_item = exportHistory.find(item => getExportId(item) === menuExportId);
+          if (export_item) {
+            handlePrintExport(export_item);
+          }
+          handleCloseActionMenu();
+        }}>
+          <PrintIcon fontSize="small" sx={{ mr: 1 }} />
+          <Typography variant="body2">ພິມໃບນຳອອກ</Typography>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => {
+            handleApproveExport(menuExportId);
+            handleCloseActionMenu();
+          }}
+          disabled={exportHistory.find(item => getExportId(item) === menuExportId)?.status === 'ນຳອອກແລ້ວ'}
+        >
+          <CheckCircleIcon fontSize="small" sx={{ mr: 1 }} />
+          <Typography variant="body2">ອະນຸມັດ</Typography>
+        </MenuItem>
+        
+        <Divider />
+        
+        <MenuItem 
+          onClick={() => {
+            handleDeleteExport(menuExportId);
+            handleCloseActionMenu();
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          <Typography variant="body2">ລຶບ</Typography>
+        </MenuItem>
+      </Menu>
+      
+      {/* Header and search area */}
       <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1" fontWeight="bold" color="primary">
           ປະຫວັດການນຳອອກສິນຄ້າ
@@ -834,14 +1208,14 @@ function ExportDetail() {
         </Box>
       </Box>
 
-         <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <TextField
             placeholder="ຄົ້ນຫາ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="small"
-            sx={{ width: 300 }}
+            sx={{ width: isMobile ? '100%' : 300 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -850,6 +1224,105 @@ function ExportDetail() {
               ),
             }}
           />
+          
+          {!isMobile && (
+            <Button
+              variant="outlined" 
+              color="primary"
+              startIcon={<SortIcon />}
+              onClick={handleOpenSortMenu}
+            >
+              ລຽງລຳດັບ
+            </Button>
+          )}
+        </Box>
+        
+        <Box sx={{ mb: 3 }}>
+          <Collapse in={filterExpanded}>
+            <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="ວັນທີເລີ່ມຕົ້ນ"
+                    type="date"
+                    size="small"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="ວັນທີສິ້ນສຸດ"
+                    type="date"
+                    size="small"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="ສະຖານະການນຳອອກ"
+                    size="small"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">- ທັງໝົດ -</MenuItem>
+                    <MenuItem value="ລໍຖ້າອະນຸມັດ">ລໍຖ້າອະນຸມັດ</MenuItem>
+                    <MenuItem value="ນຳອອກແລ້ວ">ນຳອອກແລ້ວ</MenuItem>
+                    <MenuItem value="ຍົກເລີກ">ຍົກເລີກ</MenuItem>
+                  </TextField>
+                </Grid>
+              </Grid>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Button 
+                  variant="outlined"
+                  color="error" 
+                  onClick={resetFilters}
+                  size="small"
+                  sx={{ mr: 1 }}
+                >
+                  ລ້າງຕົວກອງ
+                </Button>
+                <Button 
+                  variant="contained"
+                  color="primary" 
+                  onClick={applyFilters}
+                  size="small"
+                >
+                  ນຳໃຊ້ຕົວກອງ
+                </Button>
+              </Box>
+            </Paper>
+          </Collapse>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange}
+              indicatorColor="primary"
+              textColor="primary"
+              variant={isMobile ? "fullWidth" : "standard"}
+            >
+              <Tab label="ທັງໝົດ" />
+              <Tab label="ລໍຖ້າອະນຸມັດ" />
+              <Tab label="ນຳອອກແລ້ວ" />
+            </Tabs>
+            
+            <Button
+              variant="text"
+              onClick={toggleFilterExpansion}
+              endIcon={filterExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              size="small"
+            >
+              {filterExpanded ? "ຊ່ອນຕົວກອງ" : "ເພີ່ມຕົວກອງ"}
+            </Button>
+          </Box>
         </Box>
 
         {loading ? (
@@ -871,12 +1344,12 @@ function ExportDetail() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredExports.map((exportItem, index) => (
+                {currentItems.map((exportItem, index) => (
                   <TableRow
                     key={index}
                     sx={{ "&:nth-of-type(odd)": { bgcolor: 'action.hover' } }}
                   >
-                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell align="center">{indexOfFirstItem + index + 1}</TableCell>
                     <TableCell align="center">{getExportDate(exportItem)}</TableCell>
                     <TableCell align="center">{getItemCount(exportItem)}</TableCell>
                     <TableCell align="center">
@@ -947,6 +1420,18 @@ function ExportDetail() {
             <Typography variant="body1" color="text.secondary">
               ບໍ່ພົບຂໍ້ມູນການນຳອອກສິນຄ້າ
             </Typography>
+          </Box>
+        )}
+        
+        {/* Pagination */}
+        {filteredExports.length > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <Pagination 
+              count={Math.ceil(filteredExports.length / itemsPerPage)} 
+              page={currentPage}
+              onChange={handlePageChange}
+              color="primary"
+            />
           </Box>
         )}
       </Paper>
