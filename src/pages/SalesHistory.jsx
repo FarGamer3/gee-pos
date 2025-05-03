@@ -325,7 +325,7 @@ function SalesHistory() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        {/* <Grid item xs={12} sm={4}>
           <Card variant="outlined">
             <CardContent>
               <Typography color="text.secondary" gutterBottom>
@@ -336,7 +336,7 @@ function SalesHistory() {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
       </Grid>
       
       {/* Search and Filter Bar */}

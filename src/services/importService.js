@@ -221,6 +221,28 @@ export const updateImportStatus = async (impId, status) => {
   }
 };
 
+export const deleteImport = async (importId) => {
+  if (!importId) {
+    throw new Error('ຕ້ອງລະບຸລະຫັດການນຳເຂົ້າ');
+  }
+  
+  try {
+    console.log(`ກຳລັງລຶບການນຳເຂົ້າລະຫັດ: ${importId}`);
+    
+    const response = await axios.delete(`${API_BASE_URL}/import/Delete/Import`, {
+      data: { imp_id: importId }
+    });
+    
+    if (response.data && response.data.result_code === "200") {
+      return response.data;
+    }
+    
+    throw new Error(response.data?.result || 'Failed to delete import');
+  } catch (error) {
+    console.error('ຂໍ້ຜິດພາດໃນການລຶບການນຳເຂົ້າ:', error);
+    throw error;
+  }
+};
 /**
  * ອັບເດດສິນຄ້າໂດຍກົງ (ໃຊ້ໃນກໍລະນີ API ການນຳເຂົ້າບໍ່ເຮັດວຽກ)
  */

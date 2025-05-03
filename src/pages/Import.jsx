@@ -38,12 +38,14 @@ import {
   Close as CloseIcon,
   ErrorOutline as ErrorIcon,
   ArrowForward as ArrowForwardIcon,
+  Delete as DeleteIcon,
   ImportExport as ImportExportIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { getPendingOrders, createImport, getAllImports, testServerConnection } from '../services/importService';
 import { getOrderDetails } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
+import { DeleteConfirmDialog } from '../components/ConfirmationDialog';
 
 function Import() {
   const navigate = useNavigate();
@@ -78,6 +80,24 @@ function Import() {
   
   // Get current logged in user
   const currentUser = getCurrentUser();
+
+  // Delete dialog states
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedImportId, setSelectedImportId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+
+  // ເປີດ dialog ຢືນຢັນການລຶບ
+  const handleOpenDeleteDialog = (importId) => {
+    setSelectedImportId(importId);
+    setOpenDeleteDialog(true);
+  };
+
+  // ປິດ dialog ລຶບ
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setSelectedImportId(null);
+  };
   
   // Fetch all imports and pending orders on component mount
   useEffect(() => {
@@ -170,6 +190,32 @@ function Import() {
       showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດການສັ່ງຊື້', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ຟັງຊັນລຶບການນຳເຂົ້າ
+  const handleDeleteImport = async (importId) => {
+    try {
+      setDeleteLoading(true);
+      
+      const response = await axios.delete(`${API_BASE_URL}/import/Delete/Import`, {
+        data: { imp_id: importId }
+      });
+      
+      if (response.data && response.data.result_code === "200") {
+        // ອັບເດດລາຍການຫຼັງຈາກລຶບສຳເລັດ
+        await fetchImports();
+        setOpenDeleteDialog(false);
+        showSnackbar('ລຶບການນຳເຂົ້າສຳເລັດແລ້ວ', 'success');
+      } else {
+        throw new Error(response.data?.result || 'Failed to delete import');
+      }
+    } catch (err) {
+      console.error('ຂໍ້ຜິດພາດໃນການລຶບການນຳເຂົ້າ:', err);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການລຶບການນຳເຂົ້າ', 'error');
+    } finally {
+      setDeleteLoading(false);
+      setSelectedImportId(null);
     }
   };
   
@@ -622,74 +668,87 @@ const handleSubmitImport = async () => {
       <Alert severity="info">ບໍ່ມີຂໍ້ມູນການນຳເຂົ້າສິນຄ້າ</Alert>
     ) : (
       <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell align="center">ລະຫັດ</TableCell>
-              <TableCell align="center">ວັນທີ່ນຳເຂົ້າ</TableCell>
-              <TableCell align="center">ລະຫັດການສັ່ງຊື້</TableCell>
-              <TableCell>ພະນັກງານ</TableCell>
-              <TableCell align="right">ມູນຄ່າລວມ</TableCell>
-              <TableCell align="center">ສະຖານະ</TableCell>
-              <TableCell align="center">ຈັດການ</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {imports.map((importItem) => (
-              <TableRow key={importItem.imp_id} hover>
-                <TableCell align="center">{importItem.imp_id}</TableCell>
-                <TableCell align="center">{formatDate(importItem.imp_date)}</TableCell>
-                <TableCell align="center">{importItem.order_id}</TableCell>
-                <TableCell>{importItem.emp_name}</TableCell>
-                <TableCell align="right">{formatNumber(importItem.total_price)} ກີບ</TableCell>
-                <TableCell align="center">
-                  <Box
-                    sx={{
-                      display: 'inline-block',
-                      bgcolor: importItem.status === 'Completed' ? 'success.main' : 'warning.main',
-                      color: 'white',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontSize: '0.75rem'
-                    }}
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell align="center">ລະຫັດ</TableCell>
+            <TableCell align="center">ວັນທີ່ນຳເຂົ້າ</TableCell>
+            <TableCell align="center">ລະຫັດການສັ່ງຊື້</TableCell>
+            <TableCell>ພະນັກງານ</TableCell>
+            <TableCell align="right">ມູນຄ່າລວມ</TableCell>
+            <TableCell align="center">ສະຖານະ</TableCell>
+            <TableCell align="center">ຈັດການ</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {imports.map((importItem) => (
+            <TableRow key={importItem.imp_id} hover>
+              <TableCell align="center">{importItem.imp_id}</TableCell>
+              <TableCell align="center">{formatDate(importItem.imp_date)}</TableCell>
+              <TableCell align="center">{importItem.order_id}</TableCell>
+              <TableCell>{importItem.emp_name}</TableCell>
+              <TableCell align="right">{formatNumber(importItem.total_price)} ກີບ</TableCell>
+              <TableCell align="center">
+                <Box
+                  sx={{
+                    display: 'inline-block',
+                    bgcolor: importItem.status === 'Completed' ? 'success.main' : 'warning.main',
+                    color: 'white',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  {importItem.status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ'}
+                </Box>
+              </TableCell>
+              <TableCell align="center">
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    size="small"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={() => handleViewImportDetails(importItem)}
                   >
-                    {importItem.status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ'}
-                  </Box>
-                </TableCell>
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    ເບິ່ງ
+                  </Button>
+                  
+                  {/* Show approve button only for pending status */}
+                  {importItem.status !== 'Completed' && (
                     <Button
-                      variant="outlined"
-                      color="info"
+                      variant="contained"
+                      color="success"
                       size="small"
-                      endIcon={<ArrowForwardIcon />}
-                      onClick={() => handleViewImportDetails(importItem)}
+                      startIcon={<CheckCircleIcon />}
+                      onClick={() => handleApproveImport(importItem)}
+                      disabled={loading}
                     >
-                      ເບິ່ງ
+                      ອະນຸມັດ
                     </Button>
-                    
-                    {/* Show approve button only for pending status */}
-                    {importItem.status !== 'Completed' && (
-                      <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={() => handleApproveImport(importItem)}
-                        disabled={loading}
-                      >
-                        ອະນຸມັດ
-                      </Button>
-                    )}
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    )}
+                  )}
+                  
+                  {/* ເພີ່ມປຸ່ມລຶບສຳລັບລາຍການທີ່ມີສະຖານະ ລໍຖ້າ */}
+                  {importItem.status !== 'Completed' && (
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleOpenDeleteDialog(importItem.imp_id)}
+                      disabled={loading}
+                    >
+                      ລຶບ
+                    </Button>
+                  )}
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   </Paper>
 </Box>
       
