@@ -124,6 +124,18 @@ function Import() {
       console.error('Error testing connection:', err);
     }
   };
+
+  const getFilteredPendingOrders = () => {
+    // ດຶງລະຫັດການສັ່ງຊື້ທີ່ມີການນຳເຂົ້າສະຖານະ 'Pending' ຢູ່ແລ້ວ
+    const pendingImportOrderIds = imports
+      .filter(imp => imp.status === 'Pending')
+      .map(imp => imp.order_id);
+    
+    // ກັ່ນຕອງເອົາລາຍການສັ່ງຊື້ທີ່ຍັງບໍ່ໄດ້ໃຊ້ໃນການນຳເຂົ້າ
+    return pendingOrders.filter(order => 
+      !pendingImportOrderIds.includes(order.order_id)
+    );
+  };
   
   // Fetch list of imports
   const fetchImports = async () => {
@@ -200,6 +212,7 @@ function Import() {
       
       const response = await axios.delete(`${API_BASE_URL}/import/Delete/Import`, {
         data: { imp_id: importId }
+        
       });
       
       if (response.data && response.data.result_code === "200") {
@@ -207,6 +220,8 @@ function Import() {
         await fetchImports();
         setOpenDeleteDialog(false);
         showSnackbar('ລຶບການນຳເຂົ້າສຳເລັດແລ້ວ', 'success');
+        await fetchImports();
+        await fetchPendingOrders();
       } else {
         throw new Error(response.data?.result || 'Failed to delete import');
       }
@@ -325,7 +340,7 @@ const handleSubmitImport = async () => {
       emp_id: importData.emp_id || currentUser?.emp_id || 1,
       order_id: importData.order_id,
       imp_date: importData.imp_date || new Date().toISOString().split('T')[0],
-      status: importData.status || 'Completed',
+      status: 'Pending', // ບັງຄັບໃຫ້ເປັນ Pending ສະເໝີ
       total_price: calculateTotalPrice(),
       items: importData.items.map(item => ({
         proid: item.proid,
@@ -351,6 +366,8 @@ const handleSubmitImport = async () => {
       if (response.data && response.data.result_code === "200") {
         console.log('ບັນທຶກການນຳເຂົ້າສຳເລັດ:', response.data);
         apiSuccess = true;
+        await fetchImports();
+        await fetchPendingOrders();
       }
     } catch (apiError) {
       console.error('ຂໍ້ຜິດພາດຈາກ API:', apiError);
@@ -581,69 +598,69 @@ const handleSubmitImport = async () => {
       
       {/* Pending Orders Section */}
       <Box sx={{ mb: 4 }}>
-        <Paper sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" fontWeight="bold">
-              ລາຍການສັ່ງຊື້ທີ່ລໍຖ້າການນຳເຂົ້າ
-            </Typography>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<SyncIcon />}
-              onClick={fetchPendingOrders}
-            >
-              ໂຫຼດຄືນໃໝ່
-            </Button>
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" fontWeight="bold">
+            ລາຍການສັ່ງຊື້ທີ່ລໍຖ້າການນຳເຂົ້າ
+          </Typography>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<SyncIcon />}
+            onClick={fetchPendingOrders}
+          >
+            ໂຫຼດຄືນໃໝ່
+          </Button>
+        </Box>
+        
+        {loading && pendingOrders.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+            <CircularProgress />
           </Box>
-          
-          {loading && pendingOrders.length === 0 ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : pendingOrders.length === 0 ? (
-            <Alert severity="info">ບໍ່ມີລາຍການສັ່ງຊື້ທີ່ລໍຖ້າການນຳເຂົ້າ</Alert>
-          ) : (
-            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center">ລະຫັດ</TableCell>
-                    <TableCell align="center">ວັນທີ່ສັ່ງຊື້</TableCell>
-                    <TableCell>ຜູ້ສະໜອງ</TableCell>
-                    <TableCell>ພະນັກງານ</TableCell>
-                    <TableCell align="center">ຈັດການ</TableCell>
+        ) : getFilteredPendingOrders().length === 0 ? (
+          <Alert severity="info">ບໍ່ມີລາຍການສັ່ງຊື້ທີ່ລໍຖ້າການນຳເຂົ້າ</Alert>
+        ) : (
+          <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">ລະຫັດ</TableCell>
+                  <TableCell align="center">ວັນທີ່ສັ່ງຊື້</TableCell>
+                  <TableCell>ຜູ້ສະໜອງ</TableCell>
+                  <TableCell>ພະນັກງານ</TableCell>
+                  <TableCell align="center">ຈັດການ</TableCell>
+                </TableRow>
+              </TableHead>
+              
+              <TableBody>
+                {getFilteredPendingOrders().map((order) => (
+                  <TableRow key={order.order_id} hover>
+                    <TableCell align="center">{order.order_id}</TableCell>
+                    <TableCell align="center">{formatDate(order.order_date)}</TableCell>
+                    <TableCell>{order.supplier}</TableCell>
+                    <TableCell>{order.employee}</TableCell>
+                    <TableCell align="center">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<ImportExportIcon />}
+                        onClick={() => handleSelectOrder(order)}
+                        disabled={loading}
+                      >
+                        ນຳເຂົ້າ
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                
-                <TableBody>
-                  {pendingOrders.map((order) => (
-                    <TableRow key={order.order_id} hover>
-                      <TableCell align="center">{order.order_id}</TableCell>
-                      <TableCell align="center">{formatDate(order.order_date)}</TableCell>
-                      <TableCell>{order.supplier}</TableCell>
-                      <TableCell>{order.employee}</TableCell>
-                      <TableCell align="center">
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          startIcon={<ImportExportIcon />}
-                          onClick={() => handleSelectOrder(order)}
-                          disabled={loading}
-                        >
-                          ນຳເຂົ້າ
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Paper>
-      </Box>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+    </Box>
       
- {/* Imports History Section */}
+{/* Imports History Section */}
 <Box>
   <Paper sx={{ p: 2 }}>
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -668,87 +685,88 @@ const handleSubmitImport = async () => {
       <Alert severity="info">ບໍ່ມີຂໍ້ມູນການນຳເຂົ້າສິນຄ້າ</Alert>
     ) : (
       <TableContainer component={Paper} variant="outlined">
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell align="center">ລະຫັດ</TableCell>
-            <TableCell align="center">ວັນທີ່ນຳເຂົ້າ</TableCell>
-            <TableCell align="center">ລະຫັດການສັ່ງຊື້</TableCell>
-            <TableCell>ພະນັກງານ</TableCell>
-            <TableCell align="right">ມູນຄ່າລວມ</TableCell>
-            <TableCell align="center">ສະຖານະ</TableCell>
-            <TableCell align="center">ຈັດການ</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {imports.map((importItem) => (
-            <TableRow key={importItem.imp_id} hover>
-              <TableCell align="center">{importItem.imp_id}</TableCell>
-              <TableCell align="center">{formatDate(importItem.imp_date)}</TableCell>
-              <TableCell align="center">{importItem.order_id}</TableCell>
-              <TableCell>{importItem.emp_name}</TableCell>
-              <TableCell align="right">{formatNumber(importItem.total_price)} ກີບ</TableCell>
-              <TableCell align="center">
-                <Box
-                  sx={{
-                    display: 'inline-block',
-                    bgcolor: importItem.status === 'Completed' ? 'success.main' : 'warning.main',
-                    color: 'white',
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                    fontSize: '0.75rem'
-                  }}
-                >
-                  {importItem.status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ'}
-                </Box>
-              </TableCell>
-              <TableCell align="center">
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    color="info"
-                    size="small"
-                    endIcon={<ArrowForwardIcon />}
-                    onClick={() => handleViewImportDetails(importItem)}
-                  >
-                    ເບິ່ງ
-                  </Button>
-                  
-                  {/* Show approve button only for pending status */}
-                  {importItem.status !== 'Completed' && (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      startIcon={<CheckCircleIcon />}
-                      onClick={() => handleApproveImport(importItem)}
-                      disabled={loading}
-                    >
-                      ອະນຸມັດ
-                    </Button>
-                  )}
-                  
-                  {/* ເພີ່ມປຸ່ມລຶບສຳລັບລາຍການທີ່ມີສະຖານະ ລໍຖ້າ */}
-                  {importItem.status !== 'Completed' && (
-                    <Button
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleOpenDeleteDialog(importItem.imp_id)}
-                      disabled={loading}
-                    >
-                      ລຶບ
-                    </Button>
-                  )}
-                </Box>
-              </TableCell>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell align="center">ລະຫັດ</TableCell>
+              <TableCell align="center">ວັນທີ່ນຳເຂົ້າ</TableCell>
+              <TableCell align="center">ລະຫັດການສັ່ງຊື້</TableCell>
+              <TableCell>ພະນັກງານ</TableCell>
+              <TableCell align="right">ມູນຄ່າລວມ</TableCell>
+              <TableCell align="center">ສະຖານະ</TableCell>
+              <TableCell align="center">ຈັດການ</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {imports.map((importItem) => (
+              <TableRow key={importItem.imp_id} hover>
+                <TableCell align="center">{importItem.imp_id}</TableCell>
+                <TableCell align="center">{formatDate(importItem.imp_date)}</TableCell>
+                <TableCell align="center">{importItem.order_id}</TableCell>
+                <TableCell>{importItem.emp_name}</TableCell>
+                <TableCell align="right">{formatNumber(importItem.total_price)} ກີບ</TableCell>
+                <TableCell align="center">
+                  <Box
+                    sx={{
+                      display: 'inline-block',
+                      bgcolor: importItem.status === 'Completed' ? 'success.main' : 'warning.main',
+                      color: 'white',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    {importItem.status === 'Completed' ? 'ສຳເລັດ' : 'ລໍຖ້າ'}
+                  </Box>
+                </TableCell>
+                <TableCell align="center">
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      color="info"
+                      size="small"
+                      endIcon={<ArrowForwardIcon />}
+                      onClick={() => handleViewImportDetails(importItem)}
+                    >
+                      ເບິ່ງ
+                    </Button>
+                    
+                    {/* Show approve button only for pending status */}
+                    {importItem.status !== 'Completed' && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<CheckCircleIcon />}
+                        onClick={() => handleApproveImport(importItem)}
+                        disabled={loading}
+                      >
+                        ອະນຸມັດ
+                      </Button>
+                    )}
+                    
+                    {/* ເພີ່ມປຸ່ມລຶບສຳລັບລາຍການທີ່ມີສະຖານະ ລໍຖ້າ */}
+                    {importItem.status !== 'Completed' && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleOpenDeleteDialog(importItem.imp_id)}
+                        disabled={loading}
+                      >
+                        ລຶບ
+                      </Button>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    )}
   </Paper>
 </Box>
       
@@ -774,31 +792,30 @@ const handleSubmitImport = async () => {
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="ວັນທີ່ນຳເຂົ້າ"
-                type="date"
-                value={importData.imp_date}
-                onChange={(e) => setImportData({ ...importData, imp_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>ສະຖານະ</InputLabel>
-                <Select
-                  value={importData.status}
-                  onChange={(e) => setImportData({ ...importData, status: e.target.value })}
-                  label="ສະຖານະ"
-                >
-                  <MenuItem value="Completed">ສຳເລັດ</MenuItem>
-                  <MenuItem value="Pending">ລໍຖ້າ</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+    <Grid container spacing={2} sx={{ mt: 1 }}>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="ວັນທີ່ນຳເຂົ້າ"
+          type="date"
+          value={importData.imp_date}
+          onChange={(e) => setImportData({ ...importData, imp_date: e.target.value })}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        {/* ລຶບ dropdown ສຳລັບເລືອກສະຖານະອອກ ແລະ ສະແດງແຕ່ສະຖານະລໍຖ້າ */}
+        <TextField
+          fullWidth
+          label="ສະຖານະ"
+          value="ລໍຖ້າ"
+          disabled
+          InputProps={{
+            readOnly: true,
+          }}
+        />
+      </Grid>
+    </Grid>
           
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
@@ -917,6 +934,14 @@ const handleSubmitImport = async () => {
           </Button>
         </DialogActions>
       </Dialog>
+            {/* Delete Confirmation Dialog */}
+            <DeleteConfirmDialog
+        open={openDeleteDialog}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleDeleteImport}
+        itemId={selectedImportId}
+        loading={deleteLoading}
+      />
     </Layout>
   );
 }
