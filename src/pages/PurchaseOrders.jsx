@@ -437,10 +437,11 @@ const OrderStatistics = ({ orders }) => {
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(order => !order.imported).length;
   const importedOrders = orders.filter(order => order.imported).length;
-  const thisMonthOrders = orders.filter(order => {
+  const thisWeekOrders = orders.filter(order => {
     const orderDate = new Date(order.order_date);
     const now = new Date();
-    return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return orderDate >= weekAgo;
   }).length;
   
   return (
@@ -485,10 +486,10 @@ const OrderStatistics = ({ orders }) => {
         <Card sx={{ bgcolor: 'info.light', color: 'info.contrastText' }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <TodayIcon sx={{ mr: 1 }} />
-              <Typography variant="subtitle2">ເດືອນນີ້</Typography>
+              <EventIcon sx={{ mr: 1 }} />
+              <Typography variant="subtitle2">ອາທິດນີ້</Typography>
             </Box>
-            <Typography variant="h4" fontWeight="bold">{thisMonthOrders}</Typography>
+            <Typography variant="h4" fontWeight="bold">{thisWeekOrders}</Typography>
           </CardContent>
         </Card>
       </Grid>

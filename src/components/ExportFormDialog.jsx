@@ -145,23 +145,43 @@ function ExportFormDialog({
     const matchingZone = warehouseLocations.find(zone => zone.zone === selectedZone);
     if (matchingZone) {
       setSelectedZoneId(matchingZone.zone_id);
+      console.log(`Location changed to: ${selectedZone}, zone_id: ${matchingZone.zone_id}`);
+    } else {
+      console.log(`No matching zone found for: ${selectedZone}`);
     }
   };
   
   // Handle save button click
   const handleSave = () => {
     if (validateForm()) {
+      // Make sure we have zone_id
+      let zoneIdToUse = selectedZoneId;
+      
+      // If selectedZoneId is not set, try to find it from the location
+      if (!zoneIdToUse && exportLocation) {
+        const matchingZone = warehouseLocations.find(zone => zone.zone === exportLocation);
+        if (matchingZone) {
+          zoneIdToUse = matchingZone.zone_id;
+        }
+      }
+      
+      // Fallback to product's original zone_id
+      if (!zoneIdToUse) {
+        zoneIdToUse = product.zone_id;
+      }
+      
       // Pass zone_id along with other data
       const updatedProduct = {
         ...product,
         exportQuantity,
         exportLocation,
         exportReason,
-        zone_id: selectedZoneId
+        zone_id: zoneIdToUse || 1 // ຖ້າຍັງບໍ່ມີ zone_id ໃຫ້ໃຊ້ 1 ເປັນຄ່າ default
       };
       
       // Log the data being saved
       console.log("Saving export item with data:", updatedProduct);
+      console.log("Final zone ID:", zoneIdToUse);
       
       onSave(updatedProduct);
     }

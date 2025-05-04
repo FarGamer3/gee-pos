@@ -168,12 +168,13 @@ function Export() {
           stock: parseInt(product.qty) || 0,
           minStock: parseInt(product.qty_min) || 0,
           location: product.zone || (product.zone_id && zoneMap[product.zone_id]) || 'ບໍ່ລະບຸ',
-          zone_id: product.zone_id,
+          zone_id: product.zone_id ? parseInt(product.zone_id) : null, // ຮັບປະກັນວ່າເປັນຕົວເລກ
           brand: product.brand,
           category: product.category,
           cat_id: product.cat_id
         }));
         
+        console.log('Formatted products with zone_id:', formattedProducts);
         setProducts(formattedProducts);
         showSnackbar('ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດ', 'success');
       } else {
@@ -187,16 +188,13 @@ function Export() {
       setProducts([
         { id: 1, name: 'ຕູ້ເຢັນ Samsung', stock: 10, minStock: 5, location: 'B-05', zone_id: 2, brand: 'Samsung', category: 'ຕູ້ເຢັນ', cat_id: 2 },
         { id: 2, name: 'ໂທລະທັດ LG', stock: 15, minStock: 3, location: 'A-01', zone_id: 1, brand: 'LG', category: 'ໂທລະທັດ', cat_id: 5 },
-        { id: 3, name: 'ແອ Samsung', stock: 20, minStock: 5, location: 'A-02', zone_id: 1, brand: 'Samsung', category: 'ແອ', cat_id: 1 },
-        { id: 4, name: 'ຈັກຊັກຜ້າ Panasonic', stock: 8, minStock: 2, location: 'C-03', zone_id: 3, brand: 'Panasonic', category: 'ຈັກຊັກເຄື່ອງ', cat_id: 4 },
-        { id: 5, name: 'ໂທລະທັດ Samsung 55"', stock: 3, minStock: 3, location: 'A-03', zone_id: 1, brand: 'Samsung', category: 'ໂທລະທັດ', cat_id: 5 },
-        { id: 6, name: 'ຕູ້ເຢັນ LG Smart', stock: 2, minStock: 5, location: 'B-06', zone_id: 2, brand: 'LG', category: 'ຕູ້ເຢັນ', cat_id: 2 },
-        { id: 7, name: 'ໄມໂຄເວັບ Panasonic', stock: 7, minStock: 3, location: 'C-01', zone_id: 3, brand: 'Panasonic', category: 'ໄມໂຄເວັບ', cat_id: 6 }
+        // ... other sample data
       ]);
     } finally {
       setProductLoading(false);
     }
   };
+  
   
   // Function to fetch zones
   const fetchZones = async () => {
@@ -255,6 +253,7 @@ function Export() {
 
   // Open dialog to add product to export
   const handleOpenFormDialog = (product) => {
+    console.log('Opening form dialog with product:', product);
     setCurrentProduct(product);
     setExportQuantity(1);
     setExportLocation(product.location || 'ບໍ່ລະບຸ');
@@ -271,28 +270,24 @@ function Export() {
   };
 
   // Add product to export list
-  const handleAddToExport = () => {
+  const handleAddToExport = (productFromDialog) => {
     try {
-      if (exportQuantity <= 0 || exportQuantity > currentProduct.stock) {
-        setApiError('ກະລຸນາລະບຸຈຳນວນທີ່ຖືກຕ້ອງ');
-        return;
-      }
-
-      if (!exportReason) {
-        setApiError('ກະລຸນາລະບຸສາເຫດການນຳອອກ');
-        return;
-      }
-
+      console.log('Product received from dialog:', productFromDialog);
+      
+      // ໃຊ້ຂໍ້ມູນທີ່ສົ່ງມາຈາກ dialog
       const exportItem = {
-        ...currentProduct,
-        exportQuantity,
-        exportLocation,
-        exportReason,
-        zone_id: currentProduct.zone_id // Ensure zone_id is included
+        ...productFromDialog,
+        id: productFromDialog.id,
+        zone_id: productFromDialog.zone_id,
+        exportQuantity: productFromDialog.exportQuantity,
+        exportLocation: productFromDialog.exportLocation,
+        exportReason: productFromDialog.exportReason
       };
-
+  
+      console.log('Final export item to add:', exportItem);
+  
       // Check if product already exists in export list
-      const existingIndex = exportItems.findIndex(item => item.id === currentProduct.id);
+      const existingIndex = exportItems.findIndex(item => item.id === productFromDialog.id);
       
       if (existingIndex >= 0) {
         // Update existing item
@@ -303,7 +298,7 @@ function Export() {
         // Add new item
         setExportItems([...exportItems, exportItem]);
       }
-
+  
       // Close dialog
       setFormDialogOpen(false);
       showSnackbar('ເພີ່ມສິນຄ້າສຳເລັດແລ້ວ', 'success');
@@ -319,54 +314,65 @@ function Export() {
     showSnackbar('ລຶບສິນຄ້າອອກຈາກລາຍການແລ້ວ', 'info');
   };
 
-  // Save export to database
-  const handleSaveExport = async () => {
-    if (exportItems.length === 0) {
-      showSnackbar('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການນຳອອກ', 'warning');
-      return;
-    }
-  
-    try {
-      setLoading(true);
-      
-      // Create export data for API
-      const exportData = {
-        emp_id: currentUser?.emp_id || 1,
-        export_date: exportDate,
-        status: 'ລໍຖ້າອະນຸມັດ',
-        items: exportItems.map(item => ({
+
+// Save export to database
+const handleSaveExport = async () => {
+  if (exportItems.length === 0) {
+    showSnackbar('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການນຳອອກ', 'warning');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    // Debug log to check zone_id in export items
+    console.log("Export items before creating export data:", exportItems);
+    
+    // Create export data for API
+    const exportData = {
+      emp_id: currentUser?.emp_id || 1,
+      export_date: exportDate,
+      status: 'ລໍຖ້າອະນຸມັດ',
+      items: exportItems.map(item => {
+        console.log(`Processing item: ${item.name}, zone_id: ${item.zone_id}`);
+        
+        // ກວດສອບໃຫ້ແນ່ໃຈວ່າມີ zone_id
+        const zoneId = item.zone_id || 1; // ຖ້າບໍ່ມີໃຫ້ໃຊ້ຄ່າ default
+        
+        return {
           id: item.id,
           proid: item.id || item.proid,
           name: item.name,
           qty: item.exportQuantity,
           exportQuantity: item.exportQuantity,
           exportLocation: item.exportLocation || item.location || '',
-          zone_id: item.zone_id || 1, // Make sure zone_id is always available
+          zone_id: zoneId, // ໃສ່ zone_id ໃຫ້ຊັດເຈນ
           reason: item.exportReason,
           exportReason: item.exportReason
-        }))
-      };
-      
-      console.log("ຂໍ້ມູນການນຳອອກທີ່ຈະສົ່ງໄປຍັງ API:", exportData);
-      
-      // Send data to API
-      const result = await createExport(exportData);
-      
-      console.log('ຜົນການບັນທຶກ:', result);
-      
-      // Show success dialog
-      setShowSuccessDialog(true);
-      
-      // Clear export items
-      setExportItems([]);
-    } catch (error) {
-      console.error('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກ:', error);
-      setErrorMessage(error.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກ');
-      setShowErrorDialog(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+        };
+      })
+    };
+    
+    console.log("Final export data being sent to API:", JSON.stringify(exportData, null, 2));
+    
+    // Send data to API
+    const result = await createExport(exportData);
+    
+    console.log('API Response:', result);
+    
+    // Show success dialog
+    setShowSuccessDialog(true);
+    
+    // Clear export items
+    setExportItems([]);
+  } catch (error) {
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກ:', error);
+    setErrorMessage(error.message || 'ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການນຳອອກ');
+    setShowErrorDialog(true);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Dialog event handlers
   const handleCloseSuccessDialog = () => {
