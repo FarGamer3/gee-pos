@@ -1,4 +1,4 @@
-// src/pages/reports.jsx
+// src/pages/reports.jsx - Fixed version
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -120,7 +120,8 @@ function Reports() {
           
         case 'categories':
           const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
-          data = categoriesRes.data.categories || [];
+          // ແກ້ໄຂຕອນນີ້: ປ່ຽນຈາກ categories ເປັນ user_info ຕາມໂຄງສ້າງ API ຕົວຈິງ
+          data = categoriesRes.data.user_info || [];
           break;
           
         case 'brands':
@@ -150,7 +151,9 @@ function Reports() {
           
         case 'sales':
           const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-          data = salesRes.data.sales || [];
+          // ແກ້ໄຂຮູບແບບໂຄງສ້າງຂໍ້ມູນຕາມ API ຕົວຈິງ
+          data = salesRes.data.sales || salesRes.data.user_info || [];
+          console.log('Sales data:', data); // ກວດເບິ່ງຂໍ້ມູນທີ່ໄດ້ຮັບ
           break;
           
         case 'purchases':
@@ -281,12 +284,20 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.categories.map((category) => (
-            <TableRow key={category.cat_id}>
-              <TableCell>{category.cat_id}</TableCell>
-              <TableCell>{category.category}</TableCell>
+          {reportData.categories.length > 0 ? (
+            reportData.categories.map((category) => (
+              <TableRow key={category.cat_id}>
+                <TableCell>{category.cat_id}</TableCell>
+                <TableCell>{category.category}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={2} align="center">
+                ບໍ່ພົບຂໍ້ມູນປະເພດສິນຄ້າ
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -466,15 +477,31 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.sales.map((sale) => (
-            <TableRow key={sale.sale_id}>
-              <TableCell>{sale.sale_id}</TableCell>
-              <TableCell>{formatDate(sale.date_sale)}</TableCell>
-              <TableCell>{sale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}</TableCell>
-              <TableCell>{sale.emp_name}</TableCell>
-              <TableCell align="right">{formatNumber(sale.subtotal)} ກີບ</TableCell>
+          {reportData.sales.length > 0 ? (
+            reportData.sales.map((sale) => (
+              <TableRow key={sale.sale_id}>
+                <TableCell>{sale.sale_id}</TableCell>
+                <TableCell>{formatDate(sale.date_sale)}</TableCell>
+                <TableCell>
+                  {/* ຈັດການກັບໂຄງສ້າງການນຳສະເໜີຂໍ້ມູນຕ່າງໆທີ່ເປັນໄປໄດ້ */}
+                  {sale.customer_name || sale.cus_name || 
+                   (sale.customer ? `${sale.customer.cus_name || ''} ${sale.customer.cus_lname || ''}` : 'ລູກຄ້າທົ່ວໄປ')}
+                </TableCell>
+                <TableCell>
+                  {/* ຈັດການກັບໂຄງສ້າງການນຳສະເໜີຂໍ້ມູນຕ່າງໆທີ່ເປັນໄປໄດ້ */}
+                  {sale.emp_name || 
+                   (sale.employee ? `${sale.employee.emp_name || ''} ${sale.employee.emp_lname || ''}` : '-')}
+                </TableCell>
+                <TableCell align="right">{formatNumber(sale.subtotal)} ກີບ</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                ບໍ່ພົບຂໍ້ມູນການຂາຍ
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
