@@ -1,4 +1,4 @@
-// src/pages/reports.jsx - Fixed version
+// src/pages/reports.jsx - Fixed version with DD/MM/YYYY date format
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -149,28 +149,22 @@ function Reports() {
           data = customersRes.data.user_info || [];
           break;
           
-          case 'sales':
-            try {
-              const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-              
-              if (salesRes.data && salesRes.data.result_code === "200") {
-                // Access the correct property in the API response
-                data = salesRes.data.sales_data || [];
-                console.log('Sales data found:', data.length);
-              } else {
-                console.warn('Sales API returned unexpected format:', salesRes.data);
-                data = [];
-              }
-            } catch (err) {
-              console.error('Error fetching sales data:', err);
+        case 'sales':
+          try {
+            const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+            
+            if (salesRes.data && salesRes.data.result_code === "200") {
+              // Access the correct property in the API response
+              data = salesRes.data.sales_data || [];
+              console.log('Sales data found:', data.length);
+            } else {
+              console.warn('Sales API returned unexpected format:', salesRes.data);
               data = [];
             }
-            break;
-
-          const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-          // ແກ້ໄຂຮູບແບບໂຄງສ້າງຂໍ້ມູນຕາມ API ຕົວຈິງ
-          data = salesRes.data.sales || salesRes.data.user_info || [];
-          console.log('Sales data:', data); // ກວດເບິ່ງຂໍ້ມູນທີ່ໄດ້ຮັບ
+          } catch (err) {
+            console.error('Error fetching sales data:', err);
+            data = [];
+          }
           break;
           
         case 'purchases':
@@ -183,33 +177,33 @@ function Reports() {
           data = importsRes.data.imports || [];
           break;
           
-     case 'exports':
-  try {
-    const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
-    
-    if (exportsRes.data && exportsRes.data.result_code === "200") {
-      // Make sure we're accessing the correct property in the API response
-      data = exportsRes.data.exports || [];
-      
-      // Process data to ensure consistent structure
-      data = data.map((item, index) => ({
-        ...item,
-        // Ensure export_id is available
-        export_id: item.export_id || item.exp_id || `exp-${index}`,
-        // Ensure export_date is available
-        export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
-      }));
-      
-      console.log('Export data processed:', data.length);
-    } else {
-      console.warn('Exports API returned unexpected format:', exportsRes.data);
-      data = [];
-    }
-  } catch (err) {
-    console.error('Error fetching exports data:', err);
-    data = [];
-  }
-  break;
+        case 'exports':
+          try {
+            const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
+            
+            if (exportsRes.data && exportsRes.data.result_code === "200") {
+              // Make sure we're accessing the correct property in the API response
+              data = exportsRes.data.exports || [];
+              
+              // Process data to ensure consistent structure
+              data = data.map((item, index) => ({
+                ...item,
+                // Ensure export_id is available
+                export_id: item.export_id || item.exp_id || `exp-${index}`,
+                // Ensure export_date is available
+                export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
+              }));
+              
+              console.log('Export data processed:', data.length);
+            } else {
+              console.warn('Exports API returned unexpected format:', exportsRes.data);
+              data = [];
+            }
+          } catch (err) {
+            console.error('Error fetching exports data:', err);
+            data = [];
+          }
+          break;
       }
 
       setReportData(prev => ({
@@ -222,6 +216,26 @@ function Reports() {
       setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ຟັງຊັນສຳລັບແປງຮູບແບບຂອງວັນທີຈາກຮູບແບບ ISO ເປັນຮູບແບບ DD/MM/YYYY
+  const formatDateInput = (dateStr) => {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      
+      // Format as YYYY-MM-DD for input fields
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return dateStr;
     }
   };
 
@@ -679,7 +693,13 @@ function Reports() {
                 InputProps={{
                   startAdornment: <DateRangeIcon sx={{ mr: 1 }} />
                 }}
-                InputLabelProps={{ shrink: true }}
+                InputLabelProps={{ 
+                  shrink: true 
+                }}
+                // Use the input's localization property to set format to DD/MM/YYYY
+                inputProps={{
+                  max: '9999-12-31'
+                }}
               />
             </Grid>
             <Grid item xs={12} md={3}>
@@ -692,7 +712,13 @@ function Reports() {
                 InputProps={{
                   startAdornment: <DateRangeIcon sx={{ mr: 1 }} />
                 }}
-                InputLabelProps={{ shrink: true }}
+                InputLabelProps={{ 
+                  shrink: true 
+                }}
+                // Use the input's localization property to set format to DD/MM/YYYY
+                inputProps={{
+                  max: '9999-12-31'
+                }}
               />
             </Grid>
             <Grid item xs={12} md={2}>
