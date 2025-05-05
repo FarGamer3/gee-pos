@@ -149,7 +149,24 @@ function Reports() {
           data = customersRes.data.user_info || [];
           break;
           
-        case 'sales':
+          case 'sales':
+            try {
+              const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+              
+              if (salesRes.data && salesRes.data.result_code === "200") {
+                // Access the correct property in the API response
+                data = salesRes.data.sales_data || [];
+                console.log('Sales data found:', data.length);
+              } else {
+                console.warn('Sales API returned unexpected format:', salesRes.data);
+                data = [];
+              }
+            } catch (err) {
+              console.error('Error fetching sales data:', err);
+              data = [];
+            }
+            break;
+
           const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
           // ແກ້ໄຂຮູບແບບໂຄງສ້າງຂໍ້ມູນຕາມ API ຕົວຈິງ
           data = salesRes.data.sales || salesRes.data.user_info || [];
@@ -166,10 +183,33 @@ function Reports() {
           data = importsRes.data.imports || [];
           break;
           
-        case 'exports':
-          const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
-          data = exportsRes.data.exports || [];
-          break;
+     case 'exports':
+  try {
+    const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
+    
+    if (exportsRes.data && exportsRes.data.result_code === "200") {
+      // Make sure we're accessing the correct property in the API response
+      data = exportsRes.data.exports || [];
+      
+      // Process data to ensure consistent structure
+      data = data.map((item, index) => ({
+        ...item,
+        // Ensure export_id is available
+        export_id: item.export_id || item.exp_id || `exp-${index}`,
+        // Ensure export_date is available
+        export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
+      }));
+      
+      console.log('Export data processed:', data.length);
+    } else {
+      console.warn('Exports API returned unexpected format:', exportsRes.data);
+      data = [];
+    }
+  } catch (err) {
+    console.error('Error fetching exports data:', err);
+    data = [];
+  }
+  break;
       }
 
       setReportData(prev => ({
@@ -203,10 +243,32 @@ function Reports() {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('lo-LA');
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === '-') return "-";
+    
+    try {
+      // Check if it's ISO format
+      if (dateStr.includes('T')) {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      }
+      
+      // If it's already in DD/MM/YYYY format, return as is
+      if (dateStr.includes('/')) {
+        return dateStr;
+      }
+      
+      // Try to convert other string formats
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      
+      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return dateStr;
+    }
   };
 
   // ຟັງຊັນສຳລັບການສະແດງຜົນລາຍງານແຕ່ລະປະເພດ
@@ -483,14 +545,10 @@ function Reports() {
                 <TableCell>{sale.sale_id}</TableCell>
                 <TableCell>{formatDate(sale.date_sale)}</TableCell>
                 <TableCell>
-                  {/* ຈັດການກັບໂຄງສ້າງການນຳສະເໜີຂໍ້ມູນຕ່າງໆທີ່ເປັນໄປໄດ້ */}
-                  {sale.customer_name || sale.cus_name || 
-                   (sale.customer ? `${sale.customer.cus_name || ''} ${sale.customer.cus_lname || ''}` : 'ລູກຄ້າທົ່ວໄປ')}
+                  {sale.customer_name || "ລູກຄ້າທົ່ວໄປ"}
                 </TableCell>
                 <TableCell>
-                  {/* ຈັດການກັບໂຄງສ້າງການນຳສະເໜີຂໍ້ມູນຕ່າງໆທີ່ເປັນໄປໄດ້ */}
-                  {sale.emp_name || 
-                   (sale.employee ? `${sale.employee.emp_name || ''} ${sale.employee.emp_lname || ''}` : '-')}
+                  {sale.emp_name || "-"}
                 </TableCell>
                 <TableCell align="right">{formatNumber(sale.subtotal)} ກີບ</TableCell>
               </TableRow>
@@ -498,7 +556,7 @@ function Reports() {
           ) : (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                ບໍ່ພົບຂໍ້ມູນການຂາຍ
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການຂາຍ'}
               </TableCell>
             </TableRow>
           )}
@@ -543,6 +601,7 @@ function Reports() {
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell align="center" width="10%">ລຳດັບ</TableCell>
             <TableCell>ເລກທີ່</TableCell>
             <TableCell>ວັນທີ່</TableCell>
             <TableCell>ພະນັກງານ</TableCell>
@@ -550,14 +609,25 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.exports.map((exp) => (
-            <TableRow key={exp.exp_id}>
-              <TableCell>{exp.exp_id}</TableCell>
-              <TableCell>{formatDate(exp.exp_date)}</TableCell>
-              <TableCell>{exp.emp_name}</TableCell>
-              <TableCell align="center">{exp.status}</TableCell>
+          {reportData.exports.length > 0 ? (
+            reportData.exports.map((exp, index) => (
+              <TableRow key={exp.export_id || exp.exp_id || index}>
+                <TableCell align="center">{index + 1}</TableCell>
+                <TableCell>{exp.export_id || exp.exp_id || '-'}</TableCell>
+                <TableCell>
+                  {formatDate(exp.export_date || exp.exp_date || '-')}
+                </TableCell>
+                <TableCell>{exp.emp_name || '-'}</TableCell>
+                <TableCell align="center">{exp.status || '-'}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກສິນຄ້າ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
