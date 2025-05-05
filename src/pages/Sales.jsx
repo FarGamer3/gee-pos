@@ -315,70 +315,67 @@ function Sales() {
     showAlert('ລ້າງກະຕ່າສິນຄ້າແລ້ວ', 'info');
   };
   
-  // Handle save sale
-  const handleSaveSale = async () => {
-    if (cartItems.length === 0) {
-      showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
-      return;
-    }
+// ໃນ handleSaveSale function
+const handleSaveSale = async () => {
+  if (cartItems.length === 0) {
+    showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
+    return;
+  }
 
-    const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
-    if (paid < cartTotal) {
-      showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
-      return;
-    }
+  const paid = parseFloat(amountPaid.replace(/,/g, '')) || 0;
+  if (paid < cartTotal) {
+    showAlert('ຈຳນວນເງິນທີ່ຈ່າຍບໍ່ພຽງພໍ', 'error');
+    return;
+  }
+  
+  try {
+    setSavingOrder(true);
     
-    try {
-      setSavingOrder(true);
-      
-      // Use a default customer ID for the generic customer
-      const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
-      
-      // Create the sale data to send to API
-      const saleData = {
-        cus_id: customerIdToUse,
-        emp_id: currentUser?.emp_id || 1,
-        subtotal: cartTotal,
-        pay: paid,
-        money_change: changeAmount,
-        products: cartItems.map(item => ({
-          proid: item.id,
-          qty: item.quantity,
-          price: item.price,
-          total: item.price * item.quantity
-        }))
-      };
-      
-      // Call the API
-      const result = await createSale(saleData);
-      
-      // Store the completed sale
-      const completedSale = {
-        sale_id: result.sale_id || 'N/A',
-        customer: selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}`.trim() : 'ລູກຄ້າທົ່ວໄປ',
-        totalAmount: cartTotal,
-        amountPaid: paid,
-        changeAmount: changeAmount,
-        items: cartItems,
-        date: new Date().toISOString()
-      };
-      setLastCompletedSale(completedSale);
-      
-      // Show success dialog
-      setSuccessDialogOpen(true);
-      
-      // Clear cart and payment info
-      setCartItems([]);
-      setAmountPaid('');
-      setChangeAmount(0);
-      
-    } catch (error) {
-      console.error('Error saving sale:', error);
-      showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
-    } finally {
-      setSavingOrder(false);
-    }
-  };
+    const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
+    
+    const saleData = {
+      cus_id: customerIdToUse,
+      emp_id: currentUser?.emp_id || 1,
+      subtotal: cartTotal,
+      pay: paid,
+      money_change: changeAmount,
+      products: cartItems.map(item => ({
+        proid: item.id,
+        qty: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      }))
+    };
+    
+    const result = await createSale(saleData);
+    
+    // Use actualChange from result for UI display
+    const actualChange = result.actualChange !== undefined ? result.actualChange : changeAmount;
+    
+    const completedSale = {
+      sale_id: result.sale_id || 'N/A',
+      customer: selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}`.trim() : 'ລູກຄ້າທົ່ວໄປ',
+      totalAmount: cartTotal,
+      amountPaid: paid,
+      changeAmount: actualChange, // Use actual change for display
+      items: cartItems,
+      date: new Date().toISOString()
+    };
+    setLastCompletedSale(completedSale);
+    
+    setSuccessDialogOpen(true);
+    
+    setCartItems([]);
+    setAmountPaid('');
+    setChangeAmount(0);
+    
+  } catch (error) {
+    console.error('Error saving sale:', error);
+    showAlert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຂາຍ', 'error');
+  } finally {
+    setSavingOrder(false);
+  }
+};
   
   // Handle print receipt
   const handlePrintReceipt = () => {

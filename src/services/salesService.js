@@ -41,18 +41,12 @@ export const createSale = async (saleData) => {
       formattedData.pay = formattedData.subtotal;
     }
     
-    // Calculate change if not provided - Ensure it's never negative
-    if (formattedData.money_change === undefined) {
-      formattedData.money_change = Math.max(0, formattedData.pay - formattedData.subtotal);
-    }
+    // Calculate actual change
+    const actualChange = formattedData.pay - formattedData.subtotal;
     
-    // Adjust money_change to ensure minimum 1 kip if pay == subtotal
-    // This is a workaround for the API requirement that money_change > 0
-    if (formattedData.pay === formattedData.subtotal) {
-      // Add 1 kip to pay amount and money_change 
-      formattedData.pay += 1;
-      formattedData.money_change = 1;
-    }
+    // Store the actual change for UI purposes but send 1 to API if change is 0
+    formattedData.actualChange = actualChange;
+    formattedData.money_change = actualChange === 0 ? 1 : actualChange;
     
     console.log('Sending formatted sale data:', JSON.stringify(formattedData));
     
@@ -61,12 +55,16 @@ export const createSale = async (saleData) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 10000 // 10 seconds timeout
+      timeout: 10000
     });
     
     if (response.data && (response.data.result_code === "200" || response.data.result_code === "201")) {
       console.log('Sale created successfully:', response.data);
-      return response.data;
+      // Return with actual change for UI
+      return {
+        ...response.data,
+        actualChange: actualChange
+      };
     }
     
     console.warn('Sale API returned unexpected format:', response.data);
@@ -74,7 +72,6 @@ export const createSale = async (saleData) => {
   } catch (error) {
     console.error('Error in createSale:', error.message);
     
-    // Check for specific error types to provide more helpful messages
     if (error.response) {
       console.error('Server response error:', error.response.data);
       

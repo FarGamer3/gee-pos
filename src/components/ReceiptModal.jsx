@@ -68,8 +68,11 @@ function ReceiptModal({ open, onClose, items, customer, totalAmount, amountPaid 
     hour: '2-digit',
     minute: '2-digit',
   });
+  // ແກ້ໄຂການສະແດງຜົນເງິນທອນ
+
 
   return (
+    
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Typography variant="h6" align="center">ໃບເກັບເງິນ</Typography>
