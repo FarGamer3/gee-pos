@@ -6,8 +6,7 @@ import API_BASE_URL from '../config/api';
  * ເພີ່ມການຂາຍໃໝ່ (Create a new sale)
  * @param {Object} saleData - ຂໍ້ມູນການຂາຍ
  * @returns {Promise} - ຜົນການບັນທຶກການຂາຍ
- */
-export const createSale = async (saleData) => {
+ */export const createSale = async (saleData) => {
   try {
     // Validate required fields
     if (!saleData.cus_id || !saleData.emp_id || !saleData.products || !saleData.products.length) {
@@ -41,12 +40,8 @@ export const createSale = async (saleData) => {
       formattedData.pay = formattedData.subtotal;
     }
     
-    // Calculate actual change
-    const actualChange = formattedData.pay - formattedData.subtotal;
-    
-    // Store the actual change for UI purposes but send 1 to API if change is 0
-    formattedData.actualChange = actualChange;
-    formattedData.money_change = actualChange === 0 ? 1 : actualChange;
+    // Calculate change and allow it to be 0
+    formattedData.money_change = Math.max(0, formattedData.pay - formattedData.subtotal);
     
     console.log('Sending formatted sale data:', JSON.stringify(formattedData));
     
@@ -60,11 +55,7 @@ export const createSale = async (saleData) => {
     
     if (response.data && (response.data.result_code === "200" || response.data.result_code === "201")) {
       console.log('Sale created successfully:', response.data);
-      // Return with actual change for UI
-      return {
-        ...response.data,
-        actualChange: actualChange
-      };
+      return response.data;
     }
     
     console.warn('Sale API returned unexpected format:', response.data);

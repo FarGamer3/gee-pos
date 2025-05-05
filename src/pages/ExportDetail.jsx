@@ -1387,16 +1387,7 @@ function ExportDetail() {
                           ອະນຸມັດ
                         </Button>
                         
-                        <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          sx={{ borderRadius: 4 }}
-                          onClick={() => handlePrintExport(exportItem)}
-                          startIcon={<PrintIcon />}
-                        >
-                          ພິມ
-                        </Button>
+                  
                         
                         <Button
                           variant="contained"
