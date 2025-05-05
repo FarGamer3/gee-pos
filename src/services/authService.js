@@ -72,3 +72,33 @@ export const getCurrentUser = () => {
   const user = localStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 };
+
+/**
+ * ອັບເດດຂໍ້ມູນຜູ້ໃຊ້ໃນ localStorage ແລະ session
+ * @param {Object} userData - ຂໍ້ມູນຜູ້ໃຊ້ທີ່ຕ້ອງການອັບເດດ
+ * @returns {Object} ຂໍ້ມູນຜູ້ໃຊ້ທີ່ອັບເດດແລ້ວ
+ */
+export const updateUserProfile = (userData) => {
+  try {
+    // Get current user
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser) {
+      throw new Error("ບໍ່ພົບຂໍ້ມູນຜູ້ໃຊ້");
+    }
+    
+    // Update user data
+    const updatedUser = {
+      ...currentUser,
+      ...userData
+    };
+    
+    // Save updated user to localStorage
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    return updatedUser;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};

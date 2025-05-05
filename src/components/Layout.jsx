@@ -443,34 +443,37 @@ export default function Layout({ children, title, onLogout }) {
             </Typography>
             
             <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleMenuClose}>
-                <ListItemIcon>
-                  <PersonIcon fontSize="small" />
-                </ListItemIcon>
-                <Typography variant="inherit">ຂໍ້ມູນຜູ້ໃຊ້</Typography>
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon>
-                  <LogoutIcon fontSize="small" color="error" />
-                </ListItemIcon>
-                <Typography variant="inherit" color="error">ອອກຈາກລະບົບ</Typography>
-              </MenuItem>
-            </Menu>
+  id="menu-appbar"
+  anchorEl={anchorEl}
+  anchorOrigin={{
+    vertical: 'bottom',
+    horizontal: 'right',
+  }}
+  keepMounted
+  transformOrigin={{
+    vertical: 'top',
+    horizontal: 'right',
+  }}
+  open={Boolean(anchorEl)}
+  onClose={handleMenuClose}
+>
+  <MenuItem onClick={() => {
+    handleMenuClose();
+    navigate('/user-profile');
+  }}>
+    <ListItemIcon>
+      <PersonIcon fontSize="small" />
+    </ListItemIcon>
+    <Typography variant="inherit">ຂໍ້ມູນຜູ້ໃຊ້</Typography>
+  </MenuItem>
+  <Divider />
+  <MenuItem onClick={handleLogout}>
+    <ListItemIcon>
+      <LogoutIcon fontSize="small" color="error" />
+    </ListItemIcon>
+    <Typography variant="inherit" color="error">ອອກຈາກລະບົບ</Typography>
+  </MenuItem>
+</Menu>
           </Box>
         </Toolbar>
       </AppBar>

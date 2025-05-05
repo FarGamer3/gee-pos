@@ -29,6 +29,7 @@ import Import from './pages/Import';
 import ImportDetail from './pages/import-detail';
 import Export from './pages/Export';
 import ExportDetail from './pages/ExportDetail';
+import UserProfile from './pages/UserProfile';
 
 // Create MUI theme
 const theme = createTheme({
@@ -139,7 +140,15 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
           
+  path="/user-profile" 
+  element={
+    <ProtectedRoute>
+      <UserProfile />
+    </ProtectedRoute>
+  } 
+/>
           <Route 
             path="/Manage_data" 
             element={
