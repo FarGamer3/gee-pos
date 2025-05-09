@@ -6,7 +6,8 @@ import {
   Typography,
   CircularProgress,
   Grid,
-  useTheme
+  useTheme,
+  Alert
 } from '@mui/material';
 import {
   LineChart,
@@ -19,77 +20,91 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  BarChart,
+  Bar
 } from 'recharts';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
 
 const DashboardCharts = () => {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
-  const [salesData, setSalesData] = useState([]);
+  const [dailySalesData, setDailySalesData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [yearlyStats, setYearlyStats] = useState({
+    totalSales: 0,
+    totalPurchases: 0,
+    totalProfit: 0
+  });
 
+  // ໂຫຼດຂໍ້ມູນເມື່ອ component ຖືກໂຫຼດ
   useEffect(() => {
-    const fetchChartData = async () => {
-      try {
-        setLoading(true);
-        
-        // Mock monthly sales data - this would be replaced with actual API call
-        const mockSalesData = [
-          { name: 'ມັງກອນ', sales: 4000000 },
-          { name: 'ກຸມພາ', sales: 3000000 },
-          { name: 'ມີນາ', sales: 2000000 },
-          { name: 'ເມສາ', sales: 2780000 },
-          { name: 'ພຶດສະພາ', sales: 1890000 },
-          { name: 'ມິຖຸນາ', sales: 2390000 },
-          { name: 'ກໍລະກົດ', sales: 3490000 },
-          { name: 'ສິງຫາ', sales: 2900000 },
-          { name: 'ກັນຍາ', sales: 3200000 },
-          { name: 'ຕຸລາ', sales: 2500000 },
-          { name: 'ພະຈິກ', sales: 2800000 },
-          { name: 'ທັນວາ', sales: 3800000 },
-        ];
-        
-        // Try to fetch real categories data
-        let categories = [];
-        try {
-          const response = await axios.get(`${API_BASE_URL}/All/Category`);
-          if (response.data && response.data.result_code === "200") {
-            categories = response.data.categories || [];
-          }
-        } catch (error) {
-          console.error("Error fetching categories:", error);
-        }
-        
-        // If API fails or returns no data, use mock data
-        if (categories.length === 0) {
-          categories = [
-            { cat_id: 1, category: 'ແອ', count: 15 },
-            { cat_id: 2, category: 'ຕູ້ເຢັນ', count: 12 },
-            { cat_id: 3, category: 'ໂທລະທັດ', count: 8 },
-            { cat_id: 4, category: 'ຈັກຊັກເຄື່ອງ', count: 10 },
-            { cat_id: 5, category: 'ເຄື່ອງໃຊ້ໄຟຟ້າອື່ນໆ', count: 5 }
-          ];
-        } else {
-          // Add a count property to each category - this would normally come from API
-          categories = categories.map(cat => ({
-            ...cat,
-            count: Math.floor(Math.random() * 20) + 5 // Random count between 5-25
-          }));
-        }
-        
-        setSalesData(mockSalesData);
-        setCategoryData(categories);
-      } catch (error) {
-        console.error("Error fetching chart data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChartData();
+    // ຈຳລອງການໂຫຼດຂໍ້ມູນ (ສົມມຸດວ່າກຳລັງໂຫຼດຈາກເຊີເວີ)
+    setTimeout(() => {
+      // 1. ສ້າງຂໍ້ມູນຍອດຂາຍລາຍມື້ສຳລັບ 7 ມື້ຫຼ້າສຸດ
+      setDailySalesData(generateMockDailySales());
+      
+      // 2. ສ້າງຂໍ້ມູນປະເພດສິນຄ້າ
+      setCategoryData(generateMockCategories());
+      
+      // 3. ສ້າງຂໍ້ມູນສິນຄ້າຂາຍດີ 5 ອັນດັບ
+      setTopProducts(generateMockTopProducts());
+      
+      // 4. ສ້າງຂໍ້ມູນສະຖິຕິປະຈຳປີ
+      setYearlyStats({
+        totalSales: 37500000,
+        totalPurchases: 25800000,
+        totalProfit: 11700000
+      });
+      
+      // ສຳເລັດການໂຫຼດຂໍ້ມູນ
+      setLoading(false);
+    }, 1000);
   }, []);
+
+  // ຟັງຊັນສ້າງຂໍ້ມູນຍອດຂາຍລາຍມື້ແບບສົມມຸດ
+  const generateMockDailySales = () => {
+    const today = new Date();
+    const dailyMockData = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date();
+      day.setDate(today.getDate() - i);
+      
+      const dayName = day.toLocaleDateString('lo-LA', { weekday: 'short' });
+      const dayOfMonth = day.getDate();
+      
+      dailyMockData.push({
+        name: `${dayName} ${dayOfMonth}`,
+        sales: Math.floor(Math.random() * 4000000) + 1000000,
+        date: day.toISOString().split('T')[0]
+      });
+    }
+    
+    return dailyMockData;
+  };
+
+  // ຟັງຊັນສ້າງຂໍ້ມູນໝວດໝູ່ແບບສົມມຸດ
+  const generateMockCategories = () => {
+    return [
+      { cat_id: 1, category: 'ແອ', count: 15 },
+      { cat_id: 2, category: 'ຕູ້ເຢັນ', count: 12 },
+      { cat_id: 3, category: 'ໂທລະທັດ', count: 8 },
+      { cat_id: 4, category: 'ຈັກຊັກເຄື່ອງ', count: 10 },
+      { cat_id: 5, category: 'ເຄື່ອງໃຊ້ໄຟຟ້າອື່ນໆ', count: 5 }
+    ];
+  };
+
+  // ຟັງຊັນສ້າງຂໍ້ມູນສິນຄ້າຂາຍດີແບບສົມມຸດ
+  const generateMockTopProducts = () => {
+    return [
+      { name: 'ແອ Samsung Wind-Free', value: 12 },
+      { name: 'ຕູ້ເຢັນ Samsung Twin', value: 10 },
+      { name: 'LG DUALCOOL Inverter', value: 8 },
+      { name: 'ໂທລະທັດ LG Smart TV', value: 7 },
+      { name: 'ຈັກຊັກເຄື່ອງ Samsung', value: 5 }
+    ];
+  };
 
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -103,7 +118,7 @@ const DashboardCharts = () => {
   const SalesToolTip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 2, boxShadow: 3 }}>
+        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 2 }}>
           <Typography variant="subtitle2">{label}</Typography>
           <Typography variant="body2" color="primary">
             ຍອດຂາຍ: {formatNumber(payload[0].value)} ກີບ
@@ -118,7 +133,7 @@ const DashboardCharts = () => {
   const CategoryToolTip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 2, boxShadow: 3 }}>
+        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 2 }}>
           <Typography variant="subtitle2">{payload[0].name}</Typography>
           <Typography variant="body2" color="primary">
             ຈຳນວນ: {payload[0].value} ລາຍການ
@@ -139,16 +154,16 @@ const DashboardCharts = () => {
 
   return (
     <Grid container spacing={3}>
-      {/* Monthly Sales Chart */}
+      {/* Daily Sales Chart (Past Week) */}
       <Grid item xs={12} md={8}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            ຍອດຂາຍປະຈຳເດືອນ
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+            ຍອດຂາຍປະຈຳວັນ (7 ມື້ຫຼ້າສຸດ)
           </Typography>
           <Box sx={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={salesData}
+              <BarChart 
+                data={dailySalesData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -156,15 +171,13 @@ const DashboardCharts = () => {
                 <YAxis tickFormatter={(value) => value / 1000000 + "M"} />
                 <Tooltip content={<SalesToolTip />} />
                 <Legend />
-                <Line
-                  type="monotone"
+                <Bar
                   dataKey="sales"
                   name="ຍອດຂາຍ (ກີບ)"
-                  stroke={theme.palette.primary.main}
-                  activeDot={{ r: 8 }}
-                  strokeWidth={2}
+                  fill={theme.palette.primary.main}
+                  radius={[4, 4, 0, 0]} // Add rounded corners to the top of bars
                 />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </Box>
         </Paper>
@@ -172,8 +185,8 @@ const DashboardCharts = () => {
       
       {/* Product Categories Chart */}
       <Grid item xs={12} md={4}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ຈຳນວນສິນຄ້າແຍກຕາມປະເພດ
           </Typography>
           <Box sx={{ height: 320 }}>
@@ -204,58 +217,106 @@ const DashboardCharts = () => {
       
       {/* Additional Statistics */}
       <Grid item xs={12}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ສະຖິຕິເພີ່ມເຕີມ
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             <Box sx={{ 
-              p: 2, 
+              p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 1, 
+              borderRadius: 3, 
               flex: 1,
-              minWidth: { xs: '100%', sm: '180px' }
+              minWidth: { xs: '100%', sm: '180px' },
+              boxShadow: 1,
+              transition: 'transform 0.3s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 3
+              }
             }}>
               <Typography variant="body2" color="text.secondary">
                 ຍອດຂາຍທັງໝົດປີນີ້
               </Typography>
               <Typography variant="h5" color="primary.main" fontWeight="bold">
-                {formatNumber(37500000)} ກີບ
+                {formatNumber(yearlyStats.totalSales)} ກີບ
               </Typography>
             </Box>
             
             <Box sx={{ 
-              p: 2, 
+              p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 1, 
+              borderRadius: 3, 
               flex: 1,
-              minWidth: { xs: '100%', sm: '180px' }
+              minWidth: { xs: '100%', sm: '180px' },
+              boxShadow: 1,
+              transition: 'transform 0.3s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 3
+              }
             }}>
               <Typography variant="body2" color="text.secondary">
                 ການສັ່ງຊື້ທັງໝົດປີນີ້
               </Typography>
               <Typography variant="h5" color="info.main" fontWeight="bold">
-                {formatNumber(25800000)} ກີບ
+                {formatNumber(yearlyStats.totalPurchases)} ກີບ
               </Typography>
             </Box>
             
             <Box sx={{ 
-              p: 2, 
+              p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 1, 
+              borderRadius: 3, 
               flex: 1,
-              minWidth: { xs: '100%', sm: '180px' }
+              minWidth: { xs: '100%', sm: '180px' },
+              boxShadow: 1,
+              transition: 'transform 0.3s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 3
+              }
             }}>
               <Typography variant="body2" color="text.secondary">
                 ກຳໄລລວມ
               </Typography>
               <Typography variant="h5" color="success.main" fontWeight="bold">
-                {formatNumber(11700000)} ກີບ
+                {formatNumber(yearlyStats.totalProfit)} ກີບ
               </Typography>
             </Box>
+          </Box>
+        </Paper>
+      </Grid>
+      
+      {/* Top Selling Products Section */}
+      <Grid item xs={12}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+            ສິນຄ້າຂາຍດີ 5 ອັນດັບ
+          </Typography>
+          <Box sx={{ height: 300 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                layout="vertical"
+                data={topProducts}
+                margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" />
+                <Tooltip />
+                <Legend />
+                <Bar 
+                  dataKey="value" 
+                  name="ຈຳນວນຂາຍ" 
+                  fill={theme.palette.secondary.main}
+                  radius={[0, 4, 4, 0]} // Add rounded corners to the right side of bars
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </Box>
         </Paper>
       </Grid>
