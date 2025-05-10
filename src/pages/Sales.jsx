@@ -139,18 +139,9 @@ function Sales() {
           const customersData = await getAllCustomers();
           setCustomers(customersData || []);
           setFilteredCustomers(customersData || []);
-          
-          // Set a default customer (first one or a generic one)
-          if (customersData && customersData.length > 0) {
-            setSelectedCustomer(customersData[0]);
-          } else {
-            setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
-          }
         } catch (customerError) {
           console.error('Error loading customers:', customerError);
           showAlert('ບໍ່ສາມາດໂຫຼດຂໍ້ມູນລູກຄ້າໄດ້', 'warning');
-          // Set default customer even if API fails
-          setSelectedCustomer({ cus_id: 1, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' });
         }
         
       } catch (error) {
@@ -317,6 +308,11 @@ function Sales() {
   
 // ໃນ handleSaveSale function
 const handleSaveSale = async () => {
+  if (!selectedCustomer) {
+    showAlert('ກະລຸນາເລືອກລູກຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
+    return;
+  }
+
   if (cartItems.length === 0) {
     showAlert('ກະລຸນາເລືອກສິນຄ້າກ່ອນບັນທຶກການຂາຍ', 'error');
     return;
@@ -331,7 +327,8 @@ const handleSaveSale = async () => {
   try {
     setSavingOrder(true);
     
-    const customerIdToUse = selectedCustomer?.cus_id === 0 ? 1 : selectedCustomer?.cus_id || 1;
+    // Use the actual selected customer's ID
+    const customerIdToUse = selectedCustomer.cus_id;
     
     const saleData = {
       cus_id: customerIdToUse,
@@ -354,7 +351,7 @@ const handleSaveSale = async () => {
     
     const completedSale = {
       sale_id: result.sale_id || 'N/A',
-      customer: selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname}`.trim() : 'ລູກຄ້າທົ່ວໄປ',
+      customer: `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname || ''}`.trim(),
       totalAmount: cartTotal,
       amountPaid: paid,
       changeAmount: actualChange, // Use actual change for display
@@ -408,18 +405,8 @@ const handleSaveSale = async () => {
   // When handling the selection of a generic customer, 
   // use a special ID that won't conflict with real customers
   const handleSelectCustomer = (customer) => {
-    // Check if this is the generic customer
-    if (customer.cus_name === 'ລູກຄ້າທົ່ວໄປ' && !customer.cus_lname) {
-      // Use a special ID for the generic customer (like 0 or -1)
-      setSelectedCustomer({ 
-        cus_id: 0,  // Use 0 or -1 instead of 1
-        cus_name: 'ລູກຄ້າທົ່ວໄປ', 
-        cus_lname: '' 
-      });
-    } else {
-      // Regular customer selection
-      setSelectedCustomer(customer);
-    }
+    // No longer need to check for the general customer case
+    setSelectedCustomer(customer);
     setCustomerDialogOpen(false);
     showAlert(`ເລືອກລູກຄ້າ: ${customer.cus_name} ${customer.cus_lname || ''}`, 'success');
   };
@@ -501,51 +488,50 @@ const handleSaveSale = async () => {
 
       {/* Customer info card */}
       <Paper 
-        elevation={0}
-        sx={{ 
-          p: 2, 
-          mb: 2, 
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, md: 0 } }}>
-          <Avatar 
-            sx={{ 
-              bgcolor: 'primary.light', 
-              color: 'primary.contrastText',
-              mr: 2
-            }}
-          >
-            <PersonIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="body2" color="text.secondary">
-              ລູກຄ້າ
-            </Typography>
-            <Typography variant="subtitle1" fontWeight="bold">
-              {selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname || ''}`.trim() : 'ລູກຄ້າທົ່ວໄປ'}
-            </Typography>
-          </Box>
-        </Box>
-        
-        <Button 
-          variant="contained" 
-          size="small"
-          color="primary"
-          startIcon={<PersonIcon />}
-          onClick={() => setCustomerDialogOpen(true)}
-          sx={{ borderRadius: 2 }}
-        >
-          ເລືອກລູກຄ້າ
-        </Button>
-      </Paper>
-
+  elevation={0}
+  sx={{ 
+    p: 2, 
+    mb: 2, 
+    borderRadius: 2,
+    border: '1px solid',
+    borderColor: 'divider',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap'
+  }}
+>
+  <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, md: 0 } }}>
+    <Avatar 
+      sx={{ 
+        bgcolor: 'primary.light', 
+        color: 'primary.contrastText',
+        mr: 2
+      }}
+    >
+      <PersonIcon />
+    </Avatar>
+    <Box>
+      <Typography variant="body2" color="text.secondary">
+        ລູກຄ້າ
+      </Typography>
+      <Typography variant="subtitle1" fontWeight="bold">
+        {selectedCustomer ? `${selectedCustomer.cus_name} ${selectedCustomer.cus_lname || ''}`.trim() : 'ກະລຸນາເລືອກລູກຄ້າ'}
+      </Typography>
+    </Box>
+  </Box>
+  
+  <Button 
+    variant="contained" 
+    size="small"
+    color="primary"
+    startIcon={<PersonIcon />}
+    onClick={() => setCustomerDialogOpen(true)}
+    sx={{ borderRadius: 2 }}
+  >
+    ເລືອກລູກຄ້າ
+  </Button>
+</Paper>
       <Grid container spacing={2}>
         {/* Left column - Product selection */}
         <Grid item xs={12} md={5}>
@@ -1035,79 +1021,64 @@ const handleSaveSale = async () => {
           />
           
           <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>ລະຫັດ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>ຊື່</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>ນາມສະກຸນ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>ເບີໂທ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {/* Default customer option */}
-                <TableRow hover>
-                  <TableCell>0</TableCell>
-                  <TableCell>ລູກຄ້າທົ່ວໄປ</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleSelectCustomer({ cus_id: 0, cus_name: 'ລູກຄ້າທົ່ວໄປ', cus_lname: '' })}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      ເລືອກ
-                    </Button>
-                  </TableCell>
-                </TableRow>
+  <Table stickyHeader size="small">
+    <TableHead>
+      <TableRow>
+        <TableCell sx={{ fontWeight: 'bold' }}>ລະຫັດ</TableCell>
+        <TableCell sx={{ fontWeight: 'bold' }}>ຊື່</TableCell>
+        <TableCell sx={{ fontWeight: 'bold' }}>ນາມສະກຸນ</TableCell>
+        <TableCell sx={{ fontWeight: 'bold' }}>ເບີໂທ</TableCell>
+        <TableCell sx={{ fontWeight: 'bold' }}></TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+            
                 
-                {/* Filtered customer list */}
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.cus_id} hover>
-                    <TableCell>{customer.cus_id}</TableCell>
-                    <TableCell>{customer.cus_name}</TableCell>
-                    <TableCell>{customer.cus_lname}</TableCell>
-                    <TableCell>{customer.tel}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => handleSelectCustomer(customer)}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        ເລືອກ
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {filteredCustomers.length === 0 && customerSearch && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      <Box sx={{ py: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          ບໍ່ພົບຂໍ້ມູນລູກຄ້າ
-                        </Typography>
-                        
-                        <Button 
-                          variant="outlined" 
-                          size="small"
-                          component={Link}
-                          to="/customers"
-                          sx={{ mt: 1 }}
-                        >
-                          ໄປທີ່ໜ້າເພີ່ມລູກຄ້າໃໝ່
-                        </Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+  
+      {/* Filtered customer list */}
+      {filteredCustomers.map((customer) => (
+        <TableRow key={customer.cus_id} hover>
+          <TableCell>{customer.cus_id}</TableCell>
+          <TableCell>{customer.cus_name}</TableCell>
+          <TableCell>{customer.cus_lname}</TableCell>
+          <TableCell>{customer.tel}</TableCell>
+          <TableCell>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => handleSelectCustomer(customer)}
+              sx={{ borderRadius: 2 }}
+            >
+              ເລືອກ
+            </Button>
+          </TableCell>
+        </TableRow>
+      ))}
+      
+      {filteredCustomers.length === 0 && customerSearch && (
+        <TableRow>
+          <TableCell colSpan={5} align="center">
+            <Box sx={{ py: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                ບໍ່ພົບຂໍ້ມູນລູກຄ້າ
+              </Typography>
+              
+              <Button 
+                variant="outlined" 
+                size="small"
+                component={Link}
+                to="/customers"
+                sx={{ mt: 1 }}
+              >
+                ໄປທີ່ໜ້າເພີ່ມລູກຄ້າໃໝ່
+              </Button>
+            </Box>
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</TableContainer>
         </DialogContent>
         <DialogActions>
           <Button 

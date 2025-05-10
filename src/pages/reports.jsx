@@ -142,24 +142,58 @@ function Reports() {
           data = productsRes.data.products || [];
           break;
           
-        // ຂ້າມລາຍລະອຽດຂອງກໍລະນີອື່ນໆ...
+        case 'categories':
+          const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
+          data = categoriesRes.data.user_info || [];
+          break;
+          
+        case 'brands':
+          const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
+          data = brandsRes.data.user_info || [];
+          break;
+          
+        case 'locations':
+          const locationsRes = await axios.get(`${API_BASE_URL}/All/Zone`);
+          data = locationsRes.data.user_info || [];
+          break;
+          
+        case 'employees':
+          const employeesRes = await axios.get(`${API_BASE_URL}/users/All/Employee`);
+          data = employeesRes.data.user_info || [];
+          break;
+          
+        case 'suppliers':
+          const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
+          data = suppliersRes.data.user_info || [];
+          break;
+          
+        case 'customers':
+          const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
+          data = customersRes.data.user_info || [];
+          break;
           
         case 'sales':
           try {
             const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
             
             if (salesRes.data && salesRes.data.result_code === "200") {
+              // Access the correct property in the API response
               data = salesRes.data.sales_data || [];
               
-              // ລ້າງຕົວກອງວັນທີເມື່ອດຶງຂໍ້ມູນໃໝ່
+              // Reset date filters when fetching new sales data
               setStartDate('');
               setEndDate('');
               
-              // ເກັບຂໍ້ມູນຕົ້ນສະບັບສຳລັບການກອງໃນພາຍຫຼັງ
+              // Store original data for filtering later
               setReportData(prev => ({
                 ...prev,
                 originalSales: data
               }));
+              
+              console.log('Sales data found:', data.length);
+            } else {
+              console.warn('Sales API returned unexpected format:', salesRes.data);
+              data = [];
             }
           } catch (err) {
             console.error('Error fetching sales data:', err);
@@ -170,21 +204,11 @@ function Reports() {
         case 'purchases':
           const purchasesRes = await axios.get(`${API_BASE_URL}/order/All/Order`);
           data = purchasesRes.data.user_info || [];
-          // ເກັບຂໍ້ມູນຕົ້ນສະບັບສຳລັບການກອງ
-          setReportData(prev => ({
-            ...prev,
-            originalPurchases: data
-          }));
           break;
           
         case 'imports':
           const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
           data = importsRes.data.imports || [];
-          // ເກັບຂໍ້ມູນຕົ້ນສະບັບສຳລັບການກອງ
-          setReportData(prev => ({
-            ...prev,
-            originalImports: data
-          }));
           break;
           
         case 'exports':
@@ -192,20 +216,22 @@ function Reports() {
             const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
             
             if (exportsRes.data && exportsRes.data.result_code === "200") {
+              // Make sure we're accessing the correct property in the API response
               data = exportsRes.data.exports || [];
               
-              // ຈັດການຂໍ້ມູນເພື່ອໃຫ້ມີໂຄງສ້າງທີ່ສອດຄ່ອງກັນ
+              // Process data to ensure consistent structure
               data = data.map((item, index) => ({
                 ...item,
+                // Ensure export_id is available
                 export_id: item.export_id || item.exp_id || `exp-${index}`,
+                // Ensure export_date is available
                 export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
               }));
               
-              // ເກັບຂໍ້ມູນຕົ້ນສະບັບສຳລັບການກອງ
-              setReportData(prev => ({
-                ...prev,
-                originalExports: data
-              }));
+              console.log('Export data processed:', data.length);
+            } else {
+              console.warn('Exports API returned unexpected format:', exportsRes.data);
+              data = [];
             }
           } catch (err) {
             console.error('Error fetching exports data:', err);
@@ -213,12 +239,12 @@ function Reports() {
           }
           break;
       }
-  
+
       setReportData(prev => ({
         ...prev,
         [reportType]: data
       }));
-  
+
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
@@ -228,7 +254,7 @@ function Reports() {
   };
 
   // ຟັງຊັນກອງຂໍ້ມູນຕາມວັນທີ
- // ຟັງຊັນກອງຂໍ້ມູນຕາມວັນທີແບບປັບປຸງໃໝ່ 
+
 const filterByDateRange = () => {
   if (!startDate && !endDate) {
     showSnackbar('ກະລຸນາລະບຸຊ່ວງວັນທີທີ່ຕ້ອງການກອງ', 'warning');
@@ -311,49 +337,20 @@ const filterByDateRange = () => {
 };
 
   // ລ້າງຕົວກອງວັນທີ
-// ລ້າງຕົວກອງວັນທີ
-const clearDateFilters = () => {
-  setStartDate('');
-  setEndDate('');
-  
-  // ກູ້ຄືນຂໍ້ມູນຕົ້ນສະບັບຕາມປະເພດລາຍງານ
-  switch(reportType) {
-    case 'sales':
-      if (reportData.originalSales) {
-        setReportData(prev => ({
-          ...prev,
-          sales: prev.originalSales
-        }));
-      }
-      break;
-    case 'imports':
-      if (reportData.originalImports) {
-        setReportData(prev => ({
-          ...prev,
-          imports: prev.originalImports
-        }));
-      }
-      break;
-    case 'exports':
-      if (reportData.originalExports) {
-        setReportData(prev => ({
-          ...prev,
-          exports: prev.originalExports
-        }));
-      }
-      break;
-    case 'purchases':
-      if (reportData.originalPurchases) {
-        setReportData(prev => ({
-          ...prev,
-          purchases: prev.originalPurchases
-        }));
-      }
-      break;
-  }
-  
-  showSnackbar('ລ້າງຕົວກອງວັນທີແລ້ວ', 'info');
-};
+  const clearDateFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    
+    // Restore original data
+    if (reportData.originalSales) {
+      setReportData(prev => ({
+        ...prev,
+        sales: prev.originalSales
+      }));
+      
+      showSnackbar('ລ້າງຕົວກອງວັນທີແລ້ວ', 'info');
+    }
+  };
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
