@@ -23,7 +23,6 @@ import {
   Alert,
   CircularProgress,
   Card,
-  CardContent,
   Tooltip,
   FormControl,
   InputLabel,
@@ -35,10 +34,7 @@ import {
   Print as PrintIcon,
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
-  CalendarToday as CalendarIcon,
-  ShowChart as ShowChartIcon,
   ArrowBack as ArrowBackIcon,
-  Download as DownloadIcon,
   FilterList as FilterListIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
@@ -85,7 +81,7 @@ function SalesHistory() {
   const [saleDetailsOpen, setSaleDetailsOpen] = useState(false);
   const [saleDetailsLoading, setSaleDetailsLoading] = useState(false);
   
-  // Filter states - ປ່ຽນເປັນ string ແທນທີ່ date objects
+  // Filter states
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -176,8 +172,184 @@ function SalesHistory() {
   
   // Print receipt
   const handlePrintReceipt = (sale) => {
-    // Implementation of receipt printing
-    showAlert('ກຳລັງພິມໃບບິນ...', 'info');
+    if (!sale) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showAlert('ບໍ່ສາມາດເປີດໜ້າຕ່າງສຳລັບການພິມໄດ້. ກະລຸນາອະນຸຍາດໜ້າຕ່າງປັອບອັບ.', 'error');
+      return;
+    }
+    
+    // Get sale details for printing
+    const getSaleDetailsForPrint = async () => {
+      try {
+        // If we already have product details, use them
+        let products = sale.products;
+        
+        // Otherwise fetch them
+        if (!products || products.length === 0) {
+          const detailsData = await getSaleDetails(sale.sale_id);
+          products = detailsData || [];
+        }
+        
+        // Generate the receipt HTML
+        const receiptHtml = generateReceiptHtml(sale, products);
+        
+        // Write to the new window and print
+        printWindow.document.open();
+        printWindow.document.write(receiptHtml);
+        printWindow.document.close();
+        
+        // Print after loading
+        printWindow.onload = () => {
+          printWindow.focus();
+          printWindow.print();
+          // Optional: close after printing
+          // printWindow.close();
+        };
+        
+        showAlert('ສົ່ງຄຳສັ່ງພິມໃບບິນແລ້ວ', 'success');
+      } catch (error) {
+        console.error('Error printing receipt:', error);
+        printWindow.close();
+        showAlert('ເກີດຂໍ້ຜິດພາດໃນການພິມໃບບິນ', 'error');
+      }
+    };
+    
+    getSaleDetailsForPrint();
+  };
+  
+  // Generate receipt HTML for printing
+  const generateReceiptHtml = (sale, products) => {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ໃບບິນເລກທີ #${sale.sale_id}</title>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: 'Phetsarath OT', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 80mm;
+            margin: 0 auto;
+            font-size: 12px;
+          }
+          .receipt {
+            padding: 10px;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .info {
+            margin-bottom: 5px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+          }
+          th, td {
+            text-align: left;
+            padding: 3px 0;
+          }
+          th {
+            border-bottom: 1px dashed #000;
+          }
+          .amount {
+            text-align: right;
+          }
+          .total {
+            text-align: right;
+            margin-top: 10px;
+            border-top: 1px dashed #000;
+            padding-top: 10px;
+          }
+          .total-row {
+            font-weight: bold;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+          }
+          @media print {
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              width: 100%;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <div class="logo">GeePOS</div>
+            <div class="info">ໃບບິນຂາຍສິນຄ້າ</div>
+            <div class="info">ວັນທີ: ${formatDate(sale.date_sale)}</div>
+            <div class="info">ເລກທີໃບບິນ: ${sale.sale_id}</div>
+          </div>
+          
+          <div class="customer-info">
+            <div>ລູກຄ້າ: ${sale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}</div>
+            <div>ພະນັກງານ: ${sale.emp_name || '-'}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>ລາຍການ</th>
+                <th>ຈຳນວນ</th>
+                <th class="amount">ລາຄາ</th>
+                <th class="amount">ລວມ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${products.map((item, index) => `
+                <tr>
+                  <td>${item.product_name || `ສິນຄ້າລະຫັດ ${item.proid}`}</td>
+                  <td>${item.qty}</td>
+                  <td class="amount">${formatNumber(item.price)}</td>
+                  <td class="amount">${formatNumber(item.total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="total">
+            <div class="total-row">
+              <span>ລວມທັງໝົດ:</span>
+              <span class="amount">${formatNumber(sale.subtotal)} ກີບ</span>
+            </div>
+            <div>
+              <span>ຈຳນວນເງິນທີ່ຮັບ:</span>
+              <span class="amount">${formatNumber(sale.pay)} ກີບ</span>
+            </div>
+            <div>
+              <span>ເງິນທອນ:</span>
+              <span class="amount">${formatNumber(sale.money_change)} ກີບ</span>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>ຂອບໃຈທີ່ໃຊ້ບໍລິການ</p>
+            <p>© ${new Date().getFullYear()} GeePOS System</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   };
   
   // Apply filters
@@ -197,6 +369,7 @@ function SalesHistory() {
     setFilterAmount('');
     setFiltersApplied(false);
     fetchSalesHistory(); // Reload original data
+    showAlert('ລ້າງຕົວກອງຂໍ້ມູນແລ້ວ', 'info');
   };
   
   // Show alert message
@@ -225,8 +398,21 @@ function SalesHistory() {
     
     // Then apply date range filters if set
     if (filtersApplied) {
-      if (startDate && new Date(sale.date_sale) < new Date(startDate)) return false;
-      if (endDate && new Date(sale.date_sale) > new Date(endDate)) return false;
+      // Apply start date filter - set to beginning of day (00:00:00)
+      if (startDate) {
+        const startDateObj = new Date(startDate);
+        startDateObj.setHours(0, 0, 0, 0);
+        const saleDate = new Date(sale.date_sale);
+        if (saleDate < startDateObj) return false;
+      }
+      
+      // Apply end date filter - set to end of day (23:59:59)
+      if (endDate) {
+        const endDateObj = new Date(endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        const saleDate = new Date(sale.date_sale);
+        if (saleDate > endDateObj) return false;
+      }
       
       // Apply employee filter if set
       if (filterEmployee && sale.emp_name !== filterEmployee) return false;
@@ -279,64 +465,34 @@ function SalesHistory() {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1, textAlign: 'center' }}>
           ປະຫວັດການຂາຍສິນຄ້າທັງໝົດ
         </Typography>
-        
-        <Box>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<DownloadIcon />}
-            sx={{ mr: 1 }}
-          >
-            ສົ່ງອອກ
-          </Button>
-          <Button 
-            variant="contained" 
-            color="secondary" 
-            startIcon={<ShowChartIcon />}
-          >
-            ລາຍງານ
-          </Button>
-        </Box>
       </Box>
       
       {/* Statistics Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Card variant="outlined">
-            <CardContent>
+            <Box sx={{ p: 2 }}>
               <Typography color="text.secondary" gutterBottom>
                 ຈຳນວນການຂາຍທັງໝົດ
               </Typography>
               <Typography variant="h4" component="div" fontWeight="bold">
                 {stats.totalSales} ຄັ້ງ
               </Typography>
-            </CardContent>
+            </Box>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Card variant="outlined">
-            <CardContent>
+            <Box sx={{ p: 2 }}>
               <Typography color="text.secondary" gutterBottom>
                 ຍອດຂາຍທັງໝົດ
               </Typography>
               <Typography variant="h4" component="div" fontWeight="bold" color="primary.main">
                 {formatNumber(stats.totalAmount)} ກີບ
               </Typography>
-            </CardContent>
+            </Box>
           </Card>
         </Grid>
-        {/* <Grid item xs={12} sm={4}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                ຍອດຂາຍສະເລ່ຍຕໍ່ຄັ້ງ
-              </Typography>
-              <Typography variant="h4" component="div" fontWeight="bold" color="success.main">
-                {formatNumber(stats.averageAmount)} ກີບ
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid> */}
       </Grid>
       
       {/* Search and Filter Bar */}
@@ -358,7 +514,7 @@ function SalesHistory() {
         />
         
         <Button
-          variant="outlined"
+          variant={filtersApplied ? "contained" : "outlined"}
           color="primary"
           startIcon={<FilterListIcon />}
           onClick={() => setFilterDialogOpen(true)}
@@ -468,9 +624,19 @@ function SalesHistory() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>ຕົວກອງຂໍ້ມູນການຂາຍ</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FilterListIcon sx={{ mr: 1 }} />
+            ຕົວກອງຂໍ້ມູນການຂາຍ
+          </Box>
+        </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'text.secondary' }}>
+                ກອງຕາມວັນທີຂາຍ
+              </Typography>
+            </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -491,6 +657,14 @@ function SalesHistory() {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
+            
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2" sx={{ my: 2, fontWeight: 'bold', color: 'text.secondary' }}>
+                ກອງຕາມຂໍ້ມູນອື່ນໆ
+              </Typography>
+            </Grid>
+            
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel id="employee-filter-label">ພະນັກງານ</InputLabel>
@@ -501,8 +675,8 @@ function SalesHistory() {
                   label="ພະນັກງານ"
                 >
                   <MenuItem value="">ທັງໝົດ</MenuItem>
-                  {/* Dynamic employee list would go here */}
-                  <MenuItem value="ພະນັກງານ ທົດສອບ">ພະນັກງານ ທົດສອບ</MenuItem>
+                  <MenuItem value="Alex Vkp">Alex Vkp</MenuItem>
+                  <MenuItem value="jonh ny">jonh ny</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -551,9 +725,12 @@ function SalesHistory() {
         fullWidth
       >
         <DialogTitle>
-          ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <VisibilityIcon sx={{ mr: 1 }} />
+            ລາຍລະອຽດການຂາຍ {selectedSale?.sale_id ? `#${selectedSale.sale_id}` : ''}
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           {selectedSale ? (
             <Box>
               <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -657,10 +834,7 @@ function SalesHistory() {
             variant="contained"
             color="primary"
             startIcon={<PrintIcon />}
-            onClick={() => {
-              // ພິມໃບບິນ
-              setSaleDetailsOpen(false);
-            }}
+            onClick={() => handlePrintReceipt(selectedSale)}
           >
             ພິມໃບບິນ
           </Button>
