@@ -1,4 +1,4 @@
-// src/pages/reports.jsx - Fixed version with DD/MM/YYYY date format
+// src/pages/reports.jsx - Fixed version with proper date filtering
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,7 +22,8 @@ import {
   IconButton,
   Tooltip,
   Tab,
-  Tabs
+  Tabs,
+  Snackbar
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -70,6 +71,11 @@ function Reports() {
   const [endDate, setEndDate] = useState('');
   const [reportType, setReportType] = useState('products');
   const printRef = React.useRef();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
 
   // ຂໍ້ມູນສຳລັບລາຍງານ
   const [reportData, setReportData] = useState({
@@ -81,6 +87,7 @@ function Reports() {
     suppliers: [],
     customers: [],
     sales: [],
+    originalSales: [], // Store original sales data to enable filtering
     purchases: [],
     imports: [],
     exports: []
@@ -105,6 +112,23 @@ function Reports() {
     fetchAllData();
   }, [reportType]);
 
+  // ສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນ
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  // ປິດຂໍ້ຄວາມແຈ້ງເຕືອນ
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({
+      ...prev,
+      open: false
+    }));
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
     setError(null);
@@ -120,7 +144,6 @@ function Reports() {
           
         case 'categories':
           const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
-          // ແກ້ໄຂຕອນນີ້: ປ່ຽນຈາກ categories ເປັນ user_info ຕາມໂຄງສ້າງ API ຕົວຈິງ
           data = categoriesRes.data.user_info || [];
           break;
           
@@ -156,6 +179,17 @@ function Reports() {
             if (salesRes.data && salesRes.data.result_code === "200") {
               // Access the correct property in the API response
               data = salesRes.data.sales_data || [];
+              
+              // Reset date filters when fetching new sales data
+              setStartDate('');
+              setEndDate('');
+              
+              // Store original data for filtering later
+              setReportData(prev => ({
+                ...prev,
+                originalSales: data
+              }));
+              
               console.log('Sales data found:', data.length);
             } else {
               console.warn('Sales API returned unexpected format:', salesRes.data);
@@ -219,23 +253,73 @@ function Reports() {
     }
   };
 
-  // ຟັງຊັນສຳລັບແປງຮູບແບບຂອງວັນທີຈາກຮູບແບບ ISO ເປັນຮູບແບບ DD/MM/YYYY
-  const formatDateInput = (dateStr) => {
-    if (!dateStr) return '';
+  // ຟັງຊັນກອງຂໍ້ມູນຕາມວັນທີ
+  const filterByDateRange = () => {
+    // Make sure we have original data to filter
+    if (!reportData.originalSales || reportData.originalSales.length === 0) {
+      showSnackbar('ບໍ່ມີຂໍ້ມູນເພື່ອກອງ', 'warning');
+      return;
+    }
+    
+    if (!startDate && !endDate) {
+      showSnackbar('ກະລຸນາລະບຸຊ່ວງວັນທີທີ່ຕ້ອງການກອງ', 'warning');
+      return;
+    }
+    
+    setLoading(true);
     
     try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
+      let filtered = [...reportData.originalSales];
       
-      // Format as YYYY-MM-DD for input fields
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      if (startDate) {
+        const startDateTime = new Date(startDate);
+        startDateTime.setHours(0, 0, 0, 0);
+        
+        filtered = filtered.filter(item => {
+          // Handle both datetime and date formats
+          const itemDate = new Date(item.date_sale);
+          return itemDate >= startDateTime;
+        });
+      }
       
-      return `${year}-${month}-${day}`;
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        
+        filtered = filtered.filter(item => {
+          // Handle both datetime and date formats
+          const itemDate = new Date(item.date_sale);
+          return itemDate <= endDateTime;
+        });
+      }
+      
+      setReportData(prev => ({
+        ...prev,
+        sales: filtered
+      }));
+      
+      showSnackbar(`ກອງຂໍ້ມູນສຳເລັດ: ພົບ ${filtered.length} ລາຍການ`, 'success');
     } catch (error) {
-      console.error("Date formatting error:", error);
-      return dateStr;
+      console.error("Error filtering by date range:", error);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການກອງຂໍ້ມູນ', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ລ້າງຕົວກອງວັນທີ
+  const clearDateFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    
+    // Restore original data
+    if (reportData.originalSales) {
+      setReportData(prev => ({
+        ...prev,
+        sales: prev.originalSales
+      }));
+      
+      showSnackbar('ລ້າງຕົວກອງວັນທີແລ້ວ', 'info');
     }
   };
 
@@ -261,20 +345,6 @@ function Reports() {
     if (!dateStr || dateStr === '-') return "-";
     
     try {
-      // Check if it's ISO format
-      if (dateStr.includes('T')) {
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr;
-        
-        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-      }
-      
-      // If it's already in DD/MM/YYYY format, return as is
-      if (dateStr.includes('/')) {
-        return dateStr;
-      }
-      
-      // Try to convert other string formats
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
       
@@ -332,18 +402,26 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.products.map((product) => (
-            <TableRow key={product.proid}>
-              <TableCell>{product.proid}</TableCell>
-              <TableCell>{product.ProductName}</TableCell>
-              <TableCell>{product.category}</TableCell>
-              <TableCell>{product.brand}</TableCell>
-              <TableCell align="center">{product.qty}</TableCell>
-              <TableCell align="right">{formatNumber(product.cost_price)} ກີບ</TableCell>
-              <TableCell align="right">{formatNumber(product.retail_price)} ກີບ</TableCell>
-              <TableCell align="center">{product.status}</TableCell>
+          {reportData.products.length > 0 ? (
+            reportData.products.map((product) => (
+              <TableRow key={product.proid}>
+                <TableCell>{product.proid}</TableCell>
+                <TableCell>{product.ProductName}</TableCell>
+                <TableCell>{product.category}</TableCell>
+                <TableCell>{product.brand}</TableCell>
+                <TableCell align="center">{product.qty}</TableCell>
+                <TableCell align="right">{formatNumber(product.cost_price)} ກີບ</TableCell>
+                <TableCell align="right">{formatNumber(product.retail_price)} ກີບ</TableCell>
+                <TableCell align="center">{product.status}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={8} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ມີຂໍ້ມູນສິນຄ້າ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -370,7 +448,7 @@ function Reports() {
           ) : (
             <TableRow>
               <TableCell colSpan={2} align="center">
-                ບໍ່ພົບຂໍ້ມູນປະເພດສິນຄ້າ
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນປະເພດສິນຄ້າ'}
               </TableCell>
             </TableRow>
           )}
@@ -390,12 +468,20 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.brands.map((brand) => (
-            <TableRow key={brand.brand_id}>
-              <TableCell>{brand.brand_id}</TableCell>
-              <TableCell>{brand.brand}</TableCell>
+          {reportData.brands.length > 0 ? (
+            reportData.brands.map((brand) => (
+              <TableRow key={brand.brand_id}>
+                <TableCell>{brand.brand_id}</TableCell>
+                <TableCell>{brand.brand}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={2} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນຍີ່ຫໍ້'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -413,13 +499,21 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.locations.map((location) => (
-            <TableRow key={location.zone_id}>
-              <TableCell>{location.zone_id}</TableCell>
-              <TableCell>{location.zone}</TableCell>
-              <TableCell>{location.zone_detail}</TableCell>
+          {reportData.locations.length > 0 ? (
+            reportData.locations.map((location) => (
+              <TableRow key={location.zone_id}>
+                <TableCell>{location.zone_id}</TableCell>
+                <TableCell>{location.zone}</TableCell>
+                <TableCell>{location.zone_detail}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={3} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນບ່ອນຈັດວາງ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -440,16 +534,24 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.employees.map((employee) => (
-            <TableRow key={employee.emp_id}>
-              <TableCell>{employee.emp_id}</TableCell>
-              <TableCell>{employee.emp_name} {employee.emp_lname}</TableCell>
-              <TableCell>{employee.gender}</TableCell>
-              <TableCell>{employee.tel}</TableCell>
-              <TableCell>{employee.status}</TableCell>
-              <TableCell>{formatDate(employee.start_date)}</TableCell>
+          {reportData.employees.length > 0 ? (
+            reportData.employees.map((employee) => (
+              <TableRow key={employee.emp_id}>
+                <TableCell>{employee.emp_id}</TableCell>
+                <TableCell>{employee.emp_name} {employee.emp_lname}</TableCell>
+                <TableCell>{employee.gender}</TableCell>
+                <TableCell>{employee.tel}</TableCell>
+                <TableCell>{employee.status}</TableCell>
+                <TableCell>{formatDate(employee.start_date)}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນພະນັກງານ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -470,16 +572,24 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.suppliers.map((supplier) => (
-            <TableRow key={supplier.sup_id}>
-              <TableCell>{supplier.sup_id}</TableCell>
-              <TableCell>{supplier.sup_name}</TableCell>
-              <TableCell>{supplier.contract_name}</TableCell>
-              <TableCell>{supplier.email}</TableCell>
-              <TableCell>{supplier.tel}</TableCell>
-              <TableCell>{supplier.address}</TableCell>
+          {reportData.suppliers.length > 0 ? (
+            reportData.suppliers.map((supplier) => (
+              <TableRow key={supplier.sup_id}>
+                <TableCell>{supplier.sup_id}</TableCell>
+                <TableCell>{supplier.sup_name}</TableCell>
+                <TableCell>{supplier.contract_name}</TableCell>
+                <TableCell>{supplier.email}</TableCell>
+                <TableCell>{supplier.tel}</TableCell>
+                <TableCell>{supplier.address}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນຜູ້ສະໜອງ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -499,15 +609,23 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.customers.map((customer) => (
-            <TableRow key={customer.cus_id}>
-              <TableCell>{customer.cus_id}</TableCell>
-              <TableCell>{customer.cus_name} {customer.cus_lname}</TableCell>
-              <TableCell>{customer.gender}</TableCell>
-              <TableCell>{customer.tel}</TableCell>
-              <TableCell>{customer.address}</TableCell>
+          {reportData.customers.length > 0 ? (
+            reportData.customers.map((customer) => (
+              <TableRow key={customer.cus_id}>
+                <TableCell>{customer.cus_id}</TableCell>
+                <TableCell>{customer.cus_name} {customer.cus_lname}</TableCell>
+                <TableCell>{customer.gender}</TableCell>
+                <TableCell>{customer.tel}</TableCell>
+                <TableCell>{customer.address}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນລູກຄ້າ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -526,14 +644,22 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.purchases.map((order) => (
-            <TableRow key={order.order_id}>
-              <TableCell>{order.order_id}</TableCell>
-              <TableCell>{formatDate(order.order_date)}</TableCell>
-              <TableCell>{order.supplier}</TableCell>
-              <TableCell>{order.employee}</TableCell>
+          {reportData.purchases.length > 0 ? (
+            reportData.purchases.map((order) => (
+              <TableRow key={order.order_id}>
+                <TableCell>{order.order_id}</TableCell>
+                <TableCell>{formatDate(order.order_date)}</TableCell>
+                <TableCell>{order.supplier}</TableCell>
+                <TableCell>{order.employee}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການສັ່ງຊື້'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -594,16 +720,24 @@ function Reports() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.imports.map((imp) => (
-            <TableRow key={imp.imp_id}>
-              <TableCell>{imp.imp_id}</TableCell>
-              <TableCell>{formatDate(imp.imp_date)}</TableCell>
-              <TableCell>{imp.order_id}</TableCell>
-              <TableCell>{imp.emp_name}</TableCell>
-              <TableCell align="right">{formatNumber(imp.total_price)} ກີບ</TableCell>
-              <TableCell align="center">{imp.status}</TableCell>
+          {reportData.imports.length > 0 ? (
+            reportData.imports.map((imp) => (
+              <TableRow key={imp.imp_id}>
+                <TableCell>{imp.imp_id}</TableCell>
+                <TableCell>{formatDate(imp.imp_date)}</TableCell>
+                <TableCell>{imp.order_id}</TableCell>
+                <TableCell>{imp.emp_name}</TableCell>
+                <TableCell align="right">{formatNumber(imp.total_price)} ກີບ</TableCell>
+                <TableCell align="center">{imp.status}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳເຂົ້າ'}
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -649,6 +783,22 @@ function Reports() {
 
   return (
     <Layout title="ລາຍງານ">
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       <Box ref={printRef} sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <AssessmentIcon sx={{ mr: 1 }} /> ລາຍງານ
@@ -696,10 +846,7 @@ function Reports() {
                 InputLabelProps={{ 
                   shrink: true 
                 }}
-                // Use the input's localization property to set format to DD/MM/YYYY
-                inputProps={{
-                  max: '9999-12-31'
-                }}
+                disabled={reportType !== 'sales' && reportType !== 'imports' && reportType !== 'exports' && reportType !== 'purchases'}
               />
             </Grid>
             <Grid item xs={12} md={3}>
@@ -715,43 +862,74 @@ function Reports() {
                 InputLabelProps={{ 
                   shrink: true 
                 }}
-                // Use the input's localization property to set format to DD/MM/YYYY
-                inputProps={{
-                  max: '9999-12-31'
-                }}
+                disabled={reportType !== 'sales' && reportType !== 'imports' && reportType !== 'exports' && reportType !== 'purchases'}
               />
             </Grid>
             <Grid item xs={12} md={2}>
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                startIcon={<AssessmentIcon />}
-                onClick={fetchAllData}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : 'ສ້າງລາຍງານ'}
-              </Button>
+              {reportType === 'sales' || reportType === 'imports' || reportType === 'exports' || reportType === 'purchases' ? (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    onClick={clearDateFilters}
+                    disabled={loading || (!startDate && !endDate)}
+                    sx={{ flex: 1 }}
+                  >
+                    ລ້າງ
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<FilterListIcon />}
+                    onClick={filterByDateRange}
+                    disabled={loading || (!startDate && !endDate)}
+                    sx={{ flex: 2 }}
+                  >
+                    ກອງ
+                  </Button>
+                </Box>
+              ) : (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AssessmentIcon />}
+                  onClick={fetchAllData}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'ສ້າງລາຍງານ'}
+                </Button>
+              )}
             </Grid>
           </Grid>
         </Paper>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Tooltip title="ພິມລາຍງານ">
-            <IconButton onClick={handlePrint}>
-              <PrintIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="ສົ່ງອອກ Excel">
-            <IconButton onClick={handleExportExcel}>
-              <DownloadIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="ໂຫຼດຂໍ້ມູນໃໝ່">
-            <IconButton onClick={fetchAllData}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            {(reportType === 'sales' || reportType === 'imports' || reportType === 'exports' || reportType === 'purchases') && (
+              <Typography variant="body2" color="text.secondary">
+                {reportData[reportType]?.length || 0} ລາຍການ
+                {(startDate || endDate) && ' (ຫຼັງຈາກກອງຂໍ້ມູນ)'}
+              </Typography>
+            )}
+          </Box>
+          <Box>
+            <Tooltip title="ພິມລາຍງານ">
+              <IconButton onClick={handlePrint}>
+                <PrintIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="ສົ່ງອອກ Excel">
+              <IconButton onClick={handleExportExcel}>
+                <DownloadIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="ໂຫຼດຂໍ້ມູນໃໝ່">
+              <IconButton onClick={fetchAllData}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         <Box sx={{ mt: 2 }}>

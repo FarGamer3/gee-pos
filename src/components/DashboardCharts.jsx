@@ -118,7 +118,7 @@ const DashboardCharts = () => {
   const SalesToolTip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 2 }}>
+        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 3 }}> {/* More rounded corners */}
           <Typography variant="subtitle2">{label}</Typography>
           <Typography variant="body2" color="primary">
             ຍອດຂາຍ: {formatNumber(payload[0].value)} ກີບ
@@ -133,7 +133,7 @@ const DashboardCharts = () => {
   const CategoryToolTip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 2 }}>
+        <Paper sx={{ p: 2, boxShadow: 3, borderRadius: 3 }}> {/* More rounded corners */}
           <Typography variant="subtitle2">{payload[0].name}</Typography>
           <Typography variant="body2" color="primary">
             ຈຳນວນ: {payload[0].value} ລາຍການ
@@ -156,7 +156,7 @@ const DashboardCharts = () => {
     <Grid container spacing={3}>
       {/* Daily Sales Chart (Past Week) */}
       <Grid item xs={12} md={8}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}> {/* More rounded corners */}
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ຍອດຂາຍປະຈຳວັນ (7 ມື້ຫຼ້າສຸດ)
           </Typography>
@@ -175,7 +175,7 @@ const DashboardCharts = () => {
                   dataKey="sales"
                   name="ຍອດຂາຍ (ກີບ)"
                   fill={theme.palette.primary.main}
-                  radius={[4, 4, 0, 0]} // Add rounded corners to the top of bars
+                  radius={[8, 8, 0, 0]} // Added more rounded corners to the top of bars
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -185,7 +185,7 @@ const DashboardCharts = () => {
       
       {/* Product Categories Chart */}
       <Grid item xs={12} md={4}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}> {/* More rounded corners */}
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ຈຳນວນສິນຄ້າແຍກຕາມປະເພດ
           </Typography>
@@ -217,7 +217,7 @@ const DashboardCharts = () => {
       
       {/* Additional Statistics */}
       <Grid item xs={12}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}> {/* More rounded corners */}
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ສະຖິຕິເພີ່ມເຕີມ
           </Typography>
@@ -226,7 +226,7 @@ const DashboardCharts = () => {
               p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 3, 
+              borderRadius: 4, // More rounded corners
               flex: 1,
               minWidth: { xs: '100%', sm: '180px' },
               boxShadow: 1,
@@ -248,7 +248,7 @@ const DashboardCharts = () => {
               p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 3, 
+              borderRadius: 4, // More rounded corners
               flex: 1,
               minWidth: { xs: '100%', sm: '180px' },
               boxShadow: 1,
@@ -270,7 +270,7 @@ const DashboardCharts = () => {
               p: 3, 
               border: 1, 
               borderColor: 'divider', 
-              borderRadius: 3, 
+              borderRadius: 4, // More rounded corners
               flex: 1,
               minWidth: { xs: '100%', sm: '180px' },
               boxShadow: 1,
@@ -293,27 +293,35 @@ const DashboardCharts = () => {
       
       {/* Top Selling Products Section */}
       <Grid item xs={12}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}> {/* More rounded corners */}
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
             ສິນຄ້າຂາຍດີ 5 ອັນດັບ
           </Typography>
-          <Box sx={{ height: 300 }}>
+          <Box sx={{ height: 350 }}> {/* ເພີ່ມຄວາມສູງຈາກ 300px ເປັນ 350px */}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 layout="vertical"
                 data={topProducts}
-                margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+                // ເພີ່ມ margin ທາງຊ້າຍຈາກ 120px ເປັນ 180px
+                margin={{ top: 5, right: 30, left: 180, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" />
+                {/* ເພີ່ມຄວາມກວ້າງຂອງແກນ Y ເພື່ອໃຫ້ມີພື້ນທີ່ສະແດງຕົວໜັງສື */}
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  width={170}
+                  // ປັບຂະໜາດຕົວໜັງສື
+                  tick={{ fontSize: 14 }}
+                />
                 <Tooltip />
                 <Legend />
                 <Bar 
                   dataKey="value" 
                   name="ຈຳນວນຂາຍ" 
                   fill={theme.palette.secondary.main}
-                  radius={[0, 4, 4, 0]} // Add rounded corners to the right side of bars
+                  radius={[0, 8, 8, 0]} // Added more rounded corners to the right side of bars
                 />
               </BarChart>
             </ResponsiveContainer>

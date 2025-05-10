@@ -90,7 +90,7 @@ function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  // InfoCard Component with enhanced styling
+  // InfoCard Component with enhanced styling and rounded corners
   const InfoCard = ({ title, value, icon: Icon, color = "primary.main", onClick }) => {
     return (
       <Card 
@@ -98,6 +98,7 @@ function Dashboard() {
         sx={{ 
           height: '100%',
           transition: 'transform 0.3s, box-shadow 0.3s',
+          borderRadius: 4, // Added more rounded corners
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: 6,
@@ -106,7 +107,7 @@ function Dashboard() {
         }}
         onClick={onClick}
       >
-        <CardContent>
+        <CardContent sx={{ p: 3 }}> {/* Added more padding */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -136,18 +137,18 @@ function Dashboard() {
     );
   };
 
-  // Low Stock Alert Card
+  // Low Stock Alert Card with rounded corners
   const LowStockAlert = ({ lowStockItems }) => {
     if (!lowStockItems || lowStockItems.length === 0) {
       return (
-        <Alert severity="success" sx={{ mt: 2 }}>
+        <Alert severity="success" sx={{ mt: 2, borderRadius: 3 }}> {/* Added more rounded corners */}
           ທຸກສິນຄ້າມີຈຳນວນພຽງພໍໃນສາງ
         </Alert>
       );
     }
 
     return (
-      <Card elevation={2} sx={{ mt: 3 }}>
+      <Card elevation={2} sx={{ mt: 3, borderRadius: 4 }}> {/* Added more rounded corners */}
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <WarningIcon color="warning" sx={{ mr: 1 }} />
@@ -187,7 +188,7 @@ function Dashboard() {
                     size="small" 
                     label={item.qty <= 0 ? "ໝົດ" : "ໃກ້ໝົດ"} 
                     color={item.qty <= 0 ? "error" : "warning"} 
-                    sx={{ height: 24 }} 
+                    sx={{ height: 24, borderRadius: 4 }} // Added more rounded corners
                   />
                 </Box>
               </Box>
@@ -211,7 +212,7 @@ function Dashboard() {
   if (error) {
     return (
       <Layout title="ໜ້າຫຼັກ">
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={{ mt: 2, borderRadius: 3 }}> {/* Added more rounded corners */}
           {error}
         </Alert>
       </Layout>
@@ -226,7 +227,7 @@ function Dashboard() {
             p: 2, 
             bgcolor: 'primary.main', 
             color: 'white',
-            borderRadius: 1,
+            borderRadius: 3, // Added more rounded corners
             boxShadow: 2
           }}
         >
@@ -297,7 +298,7 @@ function Dashboard() {
 
         {/* Charts Section */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2, borderRadius: 1, boxShadow: 2 }}>
+          <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2 }}> {/* Added more rounded corners and padding */}
             <Typography variant="h6" sx={{ mb: 2 }}>
               ສະຖິຕິການຂາຍແລະຂໍ້ມູນສິນຄ້າ
             </Typography>
