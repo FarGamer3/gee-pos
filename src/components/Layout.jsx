@@ -1,3 +1,4 @@
+// Updated Layout.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -205,17 +206,30 @@ export default function Layout({ children, title, onLogout }) {
 
   const drawer = (
     <div>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+      {/* UPDATED: Logo area with increased size and text added below */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
         <Avatar
           src={logoImage}
           alt="GeePOS Logo"
           sx={{
-            width: 80,
-            height: 80,
-            bgcolor: 'white'
+            width: 100, // Increased from 80 to 100
+            height: 100, // Increased from 80 to 100
+            bgcolor: 'white',
+            mb: 1 // Added margin bottom for spacing
           }}
         />
-      </Toolbar>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: 'white', 
+            fontWeight: 'bold',
+            textAlign: 'center',
+            letterSpacing: 1
+          }}
+        >
+          Gee-Pos System
+        </Typography>
+      </Box>
       <Divider />
       <List>
         {menuItems.map((item) => (
@@ -443,37 +457,37 @@ export default function Layout({ children, title, onLogout }) {
             </Typography>
             
             <Menu
-  id="menu-appbar"
-  anchorEl={anchorEl}
-  anchorOrigin={{
-    vertical: 'bottom',
-    horizontal: 'right',
-  }}
-  keepMounted
-  transformOrigin={{
-    vertical: 'top',
-    horizontal: 'right',
-  }}
-  open={Boolean(anchorEl)}
-  onClose={handleMenuClose}
->
-  <MenuItem onClick={() => {
-    handleMenuClose();
-    navigate('/user-profile');
-  }}>
-    <ListItemIcon>
-      <PersonIcon fontSize="small" />
-    </ListItemIcon>
-    <Typography variant="inherit">ຂໍ້ມູນຜູ້ໃຊ້</Typography>
-  </MenuItem>
-  <Divider />
-  <MenuItem onClick={handleLogout}>
-    <ListItemIcon>
-      <LogoutIcon fontSize="small" color="error" />
-    </ListItemIcon>
-    <Typography variant="inherit" color="error">ອອກຈາກລະບົບ</Typography>
-  </MenuItem>
-</Menu>
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={() => {
+                handleMenuClose();
+                navigate('/user-profile');
+              }}>
+                <ListItemIcon>
+                  <PersonIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="inherit">ຂໍ້ມູນຜູ້ໃຊ້</Typography>
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                <Typography variant="inherit" color="error">ອອກຈາກລະບົບ</Typography>
+              </MenuItem>
+            </Menu>
           </Box>
         </Toolbar>
       </AppBar>

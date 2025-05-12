@@ -642,21 +642,65 @@ function PurchaseOrders() {
     
     let filtered = [...orders];
     
-    // Filter by date range
+    // Filter by date range - ແກ້ໄຂວິທີການປຽບທຽບວັນທີ
     if (fromDate) {
       const fromDateObj = new Date(fromDate);
+      // ຕັ້ງເວລາເປັນເລີ່ມຕົ້ນຂອງມື້ (00:00:00)
+      fromDateObj.setHours(0, 0, 0, 0);
+      
       filtered = filtered.filter(order => {
-        const orderDate = new Date(order.order_date);
+        // ແປງວັນທີສັ່ງຊື້ເປັນ Date object
+        let orderDate;
+        if (typeof order.order_date === 'string') {
+          // ຖ້າວັນທີຢູ່ໃນຮູບແບບ 'DD/MM/YYYY'
+          if (order.order_date.includes('/')) {
+            const parts = order.order_date.split('/');
+            // ສ້າງໃນຮູບແບບ 'YYYY-MM-DD'
+            orderDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          } else {
+            // ຮູບແບບອື່ນໆ
+            orderDate = new Date(order.order_date);
+          }
+        } else if (order.order_date instanceof Date) {
+          orderDate = order.order_date;
+        } else {
+          // ຖ້າບໍ່ມີວັນທີ ຫຼື ບໍ່ສາມາດແປງໄດ້
+          return false;
+        }
+        
+        // ຕັ້ງເວລາໃຫ້ເປັນເລີ່ມຕົ້ນຂອງມື້ (00:00:00)
+        orderDate.setHours(0, 0, 0, 0);
+        // ປຽບທຽບວັນທີສັ່ງຊື້ກັບວັນທີກອງເລີ່ມຕົ້ນ
         return orderDate >= fromDateObj;
       });
     }
     
     if (toDate) {
       const toDateObj = new Date(toDate);
-      // Set time to end of day
+      // ຕັ້ງເວລາເປັນທ້າຍມື້ (23:59:59)
       toDateObj.setHours(23, 59, 59, 999);
+      
       filtered = filtered.filter(order => {
-        const orderDate = new Date(order.order_date);
+        // ແປງວັນທີສັ່ງຊື້ເປັນ Date object
+        let orderDate;
+        if (typeof order.order_date === 'string') {
+          // ຖ້າວັນທີຢູ່ໃນຮູບແບບ 'DD/MM/YYYY'
+          if (order.order_date.includes('/')) {
+            const parts = order.order_date.split('/');
+            // ສ້າງໃນຮູບແບບ 'YYYY-MM-DD'
+            orderDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          } else {
+            // ຮູບແບບອື່ນໆ
+            orderDate = new Date(order.order_date);
+          }
+        } else if (order.order_date instanceof Date) {
+          orderDate = order.order_date;
+        } else {
+          // ຖ້າບໍ່ມີວັນທີ ຫຼື ບໍ່ສາມາດແປງໄດ້
+          return false;
+        }
+        
+        // ປຽບທຽບວັນທີສັ່ງຊື້ກັບວັນທີກອງສິ້ນສຸດ
         return orderDate <= toDateObj;
       });
     }
