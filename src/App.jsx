@@ -4,6 +4,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { laoLanguage } from './theme/laoLanguage';
 import { isAuthenticated, logout } from './services/authService';
+import RoleBasedRoute from './components/RoleBasedRoute'; // Import the new component
+import AccessDenied from './components/AccessDenied'; // Import the AccessDenied component
 
 // Pages
 import Login from './pages/Login';
@@ -86,18 +88,6 @@ const theme = createTheme({
   },
 });
 
-// ສ້າງ component ເພື່ອກວດສອບການເຂົ້າສູ່ລະບົບກ່ອນເຂົ້າເຖິງໜ້າທີ່ຕ້ອງການ
-const ProtectedRoute = ({ children }) => {
-  // ກວດສອບວ່າຜູ້ໃຊ້ເຂົ້າສູ່ລະບົບແລ້ວຫຼືບໍ່
-  if (!isAuthenticated()) {
-    // ຖ້າຍັງບໍ່ໄດ້ເຂົ້າສູ່ລະບົບ, ສົ່ງໄປໜ້າ login
-    return <Navigate to="/login" replace />;
-  }
-  
-  // ຖ້າເຂົ້າສູ່ລະບົບແລ້ວ, ສະແດງ component ທີ່ຕ້ອງການ
-  return children;
-};
-
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
@@ -131,30 +121,29 @@ function App() {
             } 
           />
           
-          {/* ເສັ້ນທາງທັງໝົດທີ່ຕ້ອງການການກວດສອບການເຂົ້າສູ່ລະບົບ */}
+          {/* ເສັ້ນທາງທັງໝົດທີ່ຕ້ອງການການກວດສອບການເຂົ້າສູ່ລະບົບແລະກວດສອບສິດ */}
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Dashboard onLogout={handleLogout} />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           <Route 
-          
-  path="/user-profile" 
-  element={
-    <ProtectedRoute>
-      <UserProfile />
-    </ProtectedRoute>
-  } 
-/>
+            path="/user-profile" 
+            element={
+              <RoleBasedRoute>
+                <UserProfile />
+              </RoleBasedRoute>
+            } 
+          />
           <Route 
             path="/Manage_data" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <MainMenu />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
@@ -162,9 +151,9 @@ function App() {
           <Route 
             path="/products" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Products />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
@@ -172,81 +161,81 @@ function App() {
           <Route 
             path="/categories" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Categories />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
-            path="/Units" 
+            path="/units" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Units />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
 
           <Route 
             path="/warehouse" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Warehouse />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/suppliers" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Suppliers />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/customers" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Customers />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/employees" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Employees />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/village" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Village />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/city" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <City />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/province" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Province />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
@@ -254,18 +243,18 @@ function App() {
           <Route 
             path="/Reports" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Reports />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
 
           <Route 
             path="/Sales" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Sales />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
@@ -273,67 +262,66 @@ function App() {
           <Route 
             path="/SalesHistory" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <SalesHistory />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/Buy" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Buy />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/Purchase-Orders" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <PurchaseOrders />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/Import" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Import />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/import-detail" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <ImportDetail />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/export" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <Export />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
           <Route 
             path="/export-detail" 
             element={
-              <ProtectedRoute>
+              <RoleBasedRoute>
                 <ExportDetail />
-              </ProtectedRoute>
+              </RoleBasedRoute>
             } 
           />
           
-
           {/* ເສັ້ນທາງເລີ່ມຕົ້ນ ແມ່ນນຳໄປສູ່ໜ້າເຂົ້າສູ່ລະບົບຫຼືໜ້າຫຼັກ */}
           <Route 
             path="/" 
@@ -344,6 +332,15 @@ function App() {
             } 
           />
           
+          {/* ເສັ້ນທາງທີ່ບໍ່ພົບ (404) */}
+          <Route 
+            path="*" 
+            element={
+              isLoggedIn ? 
+                <AccessDenied /> : 
+                <Navigate to="/login" replace />
+            } 
+          />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

@@ -616,7 +616,8 @@ function Employees() {
                   >
                     <MenuItem value="">ເລືອກສະຖານະ</MenuItem>
                     <MenuItem value="Admin">ຜູ້ບໍລິຫານ</MenuItem>
-                    <MenuItem value="User">ພະນັກງານ</MenuItem>
+                    <MenuItem value="User1">ພະນັກງານຂາຍ</MenuItem>
+                    <MenuItem value="User2">ພະນັກງານສາງ</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
