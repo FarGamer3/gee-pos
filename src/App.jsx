@@ -37,7 +37,7 @@ import UserProfile from './pages/UserProfile';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6CBAD9',
+      main: '#2ca0c7', //#6CBAD9
       light: '#8FCAE3',
       dark: '#5ba8c7',
       contrastText: '#fff',

@@ -26,14 +26,16 @@ export const ROLE_PERMISSIONS = {
     '/customers',
     '/employees',
     '/Buy',
+    '/buy',
     '/sales',
+    '/Sales',
     '/SalesHistory',
     '/import',
     '/import-detail',
     '/export',
     '/export-detail',
     '/reports',
-    '/Purchase-Orders',
+    '/purchase-orders',
     '/user-profile'
   ],
   
@@ -44,6 +46,7 @@ export const ROLE_PERMISSIONS = {
     '/products',      // ຂໍ້ມູນສິນຄ້າ
     '/customers',     // ຂໍ້ມູນລູກຄ້າ 
     '/sales',         // ໜ້າຂາຍສິນຄ້າ
+    '/Sales',         // ໜ້າຂາຍສິນຄ້າ
     '/SalesHistory',  // ປະຫວັດການຂາຍ
     '/reports',       // ລາຍງານ (ແຕ່ຈະເຫັນສະເພາະລາຍງານສິນຄ້າ ແລະ ການຂາຍ)
     '/user-profile'   // ໜ້າຂໍ້ມູນໂປຣໄຟລ໌ ສ່ວນຕົວ

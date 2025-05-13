@@ -801,53 +801,7 @@ function Products() {
     });
   }, [products, searchTerm]);
 
-  // ຟັງຊັນທົດສອບການອັບເດດໂດຍກົງ
-  const testSimpleUpdate = async () => {
-    try {
-      // ຢືນຢັນວ່າມີການໂຫຼດສິນຄ້າ
-      if (products.length === 0) {
-        showSnackbar('ກະລຸນາລໍຖ້າໃຫ້ໂຫຼດຂໍ້ມູນສິນຄ້າສຳເລັດກ່ອນ', 'warning');
-        return;
-      }
-      
-      // ໃຊ້ສິນຄ້າທຳອິດໃນລາຍການເພື່ອທົດສອບ
-      const testProduct = products[0];
-      
-      // ສ້າງຂໍ້ມູນທົດສອບທີ່ມີພຽງແຕ່ ID ແລະ ຊື່
-      const minimalUpdate = {
-        proid: testProduct.proid,
-        ProductName: `${testProduct.ProductName} (ທົດສອບ ${new Date().toLocaleTimeString()})`
-      };
-      
-      console.log("Sending minimal update test:", minimalUpdate);
-      
-      // ສົ່ງຄຳຂໍໄປຫາ API ໂດຍກົງ
-      const response = await axios.put('http://localhost:4422/Update/Product', minimalUpdate);
-      
-      console.log("Test update response:", response.data);
-      
-      if (response.data.result_code === "200") {
-        // ດຶງຂໍ້ມູນສິນຄ້າຄືນໃໝ່
-        const updatedProducts = await getAllProducts();
-        setProducts(updatedProducts);
-        
-        // ແຈ້ງເຕືອນສຳເລັດ
-        showSnackbar('ທົດສອບການອັບເດດສຳເລັດ!', 'success');
-      } else {
-        showSnackbar(`ທົດສອບລົ້ມເຫຼວ: ${response.data.result}`, 'error');
-      }
-    } catch (err) {
-      console.error("Test update error:", err);
-      let errorMsg = 'ເກີດຂໍ້ຜິດພາດໃນການທົດສອບ';
-      
-      if (err.response) {
-        console.error("Response data:", err.response.data);
-        errorMsg += `: ${err.response.data.result || err.response.status}`;
-      }
-      
-      showSnackbar(errorMsg, 'error');
-    }
-  };
+
 
   return (
     <Layout title="ຈັດການຂໍ້ມູນສິນຄ້າ">
@@ -901,17 +855,7 @@ function Products() {
             sx={{ mr: 1 }}
           >
             ໂຫຼດຄືນໃໝ່
-          </Button>
-          
-          <Button 
-            variant="outlined"
-            color="warning"
-            onClick={testSimpleUpdate}
-            sx={{ mr: 1 }}
-          >
-            ທົດສອບ
-          </Button>
-          
+          </Button>    
           <Button
             variant="contained"
             color="primary"
