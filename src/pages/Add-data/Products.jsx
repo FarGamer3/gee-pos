@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getUserRole, ROLES } from '../../services/roleService';
 import {
   Box,
   Paper,
@@ -576,6 +577,14 @@ function Products() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+    // Get the current user's role
+    const userRole = getUserRole();
+
+    const canEditProducts = () => {
+      // Only ADMIN and USER2 can edit products, USER1 cannot
+      return userRole === ROLES.ADMIN || userRole === ROLES.USER2;
+    };
   
   // ສະຖານະແຈ້ງເຕືອນ
   const [snackbar, setSnackbar] = useState({
@@ -635,6 +644,10 @@ function Products() {
 
   // ເປີດ dialog ເພີ່ມສິນຄ້າ
   const handleOpenAddDialog = () => {
+    if (!canEditProducts()) {
+      showSnackbar('ທ່ານບໍ່ມີສິດໃນການເພີ່ມຂໍ້ມູນສິນຄ້າ', 'error');
+      return;
+    }
     setOpenAddDialog(true);
   };
 
@@ -645,8 +658,14 @@ function Products() {
 
   // ເປີດ dialog ແກ້ໄຂສິນຄ້າ
   const handleOpenEditDialog = (product) => {
+
+    if (!canEditProducts()) {
+      showSnackbar('ທ່ານບໍ່ມີສິດໃນການແກ້ໄຂຂໍ້ມູນສິນຄ້າ', 'error');
+      return;
+    }
     // ຕ້ອງແນ່ໃຈວ່າມີຂໍ້ມູນທຸກຟິລດ໌ທີ່ຕ້ອງການ
     console.log("Opening dialog with product:", product);
+    
     
     // ກວດສອບແລະຮັບປະກັນວ່າມີທຸກຄ່າ
     const preparedProduct = {
@@ -669,6 +688,10 @@ function Products() {
 
   // ເປີດ dialog ຍືນຢັນການລຶບສິນຄ້າ
   const handleOpenDeleteDialog = (id) => {
+    if (!canEditProducts()) {
+      showSnackbar('ທ່ານບໍ່ມີສິດໃນການລຶບຂໍ້ມູນສິນຄ້າ', 'error');
+      return;
+    }
     setSelectedProductId(id);
     setOpenDeleteDialog(true);
   };
@@ -855,15 +878,17 @@ function Products() {
             sx={{ mr: 1 }}
           >
             ໂຫຼດຄືນໃໝ່
-          </Button>    
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenAddDialog}
-          >
-            ເພີ່ມສິນຄ້າ
           </Button>
+          {canEditProducts() && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddDialog}
+            >
+              ເພີ່ມສິນຄ້າ
+            </Button>
+          )}
         </Box>
       </Box>
 

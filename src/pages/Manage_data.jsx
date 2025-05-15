@@ -10,6 +10,7 @@ import {
   Avatar
 } from '@mui/material';
 import Layout from '../components/Layout';
+import { getUserSubmenuPermissions } from '../services/roleService';
 
 // Import icons
 import productIcon from '../assets/icon/product.png';
@@ -23,16 +24,22 @@ import locationIcon from '../assets/icon/position.png';
 function ManageData() {
   const navigate = useNavigate();
   
-  // Menu item data - removed village, city, province items
-  const menuItems = [
-    { id: 'products', title: 'ຂໍ້ມູນສິນຄ້າ', icon: productIcon, path: '/products' },
-    { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories' },
-    { id: 'units', title: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: unitIcon, path: '/units' },
-    { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: locationIcon, path: '/warehouse' },
-    { id: 'employee', title: 'ຂໍ້ມູນພະນັກງານ', icon: employeeIcon, path: '/employees' },
-    { id: 'suppliers', title: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: supplierIcon, path: '/suppliers' },
-    { id: 'customers', title: 'ຂໍ້ມູນລູກຄ້າ', icon: customerIcon, path: '/customers' },
+  // Get the submenu permissions for the current user
+  const userPermissions = getUserSubmenuPermissions();
+  
+  // Define all menu items with their permission keys
+  const allMenuItems = [
+    { id: 'products', title: 'ຂໍ້ມູນສິນຄ້າ', icon: productIcon, path: '/products', permissionKey: 'products' },
+    { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories', permissionKey: 'categories' },
+    { id: 'units', title: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: unitIcon, path: '/units', permissionKey: 'units' },
+    { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: locationIcon, path: '/warehouse', permissionKey: 'warehouse' },
+    { id: 'employee', title: 'ຂໍ້ມູນພະນັກງານ', icon: employeeIcon, path: '/employees', permissionKey: 'employees' },
+    { id: 'suppliers', title: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: supplierIcon, path: '/suppliers', permissionKey: 'suppliers' },
+    { id: 'customers', title: 'ຂໍ້ມູນລູກຄ້າ', icon: customerIcon, path: '/customers', permissionKey: 'customers' },
   ];
+  
+  // Filter menu items based on user permissions
+  const menuItems = allMenuItems.filter(item => userPermissions.includes(item.permissionKey));
 
   return (
     <Layout title="ຈັດການຂໍ້ມູນຫຼັກ">

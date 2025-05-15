@@ -664,16 +664,18 @@ const handleSaveExport = async () => {
             ຂໍ້ມູນການນຳອອກ
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                fullWidth
-                label="ວັນເວລາ"
-                type="date"
-                value={exportDate}
-                onChange={(e) => setExportDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+  <TextField
+    fullWidth
+    label="ວັນເວລາ"
+    type="date"
+    value={exportDate}
+    InputProps={{ readOnly: true }}
+    disabled
+    helperText="ວັນທີປັດຈຸບັນ (ບໍ່ສາມາດແກ້ໄຂໄດ້)"
+    InputLabelProps={{ shrink: true }}
+  />
+</Grid>
             
             <Grid item xs={12} sm={6} md={8}>
               <Box sx={{ bgcolor: 'info.50', p: 1, borderRadius: 1, display: 'flex', alignItems: 'center' }}>
@@ -693,15 +695,7 @@ const handleSaveExport = async () => {
                   <CheckCircleIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
                   ເລືອກສິນຄ້າແລ້ວ {exportItems.length} ລາຍການ ຈຳນວນລວມ {getTotalExportQuantity()} ອັນ
                 </Typography>
-                <Button
-                  variant="outlined"
-                  color="success"
-                  size="small"
-                  onClick={handleOpenPrintDialog}
-                  startIcon={<PrintIcon />}
-                >
-                  ພິມຟອມ
-                </Button>
+      
               </Box>
             </Box>
           )}

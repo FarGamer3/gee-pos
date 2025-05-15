@@ -208,12 +208,26 @@ function Sales() {
 
   // Add item to cart
   const addToCart = (product) => {
+    // ກວດສອບວ່າສິນຄ້າມີຢູ່ໃນສາງຫຼືບໍ່
+    if (product.qty <= 0) {
+      showAlert(`ສິນຄ້າ "${product.ProductName}" ໝົດແລ້ວ`, 'error');
+      return;
+    }
+  
     const existingItemIndex = cartItems.findIndex(item => item.id === product.proid);
     
     if (existingItemIndex >= 0) {
       // Item already in cart, increase quantity
       const updatedItems = [...cartItems];
-      updatedItems[existingItemIndex].quantity += 1;
+      const newQuantity = updatedItems[existingItemIndex].quantity + 1;
+      
+      // ກວດສອບວ່າຈຳນວນໃໝ່ບໍ່ເກີນຈຳນວນໃນສາງ
+      if (newQuantity > product.qty) {
+        showAlert(`ບໍ່ສາມາດເພີ່ມຕື່ມໄດ້. ສິນຄ້າໃນສາງມີພຽງ ${product.qty} ອັນ`, 'warning');
+        return;
+      }
+      
+      updatedItems[existingItemIndex].quantity = newQuantity;
       setCartItems(updatedItems);
     } else {
       // Add new item to cart
@@ -237,43 +251,52 @@ function Sales() {
     setQuickViewOpen(true);
   };
 
-  // Update item quantity in cart
-  const updateQuantity = (id, amount) => {
-    // Find the product to check stock
-    const cartItem = cartItems.find(item => item.id === id);
-    if (!cartItem) return;
-    
-    // Calculate the new quantity
-    const currentQty = cartItem.quantity;
-    let newQuantity;
-    
-    if (typeof amount === 'string' || typeof amount === 'number') {
-      // Direct quantity assignment (from text field)
-      newQuantity = parseInt(amount);
+// Update item quantity in cart
+const updateQuantity = (id, changeAmount) => {
+  // Find the cart item
+  const cartItem = cartItems.find(item => item.id === id);
+  if (!cartItem) return;
+  
+  let newQuantity;
+  
+  // Check if direct input from the text field (string) or button click (number)
+  if (typeof changeAmount === 'string') {
+    // Direct input from text field - parse as integer
+    newQuantity = parseInt(changeAmount);
+  } else {
+    // Button click - add the change amount to current quantity
+    newQuantity = cartItem.quantity + changeAmount;
+  }
+  
+  // Validate the new quantity
+  if (isNaN(newQuantity) || newQuantity <= 0) {
+    // If quantity becomes 0 or invalid, remove the item
+    removeFromCart(id);
+    return;
+  }
+  
+  // Check stock limit
+  if (newQuantity > cartItem.stock) {
+    showAlert(`ສິນຄ້າໃນສາງມີພຽງ ${cartItem.stock} ອັນ`, 'warning');
+    newQuantity = cartItem.stock;
+  }
+  
+  // Update cart items with new quantity
+  const updatedItems = cartItems.map(item => 
+    item.id === id ? { ...item, quantity: newQuantity } : item
+  );
+  
+  setCartItems(updatedItems);
+  
+  // Optional: Show feedback when quantity changes
+  if (typeof changeAmount === 'number') {
+    if (changeAmount > 0) {
+      showAlert(`ເພີ່ມຈຳນວນ "${cartItem.name}" ເປັນ ${newQuantity}`, 'success');
     } else {
-      // Increment/decrement
-      newQuantity = currentQty + amount;
+      showAlert(`ຫຼຸດຈຳນວນ "${cartItem.name}" ເປັນ ${newQuantity}`, 'info');
     }
-    
-    // Validate quantity
-    if (isNaN(newQuantity) || newQuantity <= 0) {
-      // If quantity becomes zero or invalid, remove item
-      removeFromCart(id);
-      return;
-    }
-    
-    if (newQuantity > cartItem.stock) {
-      showAlert(`ສິນຄ້າໃນສາງມີພຽງ ${cartItem.stock} ອັນ`, 'warning');
-      newQuantity = cartItem.stock;
-    }
-    
-    // Update the quantity
-    const updatedItems = cartItems.map(item => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    );
-    
-    setCartItems(updatedItems);
-  };
+  }
+};
 
   // Remove item from cart
   const removeFromCart = (id) => {
@@ -758,51 +781,51 @@ const handleSaveSale = async () => {
                           {formatNumber(item.price)}
                         </TableCell>
                         <TableCell align="center">
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <IconButton 
-                              size="small" 
-                              onClick={() => updateQuantity(item.id, -1)}
-                              color="error"
-                              sx={{ 
-                                p: 0.5, 
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                mr: 0.5
-                              }}
-                            >
-                              <RemoveIcon fontSize="small" />
-                            </IconButton>
-                            
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={item.quantity}
-                              onChange={(e) => updateQuantity(item.id, e.target.value)}
-                              sx={{ 
-                                width: 50,
-                                '& input': { 
-                                  textAlign: 'center',
-                                  p: 0.5
-                                }
-                              }}
-                              inputProps={{ min: 1, max: item.stock }}
-                            />
-                            
-                            <IconButton 
-                              size="small" 
-                              onClick={() => updateQuantity(item.id, 1)}
-                              color="success"
-                              sx={{ 
-                                p: 0.5, 
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                ml: 0.5
-                              }}
-                            >
-                              <AddIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
+  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <IconButton 
+      size="small" 
+      onClick={() => updateQuantity(item.id, -1)}  // ສົ່ງຄ່າ -1 ເພື່ອຫຼຸດຈຳນວນລົງ 1
+      color="error"
+      sx={{ 
+        p: 0.5, 
+        border: '1px solid',
+        borderColor: 'divider',
+        mr: 0.5
+      }}
+    >
+      <RemoveIcon fontSize="small" />
+    </IconButton>
+    
+    <TextField
+      type="number"
+      size="small"
+      value={item.quantity}
+      onChange={(e) => updateQuantity(item.id, e.target.value)}
+      sx={{ 
+        width: 50,
+        '& input': { 
+          textAlign: 'center',
+          p: 0.5
+        }
+      }}
+      inputProps={{ min: 1, max: item.stock }}
+    />
+    
+    <IconButton 
+      size="small" 
+      onClick={() => updateQuantity(item.id, 1)}  // ສົ່ງຄ່າ 1 ເພື່ອເພີ່ມຈຳນວນຂຶ້ນ 1
+      color="success"
+      sx={{ 
+        p: 0.5, 
+        border: '1px solid',
+        borderColor: 'divider',
+        ml: 0.5
+      }}
+    >
+      <AddIcon fontSize="small" />
+    </IconButton>
+  </Box>
+</TableCell>
                         <TableCell align="right">
                           <Typography fontWeight="medium">
                             {formatNumber(item.price * item.quantity)}

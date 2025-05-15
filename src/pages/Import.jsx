@@ -45,7 +45,8 @@ import Layout from '../components/Layout';
 import { getPendingOrders, createImport, getAllImports, testServerConnection } from '../services/importService';
 import { getOrderDetails } from '../services/orderService';
 import { getCurrentUser } from '../services/authService';
-import { DeleteConfirmDialog } from '../components/ConfirmationDialog';
+
+import { DeleteConfirmDialog, ApproveConfirmDialog } from '../components/ConfirmationDialog';
 
 function Import() {
   const navigate = useNavigate();
@@ -86,6 +87,9 @@ function Import() {
   const [selectedImportId, setSelectedImportId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [openApproveDialog, setOpenApproveDialog] = useState(false);
+const [selectedImportForApprove, setSelectedImportForApprove] = useState(null);
+const [approveLoading, setApproveLoading] = useState(false);
 
   // ເປີດ dialog ຢືນຢັນການລຶບ
   const handleOpenDeleteDialog = (importId) => {
@@ -98,6 +102,18 @@ function Import() {
     setOpenDeleteDialog(false);
     setSelectedImportId(null);
   };
+
+  // ເປີດ dialog ຢືນຢັນການອະນຸມັດ
+const handleOpenApproveDialog = (importItem) => {
+  setSelectedImportForApprove(importItem);
+  setOpenApproveDialog(true);
+};
+
+// ປິດ dialog ຢືນຢັນການອະນຸມັດ
+const handleCloseApproveDialog = () => {
+  setOpenApproveDialog(false);
+  setSelectedImportForApprove(null);
+};
   
   // Fetch all imports and pending orders on component mount
   useEffect(() => {
@@ -289,6 +305,7 @@ function Import() {
   const calculateTotalPrice = () => {
     return importData.items.reduce((total, item) => total + (item.subtotal || 0), 0);
   };
+  
   
 // ຟັງຊັນ handleSubmitImport ທີ່ປັບປຸງແລ້ວ
 // ຟັງຊັນບັນທຶກປະຫວັດການນຳເຂົ້າລົງໃນ localStorage
@@ -526,36 +543,46 @@ const handleSubmitImport = async () => {
       return dateString;
     }
   };
-  const handleApproveImport = async (importItem) => {
-    try {
-      setLoading(true);
+// ຟັງຊັນອະນຸມັດການນຳເຂົ້າສິນຄ້າ (ປັບປຸງໃຫ້ໃຊ້ກັບກ່ອງ Dialog)
+const handleApproveImport = async (importId) => {
+  try {
+    setApproveLoading(true);
+    
+    // ຖ້າຮຽກຟັງຊັນຈາກປຸ່ມໃນຕາຕະລາງໂດຍກົງ, ມັນຈະສົ່ງ object
+    const imp_id = typeof importId === 'object' ? importId.imp_id : importId;
+    
+    // ເອີ້ນໃຊ້ API ເພື່ອອັບເດດສະຖານະ
+    const response = await axios.put(`${API_BASE_URL}/import/Update/Status`, {
+      imp_id: imp_id,
+      status: 'Completed'
+    });
+    
+    if (response.data && response.data.result_code === "200") {
+      // ອັບເດດຂໍ້ມູນ local
+      const updatedImports = imports.map(item => 
+        item.imp_id === imp_id 
+          ? { ...item, status: 'Completed' } 
+          : item
+      );
       
-      // Call the update status API
-      const response = await axios.put(`${API_BASE_URL}/import/Update/Status`, {
-        imp_id: importItem.imp_id,
-        status: 'Completed'
-      });
+      setImports(updatedImports);
+      setOpenApproveDialog(false);
+      showSnackbar('ອະນຸມັດການນຳເຂົ້າສຳເລັດແລ້ວ', 'success');
       
-      if (response.data && response.data.result_code === "200") {
-        // Update the local data
-        const updatedImports = imports.map(item => 
-          item.imp_id === importItem.imp_id 
-            ? { ...item, status: 'Completed' } 
-            : item
-        );
-        
-        setImports(updatedImports);
-        showSnackbar('ອະນຸມັດການນຳເຂົ້າສຳເລັດແລ້ວ', 'success');
-      } else {
-        showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳເຂົ້າ', 'error');
-      }
-    } catch (err) {
-      console.error('ຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳເຂົ້າ:', err);
+      // ໂຫລດຂໍ້ມູນໃໝ່
+      await fetchImports();
+      await fetchPendingOrders();
+    } else {
       showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳເຂົ້າ', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error('ຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳເຂົ້າ:', err);
+    showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການອະນຸມັດການນຳເຂົ້າ', 'error');
+  } finally {
+    setApproveLoading(false);
+    setSelectedImportForApprove(null);
+  }
+};
   // Format number with commas for currency display
   const formatNumber = (num) => {
     if (num === undefined || num === null) return '0';
@@ -732,19 +759,19 @@ const handleSubmitImport = async () => {
                       ເບິ່ງ
                     </Button>
                     
-                    {/* Show approve button only for pending status */}
-                    {importItem.status !== 'Completed' && (
-                      <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={() => handleApproveImport(importItem)}
-                        disabled={loading}
-                      >
-                        ອະນຸມັດ
-                      </Button>
-                    )}
+            {/* Show approve button only for pending status */}
+{importItem.status !== 'Completed' && (
+  <Button
+    variant="contained"
+    color="success"
+    size="small"
+    startIcon={<CheckCircleIcon />}
+    onClick={() => handleOpenApproveDialog(importItem)}
+    disabled={loading}
+  >
+    ອະນຸມັດ
+  </Button>
+)}
                     
                     {/* ເພີ່ມປຸ່ມລຶບສຳລັບລາຍການທີ່ມີສະຖານະ ລໍຖ້າ */}
                     {importItem.status !== 'Completed' && (
@@ -942,6 +969,14 @@ const handleSubmitImport = async () => {
         itemId={selectedImportId}
         loading={deleteLoading}
       />
+      {/* Approve Confirmation Dialog */}
+<ApproveConfirmDialog
+  open={openApproveDialog}
+  onClose={handleCloseApproveDialog}
+  onConfirm={handleApproveImport}
+  itemId={selectedImportForApprove?.imp_id}
+  loading={approveLoading}
+/>
     </Layout>
   );
 }

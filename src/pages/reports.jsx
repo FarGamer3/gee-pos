@@ -1,5 +1,6 @@
 // src/pages/reports.jsx - Fixed version with proper date filtering
 import React, { useState, useEffect } from 'react';
+import { getUserRole, ROLES } from '../services/roleService';
 import {
   Box,
   Paper,
@@ -64,11 +65,8 @@ import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 function Reports() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const userRole = getUserRole();
+
   const [reportType, setReportType] = useState('products');
   const printRef = React.useRef();
   const [snackbar, setSnackbar] = useState({
@@ -93,23 +91,59 @@ function Reports() {
     exports: []
   });
 
-  // ປະເພດລາຍງານທັງໝົດ
-  const reportTypes = [
-    { value: 'products', label: 'ຂໍ້ມູນສິນຄ້າ', icon: <InventoryIcon /> },
-    { value: 'categories', label: 'ຂໍ້ມູນປະເພດ', icon: <CategoryIcon /> },
-    { value: 'brands', label: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: <BrandIcon /> },
-    { value: 'locations', label: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: <LocationIcon /> },
-    { value: 'employees', label: 'ຂໍ້ມູນພະນັກງານ', icon: <PeopleIcon /> },
-    { value: 'suppliers', label: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: <ShippingIcon /> },
-    { value: 'customers', label: 'ຂໍ້ມູນລູກຄ້າ', icon: <PeopleIcon /> },
-    { value: 'purchases', label: 'ລາຍງານການສັ່ງຊື້', icon: <ShoppingCartIcon /> },
-    { value: 'sales', label: 'ລາຍງານການຂາຍ', icon: <StoreIcon /> },
-    { value: 'imports', label: 'ລາຍງານການນຳເຂົ້າ', icon: <ImportExportIcon /> },
-    { value: 'exports', label: 'ລາຍງານການນຳອອກ', icon: <ImportExportIcon /> }
+
+  
+  const allReportTypes = [
+    { value: 'products', label: 'ຂໍ້ມູນສິນຄ້າ', icon: <InventoryIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER1, ROLES.USER2] },
+    
+    { value: 'categories', label: 'ຂໍ້ມູນປະເພດ', icon: <CategoryIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] },
+    
+    { value: 'brands', label: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: <BrandIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] },
+    
+    { value: 'locations', label: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: <LocationIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] },
+    
+    { value: 'employees', label: 'ຂໍ້ມູນພະນັກງານ', icon: <PeopleIcon />, 
+      roles: [ROLES.ADMIN] },
+    
+    { value: 'suppliers', label: 'ຂໍ້ມູນຜູ້ສະໜອງ', icon: <ShippingIcon />, 
+      roles: [ROLES.ADMIN, ] },
+    
+    { value: 'customers', label: 'ຂໍ້ມູນລູກຄ້າ', icon: <PeopleIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER1] },
+    
+    { value: 'purchases', label: 'ລາຍງານການສັ່ງຊື້', icon: <ShoppingCartIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] },
+    
+    { value: 'sales', label: 'ລາຍງານການຂາຍ', icon: <StoreIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER1] },
+    
+    { value: 'imports', label: 'ລາຍງານການນຳເຂົ້າ', icon: <ImportExportIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] },
+    
+    { value: 'exports', label: 'ລາຍງານການນຳອອກ', icon: <ImportExportIcon />, 
+      roles: [ROLES.ADMIN, ROLES.USER2] }
   ];
+
+    // ປະເພດລາຍງານທັງໝົດ
+    const reportTypes = allReportTypes.filter(type => type.roles.includes(userRole));
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState(0);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    
 
   useEffect(() => {
     fetchAllData();
+    if (reportTypes.length > 0 && !reportTypes.some(type => type.value === reportType)) {
+      setReportType(reportTypes[0].value);
+    }
   }, [reportType]);
 
   // ສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນ
@@ -839,29 +873,29 @@ const filterByDateRange = () => {
           </Alert>
         )}
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Grid container spacing={3} alignItems="flex-end">
-            <Grid item xs={12} md={4}>
-              <TextField
-                select
-                fullWidth
-                label="ປະເພດລາຍງານ"
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
-                InputProps={{
-                  startAdornment: <FilterListIcon sx={{ mr: 1 }} />
-                }}
-              >
-                {reportTypes.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      {option.icon}
-                      <Box sx={{ ml: 1 }}>{option.label}</Box>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+<Paper sx={{ p: 3, mb: 3 }}>
+        <Grid container spacing={3} alignItems="flex-end">
+          <Grid item xs={12} md={4}>
+            <TextField
+              select
+              fullWidth
+              label="ປະເພດລາຍງານ"
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              InputProps={{
+                startAdornment: <FilterListIcon sx={{ mr: 1 }} />
+              }}
+            >
+              {reportTypes.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {option.icon}
+                    <Box sx={{ ml: 1 }}>{option.label}</Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
