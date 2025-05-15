@@ -134,7 +134,7 @@ function Categories() {
   // Add new category
   const handleAddCategory = async () => {
     if (!currentCategory.category.trim()) {
-      showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
+      showSnackbar('ກະລຸນາປ້ອນຊື່ປະເພດ', 'error');
       return;
     }
 
@@ -145,7 +145,7 @@ function Categories() {
       if (result) {
         await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
         setOpenAddDialog(false);
-        showSnackbar('ເພີ່ມໝວດໝູ່ສຳເລັດແລ້ວ');
+        showSnackbar('ເພີ່ມປະເພດສຳເລັດແລ້ວ');
       }
     } catch (err) {
       console.error("Error adding category:", err);
@@ -158,7 +158,7 @@ function Categories() {
   // Save edited category
   const handleSaveEdit = async () => {
     if (!currentCategory.category.trim()) {
-      showSnackbar('ກະລຸນາປ້ອນຊື່ໝວດໝູ່', 'error');
+      showSnackbar('ກະລຸນາປ້ອນຊື່ປະເພດ', 'error');
       return;
     }
 
@@ -169,7 +169,7 @@ function Categories() {
       if (result) {
         await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
         setOpenEditDialog(false);
-        showSnackbar('ແກ້ໄຂໝວດໝູ່ສຳເລັດແລ້ວ');
+        showSnackbar('ແກ້ໄຂປະເພດສຳເລັດແລ້ວ');
       }
     } catch (err) {
       console.error("Error updating category:", err);
@@ -200,7 +200,7 @@ function Categories() {
       if (result) {
         await fetchCategories(); // ດຶງຂໍ້ມູນໃໝ່
         setOpenDeleteDialog(false);
-        showSnackbar('ລຶບໝວດໝູ່ສຳເລັດແລ້ວ');
+        showSnackbar('ລຶບປະເພດສຳເລັດແລ້ວ');
       }
     } catch (err) {
       console.error("Error deleting category:", err);
@@ -222,7 +222,7 @@ function Categories() {
   });
 
   return (
-    <Layout title="ຈັດການຂໍ້ມູນໝວດໝູ່">
+    <Layout title="ຈັດການຂໍ້ມູນປະເພດ">
       {/* Snackbar notification */}
       <Snackbar
         open={snackbar.open}
@@ -276,7 +276,7 @@ function Categories() {
             <TableHead>
               <TableRow>
                 <TableCell align="center" width={80}>#</TableCell>
-                <TableCell>ຊື່ໝວດໝູ່</TableCell>
+                <TableCell>ຊື່ປະເພດ</TableCell>
                 <TableCell align="center" width={120}>ແກ້ໄຂ</TableCell>
                 <TableCell align="center" width={120}>ລຶບ</TableCell>
               </TableRow>
@@ -333,7 +333,7 @@ function Categories() {
         fullWidth
       >
         <DialogTitle sx={{ pb: 1 }}>
-          ເພີ່ມໝວດໝູ່ໃໝ່
+          ເພີ່ມປະເພດໃໝ່
           <IconButton
             aria-label="close"
             onClick={handleCloseAddDialog}
@@ -351,7 +351,7 @@ function Categories() {
           <Box component="form" sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="ຊື່ໝວດໝູ່"
+              label="ຊື່ປະເພດ"
               name="category"
               value={currentCategory.category}
               onChange={handleChange}
@@ -383,7 +383,7 @@ function Categories() {
         fullWidth
       >
         <DialogTitle sx={{ pb: 1 }}>
-          ແກ້ໄຂຂໍ້ມູນໝວດໝູ່
+          ແກ້ໄຂຂໍ້ມູນປະເພດ
           <IconButton
             aria-label="close"
             onClick={handleCloseEditDialog}
@@ -401,7 +401,7 @@ function Categories() {
           <Box component="form" sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="ຊື່ໝວດໝູ່"
+              label="ຊື່ປະເພດ"
               name="category"
               value={currentCategory.category}
               onChange={handleChange}
