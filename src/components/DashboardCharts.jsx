@@ -1,4 +1,4 @@
-// src/components/DashboardCharts.jsx
+// src/components/DashboardCharts.jsx - ປັບປຸງແກ້ໄຂບັນຫາຕົວອັກສອນຊ້ອນກັນ
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -153,7 +153,6 @@ const DashboardCharts = () => {
       
       if (response.data && response.data.result_code === "200" && response.data.products) {
         const products = response.data.products;
-        console.log("Products with categories:", products);
         
         // ສ້າງການນັບຈຳນວນສິນຄ້າຕາມແຕ່ລະປະເພດ
         const categoryCounts = {};
@@ -178,8 +177,8 @@ const DashboardCharts = () => {
         // ຈັດລຽງຂໍ້ມູນຕາມຈຳນວນຈາກຫຼາຍໄປຫານ້ອຍ
         categoryData = categoryData.sort((a, b) => b.count - a.count);
         
-        console.log("Processed category data for chart:", categoryData);
-        return categoryData;
+        // ຈຳກັດຈຳນວນໝວດໝູ່ທີ່ຈະສະແດງເພື່ອຫຼີກລ້ຽງການຊ້ອນທັບ - ອັນນີ້ຄືສິ່ງທີ່ປັບປຸງ!
+        return categoryData.slice(0, 4); // ສະແດງພຽງ 4 ໝວດໝູ່ທີ່ມີຈຳນວນສິນຄ້າຫຼາຍທີ່ສຸດ
       }
       
       return [];
@@ -366,7 +365,7 @@ const DashboardCharts = () => {
         </Paper>
       </Grid>
       
-      {/* Product Categories Chart */}
+      {/* Product Categories Chart - ແກ້ໄຂບັນຫາຕົວອັກສອນຊ້ອນກັນ */}
       <Grid item xs={12} md={4}>
         <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
@@ -381,8 +380,15 @@ const DashboardCharts = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
+                    // ແກ້ໄຂ: ປັບປຸງການສະແດງ label ໃຫ້ສັ້ນລົງ ແລະ ເຂົ້າໃຈງ່າຍ
+                    label={({ name, percent }) => {
+                      // ຖ້າຊື່ໝວດໝູ່ຍາວເກີນໄປ, ໃຫ້ຕັດທ້າຍດ້ວຍ ... ແລະ ສະແດງແຕ່ເປີເຊັນ
+                      if (name.length > 8) {
+                        return `${name.substring(0, 8)}..${(percent * 100).toFixed(0)}%`;
+                      }
+                      return `${name}: ${(percent * 100).toFixed(0)}%`;
+                    }}
+                    outerRadius={90}
                     fill="#8884d8"
                     dataKey="count"
                     nameKey="name"
@@ -392,14 +398,17 @@ const DashboardCharts = () => {
                     ))}
                   </Pie>
                   <Tooltip content={<CategoryToolTip />} />
+                  {/* ແກ້ໄຂ: ຍ້າຍ Legend ໄປທາງລຸ່ມ ແລະ ເຮັດໃຫ້ມັນຊັດເຈນຂຶ້ນ */}
                   <Legend 
-                    layout="vertical" 
-                    verticalAlign="middle" 
-                    align="right"
+                    layout="horizontal" 
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ paddingTop: '10px' }}
                     formatter={(value, entry) => {
-                      // ສະແດງຊື່ໝວດໝູ່ແລະຈຳນວນສິນຄ້າໃນ legend
+                      // ຕັດຊື່ໝວດໝູ່ທີ່ຍາວເກີນໄປ
+                      const shortName = value.length > 12 ? `${value.substring(0, 12)}...` : value;
                       const item = categoryData.find(cat => cat.name === value);
-                      return `${value} (${item ? item.count : 0})`;
+                      return `${shortName} (${item ? item.count : 0})`;
                     }}
                   />
                 </PieChart>
@@ -509,7 +518,19 @@ const DashboardCharts = () => {
                     dataKey="name" 
                     type="category" 
                     width={170}
-                    tick={{ fontSize: 14 }}
+                    tick={(props) => {
+                      const { x, y, payload } = props;
+                      // ຕັດຊື່ສິນຄ້າທີ່ຍາວເກີນໄປ
+                      let displayName = payload.value;
+                      if (displayName.length > 20) {
+                        displayName = displayName.substring(0, 20) + '...';
+                      }
+                      return (
+                        <text x={x} y={y} dy={4} textAnchor="end" fontSize={14}>
+                          {displayName}
+                        </text>
+                      );
+                    }}
                   />
                   <Tooltip />
                   <Legend />

@@ -347,7 +347,7 @@ const SalesHistory = () => {
                     <strong>ລູກຄ້າ:</strong> {selectedSale.customer_name || 'ລູກຄ້າທົ່ວໄປ'}
                   </Typography>
                   <Typography variant="body1">
-                    <strong>ພະນັກງານ:</strong> {selectedSale.emp_name || '-'}
+                    <strong>ພະນັກງານ:</strong> {selectedSale.emp_name  || '-'}
                   </Typography>
                 </Grid>
                 
