@@ -1,5 +1,5 @@
-// src/pages/reports.jsx - Fixed version with proper date filtering
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { getUserRole, ROLES } from '../services/roleService';
 import {
   Box,
@@ -68,12 +68,13 @@ function Reports() {
   const userRole = getUserRole();
 
   const [reportType, setReportType] = useState('products');
-  const printRef = React.useRef();
+  const printRef = useRef(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
   });
+
 
   // ຂໍ້ມູນສຳລັບລາຍງານ
   const [reportData, setReportData] = useState({
@@ -386,10 +387,67 @@ const filterByDateRange = () => {
     }
   };
 
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `ລາຍງານ ${reportTypes.find(r => r.value === reportType)?.label}`,
-  });
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    
+    if (!printWindow) {
+      showSnackbar('ບໍ່ສາມາດເປີດໜ້າຕ່າງພິມໄດ້. ກະລຸນາອະນຸຍາດ popup ໃນ browser ຂອງທ່ານ.', 'error');
+      return;
+    }
+    
+    // ກຽມຂໍ້ມູນທີ່ຈະພິມ
+    const contentToPrint = document.createElement('div');
+    contentToPrint.innerHTML = `
+      <html>
+        <head>
+          <title>ລາຍງານ ${reportTypes.find(r => r.value === reportType)?.label || ''}</title>
+          <style>
+            body { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background-color: #f3f3f3; text-align: left; }
+            th, td { border: 1px solid #ddd; padding: 8px; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            .report-header { text-align: center; margin-bottom: 30px; }
+            .date-range { text-align: right; font-size: 12px; margin-bottom: 10px; }
+            @media print {
+              button { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <h2>ລາຍງານ ${reportTypes.find(r => r.value === reportType)?.label || ''}</h2>
+            <p>${new Date().toLocaleDateString('lo-LA')}</p>
+          </div>
+          ${startDate || endDate ? `
+            <div class="date-range">
+              ຂໍ້ມູນຈາກ: ${startDate || '---'} ຫາ ${endDate || '---'}
+            </div>
+          ` : ''}
+          ${document.querySelector('.MuiTableContainer-root')?.outerHTML || '<p>ບໍ່ມີຂໍ້ມູນສຳລັບພິມ</p>'}
+          <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print();window.close()">ພິມເອກະສານ</button>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    // ຍ້າຍຂໍ້ມູນໄປຍັງໜ້າຕ່າງພິມ
+    printWindow.document.open();
+    printWindow.document.write(contentToPrint.innerHTML);
+    printWindow.document.close();
+    
+    // ໃຫ້ browser ໂຫຼດຂໍ້ມູນກ່ອນພິມ
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        console.error('ບໍ່ສາມາດພິມໄດ້:', error);
+        showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການພິມ', 'error');
+      }
+    }, 500);
+  };
 
   const handleExportExcel = () => {
     const data = reportData[reportType] || [];
@@ -977,11 +1035,14 @@ const filterByDateRange = () => {
             )}
           </Box>
           <Box>
-            <Tooltip title="ພິມລາຍງານ">
-              <IconButton onClick={handlePrint}>
-                <PrintIcon />
-              </IconButton>
-            </Tooltip>
+          <Tooltip title="ພິມລາຍງານ">
+  <IconButton 
+    onClick={handlePrint}
+    disabled={loading || !reportData[reportType] || reportData[reportType].length === 0}
+  >
+    <PrintIcon />
+  </IconButton>
+</Tooltip>
             <Tooltip title="ສົ່ງອອກ Excel">
               <IconButton onClick={handleExportExcel}>
                 <DownloadIcon />

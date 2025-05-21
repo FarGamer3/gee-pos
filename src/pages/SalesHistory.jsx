@@ -1,3 +1,4 @@
+// Updated SalesHistory.jsx with dynamic employee dropdown
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -44,6 +45,8 @@ import {
   getSaleDetails,
   cancelSale
 } from '../services/salesService';
+import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 // Format number with commas for every 3 digits
 const formatNumber = (num) => {
@@ -89,6 +92,10 @@ function SalesHistory() {
   const [filterAmount, setFilterAmount] = useState('');
   const [filtersApplied, setFiltersApplied] = useState(false);
   
+  // Employee data for filter dropdown
+  const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  
   // Alerts
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -104,6 +111,7 @@ function SalesHistory() {
   // Load sales history on component mount
   useEffect(() => {
     fetchSalesHistory();
+    fetchEmployees();
   }, []);
 
   // Calculate statistics whenever sales history changes
@@ -141,6 +149,41 @@ function SalesHistory() {
     } finally {
       setLoading(false);
       setFiltersApplied(false);
+    }
+  };
+  
+  // Fetch all employees for filter dropdown
+  const fetchEmployees = async () => {
+    try {
+      setEmployeesLoading(true);
+      
+      // Try to fetch employees data first from standard endpoint
+      let employeeData = [];
+      try {
+        const response = await axios.get(`${API_BASE_URL}/All/Employee`);
+        if (response.data && response.data.result_code === "200") {
+          employeeData = response.data.user_info || [];
+        }
+      } catch (err) {
+        console.log("Error fetching from /All/Employee, trying alternative endpoint");
+        
+        // Try alternative endpoint with 'users' prefix
+        try {
+          const altResponse = await axios.get(`${API_BASE_URL}/users/All/Employee`);
+          if (altResponse.data && altResponse.data.result_code === "200") {
+            employeeData = altResponse.data.user_info || [];
+          }
+        } catch (altErr) {
+          console.error("Error fetching employees from alternative endpoint:", altErr);
+        }
+      }
+      
+      setEmployees(employeeData);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      // We don't show an alert for this as it's not critical to the main functionality
+    } finally {
+      setEmployeesLoading(false);
     }
   };
   
@@ -617,7 +660,7 @@ function SalesHistory() {
         </Table>
       </TableContainer>
       
-      {/* Filter Dialog */}
+      {/* Filter Dialog - Updated to display dynamic employee list */}
       <Dialog
         open={filterDialogOpen}
         onClose={() => setFilterDialogOpen(false)}
@@ -675,8 +718,20 @@ function SalesHistory() {
                   label="ພະນັກງານ"
                 >
                   <MenuItem value="">ທັງໝົດ</MenuItem>
-                  <MenuItem value="Alex Vkp">Alex Vkp</MenuItem>
-                  <MenuItem value="jonh ny">jonh ny</MenuItem>
+                  {employeesLoading ? (
+                    <MenuItem disabled>ກຳລັງໂຫລດຂໍ້ມູນ...</MenuItem>
+                  ) : employees.length > 0 ? (
+                    employees.map((employee) => (
+                      <MenuItem 
+                        key={employee.emp_id} 
+                        value={`${employee.emp_name} ${employee.emp_lname}`}
+                      >
+                        {employee.emp_name} {employee.emp_lname}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>ບໍ່ພົບຂໍ້ມູນພະນັກງານ</MenuItem>
+                  )}
                 </Select>
               </FormControl>
             </Grid>
