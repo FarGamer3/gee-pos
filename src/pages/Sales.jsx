@@ -612,76 +612,76 @@ const handleSaveSale = async () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
-                      <TableRow key={product.proid} hover>
-                        <TableCell align="center">{product.proid}</TableCell>
-                        <TableCell align="left">
-                          <Tooltip title="ຄລິກເພື່ອເບິ່ງລາຍລະອຽດ">
-                            <Typography 
-                              variant="body2" 
-                              onClick={() => handleQuickView(product)}
-                              sx={{ 
-                                cursor: 'pointer',
-                                '&:hover': { 
-                                  textDecoration: 'underline',
-                                  color: 'primary.main'
-                                }
-                              }}
-                            >
-                              {product.ProductName}
-                            </Typography>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography fontWeight="medium">
-                            {formatNumber(product.retail_price)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip 
-                            label={product.qty} 
-                            size="small"
-                            color={product.qty > 0 ? "success" : "error"}
-                            variant={product.qty > 0 ? "filled" : "outlined"}
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="secondary"
-                            onClick={() => addToCart(product)}
-                            sx={{ 
-                              borderRadius: 4,
-                              minWidth: 'unset',
-                              width: 32,
-                              height: 32,
-                              p: 0
-                            }}
-                            disabled={product.qty <= 0}
-                          >
-                            <AddIcon fontSize="small" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        {loading ? (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                            <CircularProgress size={24} />
-                          </Box>
-                        ) : searchTerm ? (
-                          'ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ'
-                        ) : (
-                          'ບໍ່ມີຂໍ້ມູນສິນຄ້າ'
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
+  {filteredProducts.length > 0 ? (
+    filteredProducts.map((product, index) => (  // ເພີ່ມ index parameter
+      <TableRow key={product.proid} hover>
+        <TableCell align="center">{index + 1}</TableCell>  {/* ປ່ຽນຈາກ {product.proid} ເປັນ {index + 1} */}
+        <TableCell align="left">
+          <Tooltip title="ຄລິກເພື່ອເບິ່ງລາຍລະອຽດ">
+            <Typography 
+              variant="body2" 
+              onClick={() => handleQuickView(product)}
+              sx={{ 
+                cursor: 'pointer',
+                '&:hover': { 
+                  textDecoration: 'underline',
+                  color: 'primary.main'
+                }
+              }}
+            >
+              {product.ProductName}
+            </Typography>
+          </Tooltip>
+        </TableCell>
+        <TableCell align="right">
+          <Typography fontWeight="medium">
+            {formatNumber(product.retail_price)}
+          </Typography>
+        </TableCell>
+        <TableCell align="center">
+          <Chip 
+            label={product.qty} 
+            size="small"
+            color={product.qty > 0 ? "success" : "error"}
+            variant={product.qty > 0 ? "filled" : "outlined"}
+          />
+        </TableCell>
+        <TableCell align="center">
+          <Button
+            variant="contained"
+            size="small"
+            color="secondary"
+            onClick={() => addToCart(product)}
+            sx={{ 
+              borderRadius: 4,
+              minWidth: 'unset',
+              width: 32,
+              height: 32,
+              p: 0
+            }}
+            disabled={product.qty <= 0}
+          >
+            <AddIcon fontSize="small" />
+          </Button>
+        </TableCell>
+      </TableRow>
+    ))
+  ) : (
+    <TableRow>
+      <TableCell colSpan={5} align="center">
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : searchTerm ? (
+          'ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ'
+        ) : (
+          'ບໍ່ມີຂໍ້ມູນສິນຄ້າ'
+        )}
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>
               </Table>
             </TableContainer>
             

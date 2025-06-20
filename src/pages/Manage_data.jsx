@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -7,10 +8,12 @@ import {
   Card,
   CardContent,
   CardActionArea,
-  Avatar
+  Avatar,
+  Badge
 } from '@mui/material';
 import Layout from '../components/Layout';
 import { getUserSubmenuPermissions } from '../services/roleService';
+import { getLowStockProducts } from '../services/notificationService';
 
 // Import icons
 import productIcon from '../assets/icon/product.png';
@@ -23,13 +26,44 @@ import locationIcon from '../assets/icon/position.png';
 
 function ManageData() {
   const navigate = useNavigate();
+  const [lowStockCount, setLowStockCount] = useState(0);
   
   // Get the submenu permissions for the current user
   const userPermissions = getUserSubmenuPermissions();
   
+  // ດຶງຂໍ້ມູນສິນຄ້າໃກ້ຈະໝົດເມື່ອ component ຖືກໂຫຼດ
+  useEffect(() => {
+    fetchLowStockCount();
+    
+    // ກຳນົດໃຫ້ດຶງຂໍ້ມູນທຸກໆ 60 ວິນາທີ
+    const interval = setInterval(() => {
+      fetchLowStockCount();
+    }, 60000);
+    
+    // ຍົກເລີກ interval ເມື່ອ component ຖືກຖອດ
+    return () => clearInterval(interval);
+  }, []);
+  
+  // ຟັງຊັນດຶງຂໍ້ມູນຈຳນວນສິນຄ້າໃກ້ຈະໝົດ
+  const fetchLowStockCount = async () => {
+    try {
+      const lowStockProducts = await getLowStockProducts();
+      setLowStockCount(lowStockProducts.length);
+    } catch (error) {
+      console.error('Error fetching low stock count:', error);
+    }
+  };
+  
   // Define all menu items with their permission keys
   const allMenuItems = [
-    { id: 'products', title: 'ຂໍ້ມູນສິນຄ້າ', icon: productIcon, path: '/products', permissionKey: 'products' },
+    { 
+      id: 'products', 
+      title: 'ຂໍ້ມູນສິນຄ້າ', 
+      icon: productIcon, 
+      path: '/products', 
+      permissionKey: 'products',
+      badge: lowStockCount > 0 ? lowStockCount : null // ສະແດງການແຈ້ງເຕືອນ
+    },
     { id: 'categories', title: 'ຂໍ້ມູນປະເພດ', icon: categoryIcon, path: '/categories', permissionKey: 'categories' },
     { id: 'units', title: 'ຂໍ້ມູນຍີ່ຫໍ້', icon: unitIcon, path: '/units', permissionKey: 'units' },
     { id: 'warehouse', title: 'ຂໍ້ມູນບ່ອນຈັດວາງ', icon: locationIcon, path: '/warehouse', permissionKey: 'warehouse' },
@@ -69,6 +103,7 @@ function ManageData() {
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: 3,
+                position: 'relative', // ສຳລັບການວາງຕຳແໜ່ງ Badge
                 '&:hover': {
                   bgcolor: 'primary.dark',
                   transform: 'translateY(-4px)',
@@ -76,6 +111,29 @@ function ManageData() {
                 }
               }}
             >
+              {/* Badge ສະແດງການແຈ້ງເຕືອນ */}
+              {item.badge && (
+                <Badge 
+                  badgeContent={item.badge} 
+                  color="error"
+                  sx={{
+                    position: 'absolute',
+                    top: 40,
+                    right: 60,
+                    zIndex: 1,
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.7rem',
+                      height: '36px',
+                      minWidth: '36px',
+                      padding: '0 6px',
+                      fontWeight: 'bold'
+                    }
+                  }}
+                >
+                  <Box />
+                </Badge>
+              )}
+              
               <CardActionArea 
                 sx={{ 
                   height: '100%', 
@@ -100,6 +158,23 @@ function ManageData() {
                 <Typography variant="h6" component="div" align="center" sx={{ mt: 1 }}>
                   {item.title}
                 </Typography>
+                
+                {/* ສະແດງຂໍ້ຄວາມແຈ້ງເຕືອນພິເສດສຳລັບສິນຄ້າໃກ້ຈະໝົດ */}
+                {item.id === 'products' && lowStockCount > 0 && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 1, 
+                      px: 1.5, 
+                      py: 0.5, 
+                      bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                      borderRadius: 1,
+                      fontSize: '0.7rem'
+                    }}
+                  >
+                    {lowStockCount} ລາຍການໃກ້ໝົດ
+                  </Typography>
+                )}
               </CardActionArea>
             </Card>
           </Grid>

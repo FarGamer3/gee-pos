@@ -51,6 +51,13 @@ const formatNumber = (num) => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
+// Format product number for display (sequential numbering)
+const formatProductNumber = (products, currentProduct) => {
+  const sortedProducts = [...products].sort((a, b) => a.proid - b.proid);
+  const index = sortedProducts.findIndex(p => p.proid === currentProduct.proid);
+  return index + 1;
+};
+
 function Buy() {
   const navigate = useNavigate();
   
@@ -167,7 +174,8 @@ function Buy() {
         name: product.ProductName,
         quantity: 1,
         stock: product.qty || 0,
-        price: product.cost_price || 0
+        price: product.cost_price || 0,
+        displayNumber: formatProductNumber(products, product) // Add display number
       }]);
       
       // Show notification
@@ -179,7 +187,7 @@ function Buy() {
     if (!supplier) {
       setSupplierWarning(true);
     }
-  }, [orderItems, supplier]);
+  }, [orderItems, supplier, products]);
 
   // Update quantity of item in order
   const updateQuantity = useCallback((id, quantity) => {
@@ -542,7 +550,7 @@ function Buy() {
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell align="center">ລະຫັດ</TableCell>
+                        <TableCell align="center">ລຳດັບ</TableCell>
                         <TableCell align="left">ຊື່ສິນຄ້າ</TableCell>
                         <TableCell align="center">ຈຳນວນໃນສາງ</TableCell>
                         <TableCell align="center">ລາຄາຕົ້ນທຶນ</TableCell>
@@ -551,10 +559,26 @@ function Buy() {
                     </TableHead>
                     <TableBody>
                       {filteredProducts.length > 0 ? (
-                        filteredProducts.map((product) => (
+                        filteredProducts.map((product, index) => (
                           <TableRow key={product.proid} hover>
                             <TableCell align="center">
-                              {product.proid}
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="bold"
+                                sx={{ 
+                                  backgroundColor: 'primary.light',
+                                  color: 'primary.contrastText',
+                                  borderRadius: '50%',
+                                  width: 30,
+                                  height: 30,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  margin: '0 auto'
+                                }}
+                              >
+                                {index + 1}
+                              </Typography>
                             </TableCell>
                             <TableCell align="left">
                               <Tooltip title={`${product.ProductName} - ${product.brand || ''}`}>
@@ -681,7 +705,7 @@ function Buy() {
                           <TableCell align="left">
                             <Typography variant="body2">{item.name}</Typography>
                             <Typography variant="caption" color="text.secondary">
-                              ລະຫັດ: {item.id}
+                              ລຳດັບ: {item.displayNumber || formatProductNumber(products, { proid: item.id })}
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
