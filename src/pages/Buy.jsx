@@ -565,17 +565,17 @@ function Buy() {
                               <Typography 
                                 variant="body2" 
                                 fontWeight="bold"
-                                sx={{ 
-                                  backgroundColor: 'primary.light',
-                                  color: 'primary.contrastText',
-                                  borderRadius: '50%',
-                                  width: 30,
-                                  height: 30,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  margin: '0 auto'
-                                }}
+                                // sx={{ 
+                                //   backgroundColor: 'primary.light',
+                                //   color: 'primary.contrastText',
+                                //   borderRadius: '50%',
+                                //   width: 30,
+                                //   height: 30,
+                                //   display: 'flex',
+                                //   alignItems: 'center',
+                                //   justifyContent: 'center',
+                                //   margin: '0 auto'
+                                // }}
                               >
                                 {index + 1}
                               </Typography>

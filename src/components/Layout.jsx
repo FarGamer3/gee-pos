@@ -159,8 +159,9 @@ export default function Layout({ children, title, onLogout }) {
       hasSubMenu: true 
     },
     { text: 'ສັ່ງຊື້ສິນຄ້າ', icon: <InventoryIcon />, path: '/Buy', badge: null },
-    { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales', badge: null },
+   
     { text: 'ນຳເຂົ້າສິນຄ້າ', icon: <ImportIcon />, path: '/import', badge: pendingImportCount > 0 ? pendingImportCount : null },
+    { text: 'ຂາຍສິນຄ້າ', icon: <ShoppingCartIcon />, path: '/sales', badge: null },
     { text: 'ນຳອອກສິນຄ້າ', icon: <ExportIcon />, path: '/export', badge: pendingExportCount > 0 ? pendingExportCount : null },
     { text: 'ລາຍງານ', icon: <ReportIcon />, path: '/reports', badge: null },
   ];
