@@ -129,6 +129,11 @@ function ExportDetail() {
     severity: 'success'
   });
 
+  const isAdmin = () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user && user.role === 'admin';
+  };
+  
   // Fetch export history when component mounts
   useEffect(() => {
     fetchExportHistory();
@@ -478,15 +483,25 @@ function ExportDetail() {
 
   // Handle delete export
   const handleDeleteExport = (id) => {
+    if (!isAdmin()) {
+      showSnackbar('ທ່ານບໍ່ມີສິດລົບ', 'error');
+      return;
+    }
     setSelectedExportId(id);
     setDeleteDialogOpen(true);
   };
 
   // Handle approve export
   const handleApproveExport = (id) => {
+    if (!isAdmin()) {
+      showSnackbar('ທ່ານບໍ່ມີສິດອະນຸມັດການນຳເຂົ້າ', 'error');
+      return;
+    }
+  
     setSelectedApproveId(id);
     setApproveDialogOpen(true);
   };
+  
   
   // Handle sort menu
   const handleOpenSortMenu = (event) => {
@@ -971,17 +986,18 @@ function ExportDetail() {
                 </Button>
                 
                 {getExportStatus(selectedExport) === 'ລໍຖ້າອະນຸມັດ' && (
-                  <Button 
-                    variant="contained" 
-                    color="success" 
-                    startIcon={<CheckCircleIcon />}
-                    onClick={() => {
-                      handleCloseDetailDialog();
-                      handleApproveExport(getExportId(selectedExport));
-                    }}
-                  >
-                    ອະນຸມັດ
-                  </Button>
+              <Button 
+  variant="contained" 
+  color="success" 
+  startIcon={<CheckCircleIcon />}
+  onClick={() => {
+    handleCloseDetailDialog();
+    handleApproveExport(getExportId(selectedExport));
+  }}
+  disabled={!isAdmin()} // ปิดปุ่มถ้าไม่ใช่แอดมิน
+>
+  ອະນຸມັດ
+</Button>
                 )}
                 
                 <Button 
@@ -992,6 +1008,7 @@ function ExportDetail() {
                     handleCloseDetailDialog();
                     handleDeleteExport(getExportId(selectedExport));
                   }}
+                  disabled={!isAdmin()} // ปิดปุ่มถ้าไม่ใช่แอดมิน
                 >
                   ລຶບ
                 </Button>
