@@ -79,6 +79,12 @@ function Import() {
     severity: 'success'
   });
   
+  const isAdmin = () => {
+    return currentUser?.role === 'admin' || 
+           currentUser?.user_type === 'admin' || 
+           currentUser?.emp_id === 1;
+  };
+  
   // Get current logged in user
   const currentUser = getCurrentUser();
 
@@ -545,20 +551,22 @@ const handleSubmitImport = async () => {
   };
 // ຟັງຊັນອະນຸມັດການນຳເຂົ້າສິນຄ້າ (ປັບປຸງໃຫ້ໃຊ້ກັບກ່ອງ Dialog)
 const handleApproveImport = async (importId) => {
+  if (!isAdmin()) {
+    showSnackbar('ທ່ານບໍ່ມີສິດອະນຸມັດການນຳເຂົ້າ', 'error');
+    return;
+  }
   try {
     setApproveLoading(true);
     
     // ຖ້າຮຽກຟັງຊັນຈາກປຸ່ມໃນຕາຕະລາງໂດຍກົງ, ມັນຈະສົ່ງ object
     const imp_id = typeof importId === 'object' ? importId.imp_id : importId;
     
-    // ເອີ້ນໃຊ້ API ເພື່ອອັບເດດສະຖານະ
     const response = await axios.put(`${API_BASE_URL}/import/Update/Status`, {
       imp_id: imp_id,
       status: 'Completed'
     });
     
     if (response.data && response.data.result_code === "200") {
-      // ອັບເດດຂໍ້ມູນ local
       const updatedImports = imports.map(item => 
         item.imp_id === imp_id 
           ? { ...item, status: 'Completed' } 
@@ -569,7 +577,6 @@ const handleApproveImport = async (importId) => {
       setOpenApproveDialog(false);
       showSnackbar('ອະນຸມັດການນຳເຂົ້າສຳເລັດແລ້ວ', 'success');
       
-      // ໂຫລດຂໍ້ມູນໃໝ່
       await fetchImports();
       await fetchPendingOrders();
     } else {
@@ -760,18 +767,18 @@ const handleApproveImport = async (importId) => {
                     </Button>
                     
             {/* Show approve button only for pending status */}
-{importItem.status !== 'Completed' && (
-  <Button
-    variant="contained"
-    color="success"
-    size="small"
-    startIcon={<CheckCircleIcon />}
-    onClick={() => handleOpenApproveDialog(importItem)}
-    disabled={loading}
-  >
-    ອະນຸມັດ
-  </Button>
-)}
+                {importItem.status !== 'Completed' && currentUser?.role === 'admin' && (
+      <Button
+        variant="contained"
+        color="success"
+        size="small"
+        startIcon={<CheckCircleIcon />}
+        onClick={() => handleOpenApproveDialog(importItem)}
+        disabled={loading}
+      >
+        ອະນຸມັດ
+      </Button>
+    )}
                     
                     {/* ເພີ່ມປຸ່ມລຶບສຳລັບລາຍການທີ່ມີສະຖານະ ລໍຖ້າ */}
                     {importItem.status !== 'Completed' && (
