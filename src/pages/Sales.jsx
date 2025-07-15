@@ -32,7 +32,8 @@ import {
   Badge,
   useTheme,
   useMediaQuery,
-  Stack
+  Stack,
+  MenuItem
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -83,6 +84,12 @@ function Sales() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
+
+  const [categories, setCategories] = useState([]);
+const [brands, setBrands] = useState([]);
+const [categoryFilter, setCategoryFilter] = useState('');
+const [brandFilter, setBrandFilter] = useState('');
+
   
   // Alerts
   const [alertOpen, setAlertOpen] = useState(false);
@@ -185,7 +192,36 @@ function Sales() {
       setFilteredCustomers(filtered);
     }
   }, [customerSearch, customers]);
-
+  useEffect(() => {
+    let filtered = products;
+  
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(product =>
+        product.ProductName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.proid?.toString().includes(searchTerm)
+      );
+    }
+  
+    if (categoryFilter) {
+      filtered = filtered.filter(product => product.category === categoryFilter);
+    }
+  
+    if (brandFilter) {
+      filtered = filtered.filter(product => product.brand === brandFilter);
+    }
+  
+    setFilteredProducts(filtered);
+  }, [searchTerm, categoryFilter, brandFilter, products]);
+  
+  useEffect(() => {
+    if (products.length > 0) {
+      const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+      const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+      setCategories(uniqueCategories);
+      setBrands(uniqueBrands);
+    }
+  }, [products]);
+  
   // Handle amount paid input
   const handleAmountPaidChange = (e) => {
     // Remove commas first
@@ -586,6 +622,7 @@ const handleSaveSale = async () => {
             </Box>
             
             <TextField
+            
               fullWidth
               placeholder="ຄົ້ນຫາສິນຄ້າ..."
               value={searchTerm}
@@ -598,7 +635,40 @@ const handleSaveSale = async () => {
                   </InputAdornment>
                 ),
               }}
+              
             />
+            <Grid container spacing={1} sx={{ mb: 2 }}>
+  <Grid item xs={6}>
+    <TextField
+      fullWidth
+      select
+      size="small"
+      label="ກອງປະເພດ"
+      value={categoryFilter}
+      onChange={(e) => setCategoryFilter(e.target.value)}
+    >
+      <MenuItem value="">ທັງໝົດ</MenuItem>
+      {categories.map((cat) => (
+        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+      ))}
+    </TextField>
+  </Grid>
+  <Grid item xs={6}>
+    <TextField
+      fullWidth
+      select
+      size="small"
+      label="ກອງຍີ່ຫໍ້"
+      value={brandFilter}
+      onChange={(e) => setBrandFilter(e.target.value)}
+    >
+      <MenuItem value="">ທັງໝົດ</MenuItem>
+      {brands.map((brand) => (
+        <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+      ))}
+    </TextField>
+  </Grid>
+</Grid>
 
             <TableContainer sx={{ maxHeight: isTablet ? 300 : 450, borderRadius: 1 }}>
               <Table stickyHeader size="small">
