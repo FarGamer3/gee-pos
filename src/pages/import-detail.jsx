@@ -90,10 +90,23 @@ function ImportDetail() {
     }
   };
   
-  // Handle the print functionality
+  // Handle the print functionality - FIXED VERSION
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef, // Changed from 'content' to 'contentRef'
     documentTitle: `ໃບນຳເຂົ້າສິນຄ້າ-${importId}`,
+    onBeforeGetContent: () => {
+      // Optional: You can return a promise here if you need to do something before printing
+      return Promise.resolve();
+    },
+    onAfterPrint: () => {
+      // Optional: Show success message after printing
+      showSnackbar('ພິມໃບນຳເຂົ້າສິນຄ້າສຳເລັດແລ້ວ', 'success');
+    },
+    onPrintError: (error) => {
+      // Optional: Handle print errors
+      console.error('Print error:', error);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການພິມ', 'error');
+    }
   });
   
   // Handle back button click
@@ -201,7 +214,7 @@ function ImportDetail() {
       ) : error ? (
         <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
       ) : (
-        <div ref={printRef} style={{ padding: '15px' }}>
+        <div ref={printRef}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
               <Typography variant="h5" fontWeight="bold" gutterBottom>

@@ -606,14 +606,14 @@ const handleSaveExport = async () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
+          {/* <Button 
             variant="contained" 
             color="primary" 
             startIcon={<PrintIcon />}
             onClick={handlePrintExport}
           >
             ພິມ
-          </Button>
+          </Button> */}
         </DialogActions>
       </Dialog>
       
@@ -1018,7 +1018,7 @@ const handleSaveExport = async () => {
 
               {/* Action buttons */}
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 2 }}>
-                <Button
+                {/* <Button
                   variant="outlined"
                   color="primary"
                   startIcon={<PrintIcon />}
@@ -1026,7 +1026,7 @@ const handleSaveExport = async () => {
                   disabled={exportItems.length === 0 || loading}
                 >
                   ພິມ
-                </Button>
+                </Button> */}
                 <Button
                   variant="contained"
                   color="success"

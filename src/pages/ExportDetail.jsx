@@ -683,17 +683,66 @@ function ExportDetail() {
       printWindow.document.write('<html><head><title>ໃບນຳອອກສິນຄ້າ</title>');
       printWindow.document.write('<style>');
       printWindow.document.write(`
-        body { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif; padding: 20px; }
-        .export-header { text-align: center; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
-        thead { background-color: #f0f0f0; }
-        .signatures { display: flex; justify-content: space-around; margin-top: 50px; }
-        .signature-box { width: 200px; text-align: center; }
-        .signature-line { border-top: 1px solid #000; margin-top: 70px; padding-top: 10px; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700&display=swap');
+        body { 
+          font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif; 
+          padding: 20px;
+          direction: ltr;
+        }
+        .print-header { 
+          text-align: center; 
+          margin-bottom: 30px;
+        }
+        .print-title {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        .print-date {
+          font-size: 18px;
+          margin-bottom: 20px;
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-bottom: 30px; 
+        }
+        th, td { 
+          padding: 10px; 
+          border: 1px solid #000; 
+          text-align: center; 
+          font-size: 14px;
+        }
+        th { 
+          background-color: #f0f0f0; 
+          font-weight: bold;
+        }
+        .signatures { 
+          display: flex; 
+          justify-content: space-around; 
+          margin-top: 50px;
+          width: 100%;
+        }
+        .signature-box { 
+          width: 200px; 
+          text-align: center;
+        }
+        .signature-line { 
+          border-top: 1px solid #000; 
+          margin-top: 70px; 
+          padding-top: 10px; 
+        }
         @media print {
-          body { margin: 0; padding: 0.5cm; }
-          table { page-break-inside: avoid; }
+          body { 
+            margin: 0; 
+            padding: 0.5cm; 
+          }
+          table { 
+            page-break-inside: avoid; 
+          }
+          .no-print {
+            display: none;
+          }
         }
       `);
       printWindow.document.write('</style></head><body>');
@@ -1041,64 +1090,56 @@ function ExportDetail() {
         
         <DialogContent sx={{ mt: 2 }}>
           {selectedExport && (
-            <div ref={printRef}>
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 'bold' }}>
-                  ໃບນຳອອກສິນຄ້າ
-                </Typography>
-                <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                  ວັນທີ: {getExportDate(selectedExport)}
-                </Typography>
-                
-                {detailsLoading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                    <CircularProgress />
-                  </Box>
-                ) : selectedExportItems.length > 0 ? (
-                  <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-                    <Table>
-                      <TableHead sx={{ bgcolor: 'background.default' }}>
-                        <TableRow>
-                          <TableCell align="center" width="5%">#</TableCell>
-                          <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
-                          <TableCell align="center">ຈຳນວນ</TableCell>
-                          <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
-                          <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {selectedExportItems.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell align="center">{index + 1}</TableCell>
-                            <TableCell align="center">{getProductName(item)}</TableCell>
-                            <TableCell align="center">{getExportQuantity(item)}</TableCell>
-                            <TableCell align="center">{getExportLocation(item)}</TableCell>
-                            <TableCell align="center">{getExportReason(item)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Alert severity="info" sx={{ mb: 3 }}>ບໍ່ພົບຂໍ້ມູນລາຍລະອຽດສິນຄ້າ</Alert>
-                )}
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 5 }}>
-                  <Box sx={{ textAlign: 'center', width: '200px' }}>
-                    <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
-                    <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                      <Typography variant="body2">ລາຍເຊັນ</Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', width: '200px' }}>
-                    <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
-                    <Box sx={{ borderTop: '1px solid #ccc', mt: 8, pt: 1 }}>
-                      <Typography variant="body2">ລາຍເຊັນ</Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </div>
+        <div ref={printRef}>
+        <Box className="print-header">
+          <Typography variant="h5" className="print-title">
+            ໃບນຳອອກສິນຄ້າ
+          </Typography>
+          <Typography variant="h6" className="print-date">
+            ວັນທີ: {getExportDate(selectedExport)}
+          </Typography>
+        </Box>
+        
+        <TableContainer component={Paper} variant="outlined">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" width="5%">#</TableCell>
+                <TableCell align="center">ຊື່ສິນຄ້າ</TableCell>
+                <TableCell align="center">ຈຳນວນ</TableCell>
+                <TableCell align="center">ບ່ອນຈັດວາງ</TableCell>
+                <TableCell align="center">ສາເຫດການນຳອອກ</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedExportItems.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell align="center">{index + 1}</TableCell>
+                  <TableCell align="center">{getProductName(item)}</TableCell>
+                  <TableCell align="center">{getExportQuantity(item)}</TableCell>
+                  <TableCell align="center">{getExportLocation(item)}</TableCell>
+                  <TableCell align="center">{getExportReason(item)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        <Box className="signatures">
+          <Box className="signature-box">
+            <Typography variant="body2">ຜູ້ນຳອອກ</Typography>
+            <Box className="signature-line">
+              <Typography variant="body2">ລາຍເຊັນ</Typography>
+            </Box>
+          </Box>
+          <Box className="signature-box">
+            <Typography variant="body2">ຜູ້ອະນຸມັດ</Typography>
+            <Box className="signature-line">
+              <Typography variant="body2">ລາຍເຊັນ</Typography>
+            </Box>
+          </Box>
+        </Box>
+      </div>
           )}
         </DialogContent>
         <DialogActions>
