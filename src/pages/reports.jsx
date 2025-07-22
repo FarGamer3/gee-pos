@@ -18,6 +18,7 @@ import {
   CircularProgress,
   Card,
   CardContent,
+  Chip,
   Divider,
   Alert,
   IconButton,
@@ -166,127 +167,263 @@ function Reports() {
 
   const fetchAllData = async () => {
     setLoading(true);
-    setError(null);
+  setError(null);
+  
+  try {
+    let data = [];
     
-    try {
-      let data = [];
-      
-      switch(reportType) {
-        case 'products':
-          const productsRes = await axios.get(`${API_BASE_URL}/All/Product`);
-          data = productsRes.data.products || [];
-          break;
-          
-        case 'categories':
-          const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
-          data = categoriesRes.data.user_info || [];
-          break;
-          
-        case 'brands':
-          const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
-          data = brandsRes.data.user_info || [];
-          break;
-          
-        case 'locations':
-          const locationsRes = await axios.get(`${API_BASE_URL}/All/Zone`);
-          data = locationsRes.data.user_info || [];
-          break;
-          
-        case 'employees':
-          const employeesRes = await axios.get(`${API_BASE_URL}/users/All/Employee`);
-          data = employeesRes.data.user_info || [];
-          break;
-          
-        case 'suppliers':
-          const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
-          data = suppliersRes.data.user_info || [];
-          break;
-          
-        case 'customers':
-          const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
-          data = customersRes.data.user_info || [];
-          break;
-          
-        case 'sales':
-          try {
-            const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-            
-            if (salesRes.data && salesRes.data.result_code === "200") {
-              // Access the correct property in the API response
-              data = salesRes.data.sales_data || [];
-              
-              // Reset date filters when fetching new sales data
-              setStartDate('');
-              setEndDate('');
-              
-              // Store original data for filtering later
-              setReportData(prev => ({
-                ...prev,
-                originalSales: data
-              }));
-              
-              console.log('Sales data found:', data.length);
-            } else {
-              console.warn('Sales API returned unexpected format:', salesRes.data);
-              data = [];
-            }
-          } catch (err) {
-            console.error('Error fetching sales data:', err);
+    switch(reportType) {
+      case 'products':
+        const productsRes = await axios.get(`${API_BASE_URL}/All/Product`);
+        data = productsRes.data.products || [];
+        break;
+        
+      case 'categories':
+        const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
+        data = categoriesRes.data.categories || [];
+        break;
+        
+      case 'brands':
+        const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
+        data = brandsRes.data.brands || [];
+        break;
+        
+      case 'locations':
+        const locationsRes = await axios.get(`${API_BASE_URL}/All/Location`);
+        data = locationsRes.data.locations || [];
+        break;
+        
+      case 'employees':
+        const employeesRes = await axios.get(`${API_BASE_URL}/All/Employee`);
+        data = employeesRes.data.user_info || [];
+        break;
+        
+      case 'suppliers':
+        const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
+        data = suppliersRes.data.user_info || [];
+        break;
+        
+      case 'customers':
+        const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
+        data = customersRes.data.user_info || [];
+        break;
+        
+      case 'purchases':
+        // ໃຊ້ຟັງຊັນພິເສດທີ່ມີລາຍລະອຽດ
+        showSnackbar('ກຳລັງດຶງຂໍ້ມູນການສັ່ງຊື້ ແລະ ລາຍລະອຽດ...', 'info');
+        data = await fetchPurchasesWithDetails();
+        showSnackbar(`ດຶງຂໍ້ມູນສຳເລັດ: ${data.length} ລາຍການ`, 'success');
+        break;
+        
+      case 'sales':
+        const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+        data = salesRes.data.sales_data || [];
+        break;
+        
+      case 'imports':
+        const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
+        data = importsRes.data.imports || [];
+        break;
+        
+      case 'exports':
+        try {
+          const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
+          if (exportsRes.data && exportsRes.data.result_code === "200") {
+            data = exportsRes.data.exports || [];
+            data = data.map((item, index) => ({
+              ...item,
+              export_id: item.export_id || item.exp_id || `exp-${index}`,
+              export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
+            }));
+          } else {
+            console.warn('Exports API returned unexpected format:', exportsRes.data);
             data = [];
           }
-          break;
-          
-        case 'purchases':
-          const purchasesRes = await axios.get(`${API_BASE_URL}/order/All/Order`);
-          data = purchasesRes.data.user_info || [];
-          break;
-          
-        case 'imports':
-          const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
-          data = importsRes.data.imports || [];
-          break;
-          
-        case 'exports':
-          try {
-            const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
-            
-            if (exportsRes.data && exportsRes.data.result_code === "200") {
-              // Make sure we're accessing the correct property in the API response
-              data = exportsRes.data.exports || [];
-              
-              // Process data to ensure consistent structure
-              data = data.map((item, index) => ({
-                ...item,
-                // Ensure export_id is available
-                export_id: item.export_id || item.exp_id || `exp-${index}`,
-                // Ensure export_date is available
-                export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
-              }));
-              
-              console.log('Export data processed:', data.length);
-            } else {
-              console.warn('Exports API returned unexpected format:', exportsRes.data);
-              data = [];
-            }
-          } catch (err) {
-            console.error('Error fetching exports data:', err);
-            data = [];
-          }
-          break;
-      }
-
-      setReportData(prev => ({
-        ...prev,
-        [reportType]: data
-      }));
-
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ');
-    } finally {
-      setLoading(false);
+        } catch (err) {
+          console.error('Error fetching exports data:', err);
+          data = [];
+        }
+        break;
+        
+      default:
+        console.warn(`ບໍ່ຮູ້ຈັກປະເພດລາຍງານ: ${reportType}`);
+        break;
     }
-  };
+
+    setReportData(prev => ({
+      ...prev,
+      [reportType]: data
+    }));
+
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    const errorMessage = err.response?.data?.result || err.message || 'ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ';
+    setError(errorMessage);
+    showSnackbar(errorMessage, 'error');
+  } finally {
+    setLoading(false);
+  }
+};
+  
+  
+
+// ຟັງຊັນສຳລັບດຶງຂໍ້ມູນລາຍການສັ່ງຊື້ພ້ອມຈຳນວນ ແລະ ລາຄາຕົ້ນທຶນ
+const fetchPurchasesWithDetails = async () => {
+  try {
+    // ດຶງຂໍ້ມູນການສັ່ງຊື້ຫລັກ
+    const ordersRes = await axios.get(`${API_BASE_URL}/order/All/Order`);
+    let orders = ordersRes.data.user_info || [];
+    
+    // ດຶງຂໍ້ມູນການນຳເຂົ້າເພື່ອເອົາສະຖານະ
+    const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
+    const imports = importsRes.data.imports || [];
+    
+    // ສ້າງແມັບການນຳເຂົ້າຕາມ order_id
+    const importMap = {};
+    imports.forEach(imp => {
+      importMap[imp.order_id] = imp;
+    });
+    
+    // ດຶງລາຍລະອຽດຂອງແຕ່ລະການສັ່ງຊື້
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        // ຫາສະຖານະຈາກຕາຕະລາງ import
+        const importRecord = importMap[order.order_id];
+        let status = 'ລໍຖ້າ'; // ຄ່າເລີ່ມຕົ້ນ
+        
+        if (importRecord) {
+          // ແປງສະຖານະເປັນພາສາລາວ
+          switch (importRecord.status) {
+            case 'Pending':
+              status = 'ກຳລັງດຳເນີນການ';
+              break;
+            case 'Completed':
+              status = 'ສຳເລັດ';
+              break;
+            case 'Cancelled':
+              status = 'ຍົກເລີກ';
+              break;
+            default:
+              status = importRecord.status || 'ລໍຖ້າ';
+          }
+        }
+        
+        try {
+          // ໃຊ້ endpoint ທີ່ຖືກຕ້ອງສຳລັບດຶງລາຍລະອຽດ
+          const detailsRes = await axios.post(`${API_BASE_URL}/import/Order/Products`, {
+            order_id: order.order_id
+          });
+          
+          let orderDetails = [];
+          
+          if (detailsRes.data && detailsRes.data.result_code === "200") {
+            orderDetails = detailsRes.data.order_products || [];
+          } else {
+            // ຖ້າ API ຫລັກໃຊ້ບໍ່ໄດ້, ລອງວິທີສຳຮອງ
+            try {
+              const fallbackRes = await axios.post(`${API_BASE_URL}/order/Order_Detail/With/OrderID`, {
+                order_id: order.order_id
+              });
+              
+              if (fallbackRes.data && fallbackRes.data.result_code === "200") {
+                orderDetails = fallbackRes.data.user_info || [];
+                // ປັບແຕ່ງຂໍ້ມູນເພື່ອໃຫ້ເປັນໄປຕາມຮູບແບບ
+                orderDetails = orderDetails.map(item => ({
+                  ...item,
+                  cost_price: item.cost_price || 0,
+                  qty: item.qty || 0
+                }));
+              }
+            } catch (fallbackErr) {
+              console.warn(`API ສຳຮອງບໍ່ສາມາດໃຊ້ໄດ້ສຳລັບການສັ່ງຊື້ ${order.order_id}`);
+            }
+          }
+          
+          // ຄິດໄລ່ຈຳນວນລາຍການ ແລະ ລາຄາຕົ້ນທຶນລວມ
+          const totalItems = orderDetails.length;
+          const totalCost = orderDetails.reduce((sum, item) => {
+            return sum + ((item.qty || 0) * (item.cost_price || 0));
+          }, 0);
+          
+          return {
+            ...order,
+            total_items: totalItems,
+            total_cost: totalCost,
+            status: status, // ເພີ່ມສະຖານະ
+            import_record: importRecord, // ເພີ່ມຂໍ້ມູນການນຳເຂົ້າ
+            order_details: orderDetails
+          };
+        } catch (error) {
+          console.warn(`ບໍ່ສາມາດດຶງລາຍລະອຽດສຳລັບການສັ່ງຊື້ ${order.order_id}:`, error.message);
+          return {
+            ...order,
+            total_items: 0,
+            total_cost: 0,
+            status: status, // ເພີ່ມສະຖານະ
+            import_record: importRecord,
+            order_details: []
+          };
+        }
+      })
+    );
+    
+    return ordersWithDetails;
+  } catch (error) {
+    console.error('ຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນການສັ່ງຊື້:', error);
+    throw error;
+  }
+};
+
+const renderOrderDetails = (order) => {
+  if (!order.order_details || order.order_details.length === 0) {
+    return null;
+  }
+  
+  return (
+    <TableContainer component={Paper} sx={{ mt: 2 }}>
+      <Typography variant="h6" sx={{ p: 2 }}>
+        ລາຍລະອຽດການສັ່ງຊື້ #{order.order_id}
+      </Typography>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>ສິນຄ້າ</TableCell>
+            <TableCell align="center">ຈຳນວນ</TableCell>
+            <TableCell align="right">ລາຄາຕົ້ນທຶນ/ໜ່ວຍ</TableCell>
+            <TableCell align="right">ລາຄາລວມ</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {order.order_details.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell>{item.ProductName || '-'}</TableCell>
+              <TableCell align="center">{item.qty || 0}</TableCell>
+              <TableCell align="right">
+                {formatNumber(item.cost_price || 0)} ກີບ
+              </TableCell>
+              <TableCell align="right">
+                {formatNumber((item.qty || 0) * (item.cost_price || 0))} ກີບ
+              </TableCell>
+            </TableRow>
+          ))}
+          <TableRow>
+            <TableCell colSpan={3} align="right">
+              <Typography variant="subtitle2" fontWeight="bold">
+                ລວມທັງໝົດ:
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              <Typography variant="subtitle2" fontWeight="bold">
+                {formatNumber(order.total_cost || 0)} ກີບ
+              </Typography>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
 
   // ຟັງຊັນກອງຂໍ້ມູນຕາມວັນທີ
 
@@ -752,39 +889,79 @@ const filterByDateRange = () => {
     </TableContainer>
   );
 
-  // 8. ລາຍງານການສັ່ງຊື້
-  const renderPurchasesReport = () => (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>ເລກທີ່</TableCell>
-            <TableCell>ວັນທີ່</TableCell>
-            <TableCell>ຜູ້ສະໜອງ</TableCell>
-            <TableCell>ພະນັກງານ</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {reportData.purchases.length > 0 ? (
-            reportData.purchases.map((order) => (
-              <TableRow key={order.order_id}>
-                <TableCell>{order.order_id}</TableCell>
-                <TableCell>{formatDate(order.order_date)}</TableCell>
-                <TableCell>{order.supplier}</TableCell>
-                <TableCell>{order.employee}</TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} align="center">
-                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການສັ່ງຊື້'}
+// 8. ລາຍງານການສັ່ງຊື້ - ປັບປຸງໃໝ່ເພື່ອເພີ່ມຈຳນວນ ແລະ ລາຄາຕົ້ນທຶນ
+const renderPurchasesReport = () => (
+  <TableContainer component={Paper}>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>ເລກທີ່</TableCell>
+          <TableCell>ວັນທີ່</TableCell>
+          <TableCell>ຂື້ສະໜອງ</TableCell>
+          <TableCell>ພະນັກງານ</TableCell>
+          <TableCell align="center">ຈຳນວນລາຍການ</TableCell>
+          <TableCell align="right">ລາຄາຕົ້ນທຶນລວມ</TableCell>
+          <TableCell align="center">ສະຖານະ</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {reportData.purchases.length > 0 ? (
+          reportData.purchases.map((order) => (
+            <TableRow key={order.order_id}>
+              <TableCell>{order.order_id}</TableCell>
+              <TableCell>{formatDate(order.order_date)}</TableCell>
+              <TableCell>{order.supplier || order.supplier_name || order.sup_name || '-'}</TableCell>
+              <TableCell>{order.employee || order.emp_name || '-'}</TableCell>
+              <TableCell align="center">
+                <Typography variant="body2" color={order.total_items > 0 ? 'primary' : 'text.secondary'}>
+                  {order.total_items || 0} ລາຍການ
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2" color={order.total_cost > 0 ? 'success.main' : 'text.secondary'}>
+                  {formatNumber(order.total_cost || 0)} ກີບ
+                </Typography>
+              </TableCell>
+              <TableCell align="center">
+                <Tooltip 
+                  title={
+                    order.import_record ? 
+                    `ວັນທີນຳເຂົ້າ: ${formatDate(order.import_record.imp_date)} | ມູນຄ່າ: ${formatNumber(order.import_record.total_price)} ກີບ` :
+                    'ຍັງບໍ່ໄດ້ນຳເຂົ້າ'
+                  }
+                  arrow
+                >
+                  <Chip 
+                    label={order.status} 
+                    color={
+                      order.status === 'ສຳເລັດ' ? 'success' :
+                      order.status === 'ກຳລັງດຳເນີນການ' ? 'warning' :
+                      order.status === 'ຍົກເລີກ' ? 'error' :
+                      'default'
+                    }
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      fontWeight: 'bold',
+                      minWidth: '90px',
+                      cursor: 'help'
+                    }}
+                  />
+                </Tooltip>
               </TableCell>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={7} align="center">
+              {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການສັ່ງຊື້'}
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
 
   // 9. ລາຍງານການຂາຍ
   const renderSalesReport = () => (
