@@ -176,36 +176,45 @@ function Reports() {
         case 'products':
           // ☑️ Confirmed path from routes/index.js
           const productsRes = await axios.get(`${API_BASE_URL}/All/Product`);
+          console.log('Products API Response:', productsRes.data);
           data = productsRes.data.products || [];
           break;
           
         case 'categories':
           // ☑️ Confirmed path from routes/index.js
           const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
-          data = categoriesRes.data.categories || [];
+          console.log('Categories API Response:', categoriesRes.data);
+          // ຕາມຂໍ້ມູນໃນ Export.jsx, ໃຊ້ .categories
+          data = categoriesRes.data.categories || categoriesRes.data.user_info || [];
           break;
           
         case 'brands':
-          // ☑️ Confirmed path from routes/index.js
+          // ☑️ Confirmed path from routes/index.js  
           const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
-          data = brandsRes.data.brands || [];
+          console.log('Brands API Response:', brandsRes.data);
+          // ອາດຈະເປັນ .brands ຫຼື .user_info
+          data = brandsRes.data.brands || brandsRes.data.user_info || [];
           break;
           
         case 'locations':
           // ☑️ Confirmed path from routes/index.js
           const locationsRes = await axios.get(`${API_BASE_URL}/All/Zone`);
-          data = locationsRes.data.zones || [];
+          console.log('Zones API Response:', locationsRes.data);
+          // ຕາມຂໍ້ມູນໃນ Export.jsx ແລະ zoneService.js, ໃຊ້ .user_info
+          data = locationsRes.data.zones || locationsRes.data.user_info || [];
           break;
           
         case 'employees':
           // ☑️ Confirmed path from routes/users.js (needs /users prefix)
           try {
             const employeesRes = await axios.get(`${API_BASE_URL}/users/All/Employee`);
+            console.log('Employees API Response:', employeesRes.data);
             data = employeesRes.data.user_info || [];
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ employees:', error.message);
             // Fallback without /users prefix
             const employeesRes = await axios.get(`${API_BASE_URL}/All/Employee`);
+            console.log('Employees Fallback API Response:', employeesRes.data);
             data = employeesRes.data.user_info || [];
           }
           break;
@@ -214,12 +223,15 @@ function Reports() {
           // ☑️ Confirmed path from routes/users.js (needs /users prefix)
           try {
             const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
-            data = suppliersRes.data.suppliers || [];
+            console.log('Suppliers API Response:', suppliersRes.data);
+            // ຕາມຂໍ້ມູນໃນ salesService.js, ອາດຈະເປັນ .user_info
+            data = suppliersRes.data.suppliers || suppliersRes.data.user_info || [];
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ suppliers:', error.message);
             // Fallback without /users prefix
             const suppliersRes = await axios.get(`${API_BASE_URL}/All/Supplier`);
-            data = suppliersRes.data.suppliers || [];
+            console.log('Suppliers Fallback API Response:', suppliersRes.data);
+            data = suppliersRes.data.suppliers || suppliersRes.data.user_info || [];
           }
           break;
           
@@ -227,18 +239,22 @@ function Reports() {
           // ☑️ Confirmed path from routes/users.js (needs /users prefix)
           try {
             const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
-            data = customersRes.data.customers || [];
+            console.log('Customers API Response:', customersRes.data);
+            // ຕາມຂໍ້ມູນໃນ salesService.js, ໃຊ້ .user_info
+            data = customersRes.data.customers || customersRes.data.user_info || [];
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ customers:', error.message);
             // Fallback without /users prefix
             const customersRes = await axios.get(`${API_BASE_URL}/All/Customer`);
-            data = customersRes.data.customers || [];
+            console.log('Customers Fallback API Response:', customersRes.data);
+            data = customersRes.data.customers || customersRes.data.user_info || [];
           }
           break;
           
         case 'sales':
           // ☑️ Confirmed path from routes/sale.js (needs /sale prefix)
           const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+          console.log('Sales API Response:', salesRes.data);
           const salesData = salesRes.data.sales_data || [];
           
           // ດຶງຂໍ້ມູນສິນຄ້າທັງໝົດເພື່ອເອົາລາຄາຕົ້ນທຶນ
@@ -298,11 +314,13 @@ function Reports() {
           // ☑️ Try different endpoints for orders
           try {
             const purchasesRes = await axios.get(`${API_BASE_URL}/order/All/Order`);
+            console.log('Purchases API Response:', purchasesRes.data);
             data = await fetchPurchasesWithDetails(purchasesRes.data.orders || purchasesRes.data.user_info || []);
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ purchases:', error.message);
             // Fallback endpoint
             const purchasesRes = await axios.get(`${API_BASE_URL}/All/Order`);
+            console.log('Purchases Fallback API Response:', purchasesRes.data);
             data = await fetchPurchasesWithDetails(purchasesRes.data.orders || purchasesRes.data.user_info || []);
           }
           break;
@@ -311,11 +329,13 @@ function Reports() {
           // ☑️ Confirmed path from routes/import.js (needs /import prefix)
           try {
             const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
+            console.log('Imports API Response:', importsRes.data);
             data = importsRes.data.imports || [];
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ imports:', error.message);
             // Fallback endpoint
             const importsRes = await axios.get(`${API_BASE_URL}/All/Import`);
+            console.log('Imports Fallback API Response:', importsRes.data);
             data = importsRes.data.imports || [];
           }
           break;
@@ -324,12 +344,14 @@ function Reports() {
           // ☑️ Try export endpoint (may need specific prefix)
           try {
             const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
+            console.log('Exports API Response:', exportsRes.data);
             data = exportsRes.data.exports || [];
           } catch (error) {
             console.warn('ລອງ fallback endpoint สำหรับ exports:', error.message);
             // Fallback endpoint
             try {
               const exportsRes = await axios.get(`${API_BASE_URL}/All/Export`);
+              console.log('Exports Fallback API Response:', exportsRes.data);
               data = exportsRes.data.exports || [];
             } catch (fallbackError) {
               console.warn('ທັງສອງ endpoint ບໍ່ເຮັດວຽກ, ໃຊ້ຂໍ້ມູນວ່າງ:', fallbackError.message);
@@ -342,6 +364,9 @@ function Reports() {
           data = [];
       }
   
+      // ລອກຂໍ້ມູນທີ່ໄດ້ຮັບ
+      console.log(`Final data for ${reportType}:`, data);
+  
       // ອັບເດດຂໍ້ມູນຕາມປະເພດລາຍງານ
       setReportData(prev => ({
         ...prev,
@@ -350,7 +375,7 @@ function Reports() {
         [`original${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`]: data
       }));
       
-      showSnackbar(`ໂຫຼດຂໍ້ມູນ${reportTypes.find(r => r.value === reportType)?.label}ສຳເລັດແລ້ວ`, 'success');
+      showSnackbar(`ໂຫຼດຂໍ້ມູນ${reportTypes.find(r => r.value === reportType)?.label}ສຳເລັດແລ້ວ (${data.length} ລາຍການ)`, 'success');
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(`ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້: ${error.message}`);
@@ -1225,8 +1250,46 @@ const renderSalesReport = () => {
   );
 };
 
-  // 10. ລາຍງານການນຳເຂົ້າ
-  const renderImportsReport = () => (
+// 10. ລາຍງານການນຳເຂົ້າ - ປັບປຸງດ້ວຍສະຖານະພາສາລາວແລະສີ
+const renderImportsReport = () => {
+  // ຟັງຊັນແປງສະຖານະເປັນພາສາລາວ
+  const getStatusInLao = (status) => {
+    const statusMap = {
+      'Completed': 'ສຳເລັດ',
+      'Pending': 'ລໍຖ້າ',
+      'Processing': 'ກຳລັງດຳເນີນການ',
+      'Cancelled': 'ຍົກເລີກ',
+      'Approved': 'ອະນຸມັດແລ້ວ',
+      'Rejected': 'ປະຕິເສດ'
+    };
+    return statusMap[status] || status || '-';
+  };
+
+  // ຟັງຊັນເລືອກສີຕາມສະຖານະ (ໃຊ້ສີ white ເພື່ອໃຫ້ແຈ້ງ)
+  const getStatusColor = (status) => {
+    // ໃຊ້ສີຂາວສຳລັບທຸກສະຖານະເພື່ອໃຫ້ເຫັນແຈ້ງ
+    return 'white';
+  };
+
+  // ຟັງຊັນເລືອກ background color ຂອງ Chip (ໃຊ້ສີເຂັ້ມເພື່ອໃຫ້ຕົວອັກສອນສີຂາວເຫັນແຈ້ງ)
+  const getStatusBgColor = (status) => {
+    const bgColorMap = {
+      'Completed': '#4caf50',         // ເຂຍວເຂັ້ມ
+      'ສຳເລັດ': '#4caf50',
+      'Pending': '#ff9800',           // ສີເຫຼືອງເຂັ້ມ  
+      'ລໍຖ້າ': '#ff9800',
+      'Processing': '#2196f3',        // ສີຟ້າເຂັ້ມ
+      'ກຳລັງດຳເນີນການ': '#2196f3',
+      'Cancelled': '#f44336',         // ແດງເຂັ້ມ
+      'ຍົກເລີກ': '#f44336',
+      'Approved': '#4caf50',          // ເຂຍວເຂັ້ມ
+      'ອະນຸມັດແລ້ວ': '#4caf50',
+      'Rejected': '#f44336'           // ແດງເຂັ້ມ
+    };
+    return bgColorMap[status] || '#9e9e9e'; // ເທົາເຂັ້ມສຳລັບສະຖານະທີ່ບໍ່ຮູ້ຈັກ
+  };
+
+  return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
@@ -1241,27 +1304,103 @@ const renderSalesReport = () => {
         </TableHead>
         <TableBody>
           {reportData.imports.length > 0 ? (
-            reportData.imports.map((imp) => (
-              <TableRow key={imp.imp_id}>
-                <TableCell>{imp.imp_id}</TableCell>
-                <TableCell>{formatDate(imp.imp_date)}</TableCell>
-                <TableCell>{imp.order_id}</TableCell>
-                <TableCell>{imp.emp_name}</TableCell>
-                <TableCell align="right">{formatNumber(imp.total_price)} ກີບ</TableCell>
-                <TableCell align="center">{imp.status}</TableCell>
-              </TableRow>
-            ))
+            reportData.imports.map((imp) => {
+              const statusInLao = getStatusInLao(imp.status);
+              const statusColor = getStatusColor(imp.status);
+              const statusBgColor = getStatusBgColor(imp.status);
+              
+              return (
+                <TableRow key={imp.imp_id}>
+                  <TableCell>{imp.imp_id}</TableCell>
+                  <TableCell>{formatDate(imp.imp_date)}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="primary.main" fontWeight="medium">
+                      #{imp.order_id}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {imp.emp_name || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography 
+                      variant="body2" 
+                      fontWeight="medium"
+                      color="text.primary"
+                    >
+                      {formatNumber(imp.total_price)} ກີບ
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      label={statusInLao}
+                      size="small"
+                      sx={{
+                        bgcolor: statusBgColor,
+                        color: statusColor,
+                        fontWeight: 'bold',
+                        minWidth: '80px',
+                        fontSize: '0.75rem',
+                        '& .MuiChip-label': {
+                          px: 1.5
+                        }
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={6} align="center">
-                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳເຂົ້າ'}
+                <Typography variant="body2" color="text.secondary">
+                  {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳເຂົ້າ'}
+                </Typography>
               </TableCell>
             </TableRow>
+          )}
+          
+          {/* ສະລຸບລວມຖ້າມີຂໍ້ມູນ */}
+          {reportData.imports.length > 0 && (
+            <>
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Divider sx={{ my: 1 }} />
+                </TableCell>
+              </TableRow>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell colSpan={4} align="right">
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    ລວມທັງໝົດ ({reportData.imports.length} ລາຍການ):
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography 
+                    variant="subtitle2" 
+                    fontWeight="bold"
+                    color="primary.main"
+                  >
+                    {formatNumber(
+                      reportData.imports.reduce((sum, imp) => sum + (imp.total_price || 0), 0)
+                    )} ກີບ
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {reportData.imports.filter(imp => 
+                      getStatusInLao(imp.status) === 'ສຳເລັດ'
+                    ).length} ສຳເລັດ
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            </>
           )}
         </TableBody>
       </Table>
     </TableContainer>
   );
+};
 
   // 11. ລາຍງານການນຳອອກ
   const renderExportsReport = () => (
