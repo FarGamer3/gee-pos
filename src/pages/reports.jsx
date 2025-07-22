@@ -167,103 +167,205 @@ function Reports() {
 
   const fetchAllData = async () => {
     setLoading(true);
-  setError(null);
-  
-  try {
-    let data = [];
+    setError(null);
     
-    switch(reportType) {
-      case 'products':
-        const productsRes = await axios.get(`${API_BASE_URL}/All/Product`);
-        data = productsRes.data.products || [];
-        break;
-        
-      case 'categories':
-        const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
-        data = categoriesRes.data.categories || [];
-        break;
-        
-      case 'brands':
-        const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
-        data = brandsRes.data.brands || [];
-        break;
-        
-      case 'locations':
-        const locationsRes = await axios.get(`${API_BASE_URL}/All/Location`);
-        data = locationsRes.data.locations || [];
-        break;
-        
-      case 'employees':
-        const employeesRes = await axios.get(`${API_BASE_URL}/All/Employee`);
-        data = employeesRes.data.user_info || [];
-        break;
-        
-      case 'suppliers':
-        const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
-        data = suppliersRes.data.user_info || [];
-        break;
-        
-      case 'customers':
-        const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
-        data = customersRes.data.user_info || [];
-        break;
-        
-      case 'purchases':
-        // ໃຊ້ຟັງຊັນພິເສດທີ່ມີລາຍລະອຽດ
-        showSnackbar('ກຳລັງດຶງຂໍ້ມູນການສັ່ງຊື້ ແລະ ລາຍລະອຽດ...', 'info');
-        data = await fetchPurchasesWithDetails();
-        showSnackbar(`ດຶງຂໍ້ມູນສຳເລັດ: ${data.length} ລາຍການ`, 'success');
-        break;
-        
-      case 'sales':
-        const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-        data = salesRes.data.sales_data || [];
-        break;
-        
-      case 'imports':
-        const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
-        data = importsRes.data.imports || [];
-        break;
-        
-      case 'exports':
-        try {
-          const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
-          if (exportsRes.data && exportsRes.data.result_code === "200") {
-            data = exportsRes.data.exports || [];
-            data = data.map((item, index) => ({
-              ...item,
-              export_id: item.export_id || item.exp_id || `exp-${index}`,
-              export_date: item.export_date || item.exp_date || new Date().toISOString().split('T')[0]
-            }));
-          } else {
-            console.warn('Exports API returned unexpected format:', exportsRes.data);
-            data = [];
+    try {
+      let data = [];
+      
+      switch(reportType) {
+        case 'products':
+          // ☑️ Confirmed path from routes/index.js
+          const productsRes = await axios.get(`${API_BASE_URL}/All/Product`);
+          data = productsRes.data.products || [];
+          break;
+          
+        case 'categories':
+          // ☑️ Confirmed path from routes/index.js
+          const categoriesRes = await axios.get(`${API_BASE_URL}/All/Category`);
+          data = categoriesRes.data.categories || [];
+          break;
+          
+        case 'brands':
+          // ☑️ Confirmed path from routes/index.js
+          const brandsRes = await axios.get(`${API_BASE_URL}/All/Brand`);
+          data = brandsRes.data.brands || [];
+          break;
+          
+        case 'locations':
+          // ☑️ Confirmed path from routes/index.js
+          const locationsRes = await axios.get(`${API_BASE_URL}/All/Zone`);
+          data = locationsRes.data.zones || [];
+          break;
+          
+        case 'employees':
+          // ☑️ Confirmed path from routes/users.js (needs /users prefix)
+          try {
+            const employeesRes = await axios.get(`${API_BASE_URL}/users/All/Employee`);
+            data = employeesRes.data.user_info || [];
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ employees:', error.message);
+            // Fallback without /users prefix
+            const employeesRes = await axios.get(`${API_BASE_URL}/All/Employee`);
+            data = employeesRes.data.user_info || [];
           }
-        } catch (err) {
-          console.error('Error fetching exports data:', err);
+          break;
+          
+        case 'suppliers':
+          // ☑️ Confirmed path from routes/users.js (needs /users prefix)
+          try {
+            const suppliersRes = await axios.get(`${API_BASE_URL}/users/All/Supplier`);
+            data = suppliersRes.data.suppliers || [];
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ suppliers:', error.message);
+            // Fallback without /users prefix
+            const suppliersRes = await axios.get(`${API_BASE_URL}/All/Supplier`);
+            data = suppliersRes.data.suppliers || [];
+          }
+          break;
+          
+        case 'customers':
+          // ☑️ Confirmed path from routes/users.js (needs /users prefix)
+          try {
+            const customersRes = await axios.get(`${API_BASE_URL}/users/All/Customer`);
+            data = customersRes.data.customers || [];
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ customers:', error.message);
+            // Fallback without /users prefix
+            const customersRes = await axios.get(`${API_BASE_URL}/All/Customer`);
+            data = customersRes.data.customers || [];
+          }
+          break;
+          
+        case 'sales':
+          // ☑️ Confirmed path from routes/sale.js (needs /sale prefix)
+          const salesRes = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+          const salesData = salesRes.data.sales_data || [];
+          
+          // ດຶງຂໍ້ມູນສິນຄ້າທັງໝົດເພື່ອເອົາລາຄາຕົ້ນທຶນ
+          const productsForCostRes = await axios.get(`${API_BASE_URL}/All/Product`);
+          const productsData = productsForCostRes.data.products || [];
+          
+          // ສ້າງ map ສຳລັບຄົ້ນຫາລາຄາຕົ້ນທຶນຂອງສິນຄ້າໄວ
+          const productCostMap = {};
+          productsData.forEach(product => {
+            productCostMap[product.proid] = product.cost_price || 0;
+          });
+          
+          // ປັບປຸງຂໍ້ມູນການຂາຍດ້ວຍການເພີ່ມລາຄາຕົ້ນທຶນ
+          const enhancedSalesData = await Promise.all(
+            salesData.map(async (sale) => {
+              try {
+                // ດຶງລາຍລະອຽດການຂາຍ
+                const detailsRes = await axios.post(`${API_BASE_URL}/sale/Sale/Details`, {
+                  sale_id: sale.sale_id
+                });
+                
+                let totalCost = 0;
+                
+                if (detailsRes.data && detailsRes.data.result_code === "200") {
+                  const saleDetails = detailsRes.data.sale_details || [];
+                  
+                  // ຄິດໄລ່ລາຄາຕົ້ນທຶນລວມຈາກລາຍລະອຽດການຂາຍ
+                  totalCost = saleDetails.reduce((sum, detail) => {
+                    const costPrice = productCostMap[detail.proid] || 0;
+                    const quantity = detail.qty || 0;
+                    return sum + (costPrice * quantity);
+                  }, 0);
+                }
+                
+                return {
+                  ...sale,
+                  total_cost: totalCost,
+                  customer_name: sale.customer_name || "ລູກຄ້າທົ່ວໄປ"
+                };
+              } catch (error) {
+                console.warn(`ບໍ່ສາມາດດຶງລາຍລະອຽດສຳລັບການຂາຍ ${sale.sale_id}:`, error.message);
+                
+                // ກໍລະນີດຶງລາຍລະອຽດບໍ່ໄດ້, ໃຫ້ໃຊ້ cost = 0
+                return {
+                  ...sale,
+                  total_cost: 0,
+                  customer_name: sale.customer_name || "ລູກຄ້າທົ່ວໄປ"
+                };
+              }
+            })
+          );
+          
+          data = enhancedSalesData;
+          break;
+          
+        case 'purchases':
+          // ☑️ Try different endpoints for orders
+          try {
+            const purchasesRes = await axios.get(`${API_BASE_URL}/order/All/Order`);
+            data = await fetchPurchasesWithDetails(purchasesRes.data.orders || purchasesRes.data.user_info || []);
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ purchases:', error.message);
+            // Fallback endpoint
+            const purchasesRes = await axios.get(`${API_BASE_URL}/All/Order`);
+            data = await fetchPurchasesWithDetails(purchasesRes.data.orders || purchasesRes.data.user_info || []);
+          }
+          break;
+          
+        case 'imports':
+          // ☑️ Confirmed path from routes/import.js (needs /import prefix)
+          try {
+            const importsRes = await axios.get(`${API_BASE_URL}/import/All/Import`);
+            data = importsRes.data.imports || [];
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ imports:', error.message);
+            // Fallback endpoint
+            const importsRes = await axios.get(`${API_BASE_URL}/All/Import`);
+            data = importsRes.data.imports || [];
+          }
+          break;
+          
+        case 'exports':
+          // ☑️ Try export endpoint (may need specific prefix)
+          try {
+            const exportsRes = await axios.get(`${API_BASE_URL}/export/All/Export`);
+            data = exportsRes.data.exports || [];
+          } catch (error) {
+            console.warn('ລອງ fallback endpoint สำหรับ exports:', error.message);
+            // Fallback endpoint
+            try {
+              const exportsRes = await axios.get(`${API_BASE_URL}/All/Export`);
+              data = exportsRes.data.exports || [];
+            } catch (fallbackError) {
+              console.warn('ທັງສອງ endpoint ບໍ່ເຮັດວຽກ, ໃຊ້ຂໍ້ມູນວ່າງ:', fallbackError.message);
+              data = [];
+            }
+          }
+          break;
+          
+        default:
           data = [];
-        }
-        break;
-        
-      default:
-        console.warn(`ບໍ່ຮູ້ຈັກປະເພດລາຍງານ: ${reportType}`);
-        break;
+      }
+  
+      // ອັບເດດຂໍ້ມູນຕາມປະເພດລາຍງານ
+      setReportData(prev => ({
+        ...prev,
+        [reportType]: data,
+        // ເກັບຂໍ້ມູນຕົ້ນສະບັບສຳລັບການກັອງ
+        [`original${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`]: data
+      }));
+      
+      showSnackbar(`ໂຫຼດຂໍ້ມູນ${reportTypes.find(r => r.value === reportType)?.label}ສຳເລັດແລ້ວ`, 'success');
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(`ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້: ${error.message}`);
+      showSnackbar('ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນ', 'error');
+      
+      // ໃຫ້ຂໍ້ມູນວ່າງເພື່ອຫຼີກເວັ້ນ crash
+      setReportData(prev => ({
+        ...prev,
+        [reportType]: [],
+        [`original${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`]: []
+      }));
+    } finally {
+      setLoading(false);
     }
-
-    setReportData(prev => ({
-      ...prev,
-      [reportType]: data
-    }));
-
-  } catch (err) {
-    console.error('Error fetching data:', err);
-    const errorMessage = err.response?.data?.result || err.message || 'ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນ';
-    setError(errorMessage);
-    showSnackbar(errorMessage, 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   
   
 
@@ -963,8 +1065,43 @@ const renderPurchasesReport = () => (
   </TableContainer>
 );
 
-  // 9. ລາຍງານການຂາຍ
-  const renderSalesReport = () => (
+// 9. ລາຍງານການຂາຍ - ປັບປຸງໃໝ່ເພື່ອເພີ່ມລາຄາຕົ້ນທຶນ ແລະ ສະລຸບລວມ
+const renderSalesReport = () => {
+  // ກວດສອບວ່າມີຂໍ້ມູນການຂາຍຫຼືບໍ່
+  if (!reportData.sales || reportData.sales.length === 0) {
+    return (
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ເລກທີໃບບິນ</TableCell>
+              <TableCell>ວັນທີ</TableCell>
+              <TableCell>ລູກຄ້າ</TableCell>
+              <TableCell>ພະນັກງານ</TableCell>
+              <TableCell align="right">ລາຄາຕົ້ນທຶນ</TableCell>
+              <TableCell align="right">ມູນຄ່າຂາຍ</TableCell>
+              <TableCell align="right">ກຳໄລ</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={7} align="center">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການຂາຍ'}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
+  }
+
+  // ຄຳນວນຍອດລວມທັງໝົດ
+  const totalSales = reportData.sales.reduce((sum, sale) => sum + (sale.subtotal || 0), 0);
+  const totalCost = reportData.sales.reduce((sum, sale) => sum + (sale.total_cost || 0), 0);
+  const totalProfit = totalSales - totalCost;
+  const profitMargin = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(2) : 0;
+
+  return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
@@ -973,12 +1110,18 @@ const renderPurchasesReport = () => (
             <TableCell>ວັນທີ</TableCell>
             <TableCell>ລູກຄ້າ</TableCell>
             <TableCell>ພະນັກງານ</TableCell>
-            <TableCell align="right">ມູນຄ່າ</TableCell>
+            <TableCell align="right">ລາຄາຕົ້ນທຶນ</TableCell>
+            <TableCell align="right">ມູນຄ່າຂາຍ</TableCell>
+            <TableCell align="right">ກຳໄລ</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {reportData.sales.length > 0 ? (
-            reportData.sales.map((sale) => (
+          {reportData.sales.map((sale) => {
+            const costPrice = sale.total_cost || 0;
+            const sellPrice = sale.subtotal || 0;
+            const profit = sellPrice - costPrice;
+            
+            return (
               <TableRow key={sale.sale_id}>
                 <TableCell>{sale.sale_id}</TableCell>
                 <TableCell>{formatDate(sale.date_sale)}</TableCell>
@@ -988,20 +1131,99 @@ const renderPurchasesReport = () => (
                 <TableCell>
                   {sale.emp_name || "-"}
                 </TableCell>
-                <TableCell align="right">{formatNumber(sale.subtotal)} ກີບ</TableCell>
+                <TableCell align="right">
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                  >
+                    {formatNumber(costPrice)} ກີບ
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography 
+                    variant="body2" 
+                    color="primary.main"
+                    fontWeight="medium"
+                  >
+                    {formatNumber(sellPrice)} ກີບ
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography 
+                    variant="body2" 
+                    color={profit >= 0 ? "success.main" : "error.main"}
+                    fontWeight="medium"
+                  >
+                    {formatNumber(profit)} ກີບ
+                  </Typography>
+                </TableCell>
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={5} align="center">
-                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການຂາຍ'}
-              </TableCell>
-            </TableRow>
-          )}
+            );
+          })}
+          
+          {/* ແຖວສະລຸບລວມ */}
+          <TableRow>
+            <TableCell colSpan={7}>
+              <Divider sx={{ my: 1 }} />
+            </TableCell>
+          </TableRow>
+          <TableRow sx={{ bgcolor: 'grey.50' }}>
+            <TableCell colSpan={4} align="right">
+              <Typography variant="subtitle1" fontWeight="bold">
+                ລວມທັງໝົດ:
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              <Typography 
+                variant="subtitle1" 
+                fontWeight="bold"
+                color="text.secondary"
+              >
+                {formatNumber(totalCost)} ກີບ
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              <Typography 
+                variant="subtitle1" 
+                fontWeight="bold"
+                color="primary.main"
+              >
+                {formatNumber(totalSales)} ກີບ
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              <Typography 
+                variant="subtitle1" 
+                fontWeight="bold"
+                color={totalProfit >= 0 ? "success.main" : "error.main"}
+              >
+                {formatNumber(totalProfit)} ກີບ
+              </Typography>
+            </TableCell>
+          </TableRow>
+          
+          {/* ແຖວສະແດງເປີເຊັນກຳໄລ */}
+          <TableRow sx={{ bgcolor: 'grey.50' }}>
+            <TableCell colSpan={6} align="right">
+              <Typography variant="body2" color="text.secondary">
+                ອັດຕາກຳໄລ:
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              <Typography 
+                variant="body2" 
+                fontWeight="medium"
+                color={totalProfit >= 0 ? "success.main" : "error.main"}
+              >
+                {profitMargin}%
+              </Typography>
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </TableContainer>
   );
+};
 
   // 10. ລາຍງານການນຳເຂົ້າ
   const renderImportsReport = () => (
