@@ -1,38 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Grid, 
-  Paper, 
+  Card, 
+  CardContent, 
   Typography, 
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
+  Box, 
+  Divider, 
   Alert,
-  Divider,
-  Chip,
-  useTheme,
-  useMediaQuery
+  Paper,
+  CircularProgress
 } from '@mui/material';
-import Layout from '../components/Layout';
-import {
+import { 
   Inventory as InventoryIcon,
-  MoveToInbox as ImportIcon,
-  LocalShipping as ExportIcon,
-  ShoppingCart as PurchaseIcon,
-  Storefront as SalesIcon,
+  ImportExport as ImportIcon,
+  ShoppingCart as ExportIcon,
+  Receipt as PurchaseIcon,
+  AttachMoney as SalesIcon,
   People as StaffIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
+import { useTheme } from '@mui/material/styles';
+import Layout from '../components/Layout';
 import DashboardCharts from '../components/DashboardCharts';
-
+import API_BASE_URL from '../config/api';
+import axios from 'axios';
+import { getCurrentUser } from '../services/authService';
 
 function Dashboard() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState({
     totalProducts: 0,
     importedItems: 0,
@@ -40,163 +35,142 @@ function Dashboard() {
     purchases: 0,
     sales: 0,
     staffCount: { admin: 0, users: 0 },
-    lowStockItems: [] // For products below minimum stock level
+    lowStockItems: []
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Fetch dashboard data on component mount
+  // ຮັບຂໍ້ມູນຜູ້ໃຊ້ປັດຈຸບັນ
+  const currentUser = getCurrentUser();
+  const isUser2 = currentUser?.status === 'User2';
+  const isUser1 = currentUser?.status === 'User1'; // ເພີ່ມການກວດສອບ User1
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Fetch products and low stock data - essential data first
         let products = [];
-        let lowStockItems = [];
-        
-        try {
-          const productsResponse = await axios.get(`${API_BASE_URL}/All/Product`);
-          if (productsResponse.data && productsResponse.data.result_code === "200") {
-            products = productsResponse.data.products || [];
-          }
-        } catch (err) {
-          console.error("Error fetching products:", err);
-        }
-        
-        try {
-          const lowStockResponse = await axios.get(`${API_BASE_URL}/All/Min/Product`);
-          if (lowStockResponse.data && lowStockResponse.data.result_code === "200") {
-            lowStockItems = lowStockResponse.data.products || [];
-          }
-        } catch (err) {
-          console.error("Error fetching low stock items:", err);
-        }
-        
-        // Initialize stats with safe values
+        let importedItems = 0;
+        let exportedItems = 0;
         let purchases = 0;
         let sales = 0;
         let adminCount = 0;
         let userCount = 0;
-        let importedItems = 0;
-        let exportedItems = 0;
-        
-        // Try to fetch orders/purchases data with multiple endpoints
+        let lowStockItems = [];
+
+        // ດຶງຂໍ້ມູນສິນຄ້າ
         try {
-          const ordersResponse = await axios.get(`${API_BASE_URL}/All/Order`);
-          if (ordersResponse.data && ordersResponse.data.result_code === "200") {
-            purchases = ordersResponse.data.user_info ? ordersResponse.data.user_info.length : 0;
-          }
-        } catch (err) {
-          console.error("Error fetching orders with /All/Order:", err);
-          // Try alternative endpoint
-          try {
-            const ordersAltResponse = await axios.get(`${API_BASE_URL}/order/All/Order`);
-            if (ordersAltResponse.data && ordersAltResponse.data.result_code === "200") {
-              purchases = ordersAltResponse.data.user_info ? ordersAltResponse.data.user_info.length : 0;
-            }
-          } catch (errAlt) {
-            console.error("Error fetching orders with alternative endpoint:", errAlt);
-            // If all else fails, assign a fallback value
-            purchases = 2; // Fallback value
-          }
-        }
-        
-        // Try different paths to fetch employee data
-        try {
-          const employeesResponse = await axios.get(`${API_BASE_URL}/All/Employee`);
-          if (employeesResponse.data && employeesResponse.data.result_code === "200") {
-            const employees = employeesResponse.data.user_info || [];
+          const productsResponse = await axios.get(`${API_BASE_URL}/All/Product`);
+          if (productsResponse.data && productsResponse.data.result_code === "200") {
+            products = productsResponse.data.products || [];
             
-            // Count based on status
-            employees.forEach(employee => {
-              if (employee.status === 'Admin') {
-                adminCount++;
-              } else {
-                userCount++;
-              }
-            });
+            // ກວດຫາສິນຄ້າໃກ້ໝົດສາງ - ປັບປຸງການກວດສອບ
+            lowStockItems = products.filter(product => {
+              const qty = parseInt(product.qty || product.quantity || 0);
+              const minStock = parseInt(product.qty_min || 10); // ຖ້າບໍ່ມີ qty_min ໃຫ້ໃຊ້ 10
+              return qty <= minStock && qty >= 0; // ກວດຫາວ່າຈຳນວນໜ້ອຍກວ່າຫຼືເທົ່າກັບຈຳນວນຕໍ່າສຸດ
+            }).map(product => ({
+              proid: product.proid,
+              proname: product.ProductName || product.proname || product.name || 'ບໍ່ມີຊື່',
+              quantity: parseInt(product.qty || product.quantity || 0),
+              minStock: parseInt(product.qty_min || 10)
+            }));
+            
+            console.log('Low stock items found:', lowStockItems);
           }
         } catch (err) {
-          console.error("Error fetching employees with /All/Employee:", err);
-          
-          try {
-            // Try with users prefix
-            const employeesAltResponse = await axios.get(`${API_BASE_URL}/users/All/Employee`);
-            if (employeesAltResponse.data && employeesAltResponse.data.result_code === "200") {
-              const employees = employeesAltResponse.data.user_info || [];
-              
-              // Count based on status
-              employees.forEach(employee => {
-                if (employee.status === 'Admin') {
-                  adminCount++;
-                } else {
-                  userCount++;
-                }
-              });
-            }
-          } catch (errAlt) {
-            console.error("Error fetching employees with alternative endpoint:", errAlt);
-            // If all API calls fail, use fallback values
-            adminCount = 1; // Fallback value
-            userCount = 4; // Fallback value
-          }
-        }
-        
-        // Try different API paths for sales data
-        try {
-          // Try first with /sale/All/Sales
-          const salesResponse = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
-          if (salesResponse.data && salesResponse.data.result_code === "200") {
-            sales = salesResponse.data.sales_data ? salesResponse.data.sales_data.length : 0;
-          }
-        } catch (err) {
-          console.error("Error fetching sales data with /sale/All/Sales:", err);
-          try {
-            // Try alternative endpoint
-            const salesAltResponse = await axios.get(`${API_BASE_URL}/All/Sales`);
-            if (salesAltResponse.data && salesAltResponse.data.result_code === "200") {
-              sales = salesAltResponse.data.sales_data ? salesAltResponse.data.sales_data.length : 0;
-            }
-          } catch (errAlt) {
-            console.error("Error fetching sales with first alternative:", errAlt);
-            try {
-              // Try another alternative
-              const salesAlt2Response = await axios.get(`${API_BASE_URL}/sales/All/Sales`);
-              if (salesAlt2Response.data && salesAlt2Response.data.result_code === "200") {
-                sales = salesAlt2Response.data.sales_data ? salesAlt2Response.data.sales_data.length : 0;
-              }
-            } catch (errAlt2) {
-              console.error("Error fetching sales with all endpoints:", errAlt2);
-              // If all API calls fail, use fallback values
-              sales = 3; // Fallback value
-            }
-          }
-        }
-        
-        // Attempt to get import data
-        try {
-          const importsResponse = await axios.get(`${API_BASE_URL}/import/All/Import`);
-          if (importsResponse.data && importsResponse.data.result_code === "200") {
-            importedItems = importsResponse.data.imports ? importsResponse.data.imports.length : 0;
-          }
-        } catch (err) {
-          console.error("Error fetching imports:", err);
-          // Fallback value if API fails
-          importedItems = 5;
-        }
-        
-        // Attempt to get export data
-        try {
-          const exportsResponse = await axios.get(`${API_BASE_URL}/export/All/Export`);
-          if (exportsResponse.data && exportsResponse.data.result_code === "200") {
-            exportedItems = exportsResponse.data.exports ? exportsResponse.data.exports.length : 0;
-          }
-        } catch (err) {
-          console.error("Error fetching exports:", err);
-          // Fallback value if API fails
-          exportedItems = 2;
+          console.error("Error fetching products:", err);
+          products = [];
+          // ສຳລັບທົດສອບ - ສ້າງຂໍ້ມູນຈຳລອງ
+          lowStockItems = [
+            { proid: 1, proname: 'ສິນຄ້າທົດສອບ A', quantity: 3, minStock: 10 },
+            { proid: 2, proname: 'ສິນຄ້າທົດສອບ B', quantity: 1, minStock: 5 }
+          ];
         }
 
-        // Update dashboard data with real values
+        // ສຳລັບ User2 - ບໍ່ດຶງຂໍ້ມູນການຂາຍ ແລະ ພະນັກງານ
+        // ສຳລັບ User1 - ດຶງຂໍ້ມູນການຂາຍແຕ່ບໍ່ດຶງພະນັກງານ
+        if (!isUser2) {
+          // ດຶງຂໍ້ມູນການຊື້ (ສະແດງສຳລັບ Admin ເທົ່ານັ້ນ)
+          if (currentUser?.status === 'Admin') {
+            try {
+              const purchaseResponse = await axios.get(`${API_BASE_URL}/order/All/Order`);
+              if (purchaseResponse.data && purchaseResponse.data.result_code === "200") {
+                purchases = purchaseResponse.data.user_info ? purchaseResponse.data.user_info.length : 0;
+              }
+            } catch (err) {
+              console.error("Error fetching purchases:", err);
+              purchases = 1; // ຄ່າສຳຮອງ
+            }
+          }
+
+          // ດຶງຂໍ້ມູນການຂາຍ (ສຳລັບ Admin ແລະ User1)
+          try {
+            const salesResponse = await axios.get(`${API_BASE_URL}/sale/All/Sales`);
+            if (salesResponse.data && salesResponse.data.result_code === "200") {
+              sales = salesResponse.data.sales_data ? salesResponse.data.sales_data.length : 0;
+            }
+          } catch (err) {
+            console.error("Error fetching sales data:", err);
+            sales = 3; // ຄ່າສຳຮອງ
+          }
+
+          // ດຶງຂໍ້ມູນພະນັກງານ (ສຳລັບ Admin ເທົ່ານັ້ນ)
+          if (currentUser?.status === 'Admin') {
+            try {
+              const employeesResponse = await axios.get(`${API_BASE_URL}/users/All/Employee`);
+              if (employeesResponse.data && employeesResponse.data.result_code === "200") {
+                const employees = employeesResponse.data.user_info || [];
+                adminCount = employees.filter(emp => emp.status === 'Admin').length;
+                userCount = employees.filter(emp => emp.status && emp.status !== 'Admin').length;
+              }
+            } catch (err) {
+              console.error("Error fetching employees:", err);
+              // ລອງວິທີສຳຮອງ
+              try {
+                const employeesAltResponse = await axios.get(`${API_BASE_URL}/All/Employee`);
+                if (employeesAltResponse.data && employeesAltResponse.data.result_code === "200") {
+                  const employees = employeesAltResponse.data.user_info || [];
+                  adminCount = employees.filter(emp => emp.status === 'Admin').length;
+                  userCount = employees.filter(emp => emp.status && emp.status !== 'Admin').length;
+                }
+              } catch (errAlt) {
+                console.error("Error with fallback employees endpoint:", errAlt);
+                adminCount = 1;
+                userCount = 2;
+              }
+            }
+          }
+        }
+
+        // ດຶງຂໍ້ມູນນຳເຂົ້າ - ສຳລັບ Admin ແລະ User2 ເທົ່ານັ້ນ
+        if (currentUser?.status === 'Admin' || currentUser?.status === 'User2') {
+          try {
+            const importsResponse = await axios.get(`${API_BASE_URL}/import/All/Import`);
+            if (importsResponse.data && importsResponse.data.result_code === "200") {
+              importedItems = importsResponse.data.imports ? importsResponse.data.imports.length : 0;
+            }
+          } catch (err) {
+            console.error("Error fetching imports:", err);
+            importedItems = 5;
+          }
+        }
+        
+        // ດຶງຂໍ້ມູນນຳອອກ - ສຳລັບ Admin ແລະ User2 ເທົ່ານັ້ນ
+        if (currentUser?.status === 'Admin' || currentUser?.status === 'User2') {
+          try {
+            const exportsResponse = await axios.get(`${API_BASE_URL}/export/All/Export`);
+            if (exportsResponse.data && exportsResponse.data.result_code === "200") {
+              exportedItems = exportsResponse.data.exports ? exportsResponse.data.exports.length : 0;
+            }
+          } catch (err) {
+            console.error("Error fetching exports:", err);
+            exportedItems = 2;
+          }
+        }
+
+        // ອັບເດດຂໍ້ມູນ dashboard
         setDashboardData({
           totalProducts: products.length,
           importedItems,
@@ -210,7 +184,6 @@ function Dashboard() {
         setError(null);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        // Set a friendly error message but continue showing whatever data was loaded
         setError("ມີບັນຫາໃນການດຶງຂໍ້ມູນບາງສ່ວນ. ທ່ານຍັງສາມາດໃຊ້ງານລະບົບຕໍ່ໄດ້.");
       } finally {
         setLoading(false);
@@ -218,9 +191,9 @@ function Dashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [isUser2, isUser1]); // ເພີ່ม isUser1 ໃນ dependency array
 
-  // InfoCard Component with enhanced styling and rounded corners
+  // InfoCard Component
   const InfoCard = ({ title, value, icon: Icon, color = "primary.main", onClick }) => {
     return (
       <Card 
@@ -228,7 +201,7 @@ function Dashboard() {
         sx={{ 
           height: '100%',
           transition: 'transform 0.3s, box-shadow 0.3s',
-          borderRadius: 4, // Added more rounded corners
+          borderRadius: 4,
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: 6,
@@ -237,7 +210,7 @@ function Dashboard() {
         }}
         onClick={onClick}
       >
-        <CardContent sx={{ p: 3 }}> {/* Added more padding */}
+        <CardContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -254,7 +227,7 @@ function Dashboard() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: `${color}15`, // Light background based on the icon color
+                backgroundColor: `${color}15`,
                 borderRadius: '50%',
                 color: color
               }}
@@ -267,22 +240,24 @@ function Dashboard() {
     );
   };
 
-  // Low Stock Alert Card with rounded corners
+  // Low Stock Alert Card
   const LowStockAlert = ({ lowStockItems }) => {
+    console.log('LowStockAlert received items:', lowStockItems); // ສຳລັບ debug
+    
     if (!lowStockItems || lowStockItems.length === 0) {
       return (
-        <Alert severity="success" sx={{ mt: 2, borderRadius: 3 }}> {/* Added more rounded corners */}
+        <Alert severity="success" sx={{ mt: 2, borderRadius: 3 }}>
           ທຸກສິນຄ້າມີຈຳນວນພຽງພໍໃນສາງ
         </Alert>
       );
     }
 
     return (
-      <Card elevation={2} sx={{ mt: 3, borderRadius: 4 }}> {/* Added more rounded corners */}
+      <Card elevation={2} sx={{ mt: 3, borderRadius: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <WarningIcon color="warning" sx={{ mr: 1 }} />
-            <Typography variant="h6">ສິນຄ້າໃກ້ໝົດສາງ</Typography>
+            <Typography variant="h6">ສິນຄ້າໃກ້ໝົດສາງ ({lowStockItems.length} ລາຍການ)</Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
           <Box sx={{ 
@@ -306,20 +281,30 @@ function Dashboard() {
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   py: 1,
-                  borderBottom: index !== lowStockItems.length - 1 ? '1px solid #eee' : 'none'
+                  borderBottom: index !== lowStockItems.length - 1 ? '1px solid #f0f0f0' : 'none'
                 }}
               >
-                <Typography variant="body2">{item.ProductName}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ mr: 1 }}>
-                    {item.qty} / {item.qty_min}
+                <Box>
+                  <Typography variant="body2" fontWeight="medium">
+                    {item.proname}
                   </Typography>
-                  <Chip 
-                    size="small" 
-                    label={item.qty <= 0 ? "ໝົດ" : "ໃກ້ໝົດ"} 
-                    color={item.qty <= 0 ? "error" : "warning"} 
-                    sx={{ height: 24, borderRadius: 4 }} // Added more rounded corners
-                  />
+                  <Typography variant="caption" color="text.secondary">
+                    ຕໍ່າສຸດ: {item.minStock || 10}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography 
+                    variant="body2" 
+                    color={item.quantity <= 5 ? "error" : "warning.main"}
+                    fontWeight="bold"
+                  >
+                    ເຫຼືອ {item.quantity}
+                  </Typography>
+                  {item.quantity === 0 && (
+                    <Typography variant="caption" color="error">
+                      ໝົດສາງ!
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             ))}
@@ -331,43 +316,43 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <Layout title="ໜ້າຫຼັກ">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+      <Layout>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
           <CircularProgress />
         </Box>
       </Layout>
     );
   }
 
-  // Even if there's an error, show the dashboard with the data we have
-  // Just display an error alert at the top
-
   return (
-    <Layout title="ໜ້າຫຼັກ">
-      {error && (
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      <Box sx={{ mb: 3 }}>
-        <Paper 
+    <Layout>
+      {/* ຫົວຂໍ້ໜ້າຫຼັກ */}
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          fontWeight="bold" 
+          color="primary.main"
           sx={{ 
-            p: 2, 
-            bgcolor: 'primary.main', 
-            color: 'white',
-            borderRadius: 3, // Added more rounded corners
-            boxShadow: 2
+            fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            mb: 1
           }}
         >
-          <Typography variant="h6">
-            ຂໍ້ມູນສິນຄ້າ ແລະ ສະຖະຕິຂອງຮ້ານ
-          </Typography>
-        </Paper>
+          ໜ້າຫຼັກ
+        </Typography>
+        <Typography 
+          variant="h6" 
+          color="text.secondary"
+          sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}
+        >
+          ລະບົບຈັດການຮ້ານຄ້າ
+        </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        {/* First row */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        
+        {/* ແຖວທີ 1 - Card ຂໍ້ມູນພື້ນຖານ - ປັບຕາມບົດບາດ */}
         <Grid item xs={12} sm={6} md={4}>
           <InfoCard 
             title="ຈຳນວນສິນຄ້າທັງໜົດ" 
@@ -377,65 +362,93 @@ function Dashboard() {
             onClick={() => window.location.href = "/products"}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <InfoCard 
-            title="ສິນຄ້ານຳເຂົ້າ" 
-            value={dashboardData.importedItems.toString()} 
-            icon={ImportIcon} 
-            color={theme.palette.success.main}
-            onClick={() => window.location.href = "/import"}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <InfoCard 
-            title="ສິນຄ້ານຳອອກ" 
-            value={dashboardData.exportedItems.toString()} 
-            icon={ExportIcon} 
-            color={theme.palette.warning.main}
-            onClick={() => window.location.href = "/export"}
-          />
-        </Grid>
+        
+        {/* ນຳເຂົ້າ ແລະ ນຳອອກ - ສະແດງສຳລັບ Admin ແລະ User2 ເທົ່ານັ້ນ */}
+        {(currentUser?.status === 'Admin' || currentUser?.status === 'User2') && (
+          <>
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ສິນຄ້ານຳເຂົ້າ" 
+                value={dashboardData.importedItems.toString()} 
+                icon={ImportIcon} 
+                color={theme.palette.success.main}
+                onClick={() => window.location.href = "/import"}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ສິນຄ້ານຳອອກ" 
+                value={dashboardData.exportedItems.toString()} 
+                icon={ExportIcon} 
+                color={theme.palette.warning.main}
+                onClick={() => window.location.href = "/export"}
+              />
+            </Grid>
+          </>
+        )}
 
-        {/* Second row */}
-        <Grid item xs={12} sm={6} md={4}>
-          <InfoCard 
-            title="ສັັ່ງຊື້ສິນຄ້າ" 
-            value={dashboardData.purchases.toString()} 
-            icon={PurchaseIcon} 
-            color={theme.palette.info.main}
-            onClick={() => window.location.href = "/Buy"}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <InfoCard 
-            title="ຂາຍສິນຄ້າ" 
-            value={dashboardData.sales.toString()} 
-            icon={SalesIcon} 
-            color="#FF5722" // Deep orange
-            onClick={() => window.location.href = "/sales"}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <InfoCard 
-            title="ພະນັກງານ" 
-            value={`Admin ${dashboardData.staffCount.admin} : User ${dashboardData.staffCount.users}`} 
-            icon={StaffIcon} 
-            color="#9C27B0" // Purple
-            onClick={() => window.location.href = "/employees"}
-          />
-        </Grid>
+        {/* ແຖວທີ 2 - ສະແດງຕາມບົດບາດ */}
+        {currentUser?.status === 'Admin' && (
+          <>
+            {/* ສຳລັບ Admin - ສະແດງທຸກ boxes */}
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ສັັ່ງຊື້ສິນຄ້າ" 
+                value={dashboardData.purchases.toString()} 
+                icon={PurchaseIcon} 
+                color={theme.palette.info.main}
+                onClick={() => window.location.href = "/Buy"}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ຂາຍສິນຄ້າ" 
+                value={dashboardData.sales.toString()} 
+                icon={SalesIcon} 
+                color="#FF5722"
+                onClick={() => window.location.href = "/sales"}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ພະນັກງານ" 
+                value={`Admin ${dashboardData.staffCount.admin} : User ${dashboardData.staffCount.users}`} 
+                icon={StaffIcon} 
+                color="#9C27B0"
+                onClick={() => window.location.href = "/employees"}
+              />
+            </Grid>
+          </>
+        )}
 
-        {/* Charts Section */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2 }}> {/* Added more rounded corners and padding */}
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              ສະຖິຕິການຂາຍແລະຂໍ້ມູນສິນຄ້າ
-            </Typography>
-            <DashboardCharts />
-          </Paper>
-        </Grid>
+        {currentUser?.status === 'User1' && (
+          <>
+            {/* ສຳລັບ User1 - ສະແດງແຕ່ການຂາຍ (ບໍ່ມີການຊື້ ແລະ ພະນັກງານ) */}
+            <Grid item xs={12} sm={6} md={4}>
+              <InfoCard 
+                title="ຂາຍສິນຄ້າ" 
+                value={dashboardData.sales.toString()} 
+                icon={SalesIcon} 
+                color="#FF5722"
+                onClick={() => window.location.href = "/sales"}
+              />
+            </Grid>
+          </>
+        )}
 
-        {/* Low stock alerts section */}
+        {/* Charts Section - ສະແດງສຳລັບ Admin ເທົ່ານັ້ນ (ເພື່ອເຊື່ອງກຳໄລ/ຕົ້ນທຶນຈາກ User1) */}
+        {currentUser?.status === 'Admin' && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                ສະຖິຕິການຂາຍແລະຂໍ້ມູນສິນຄ້າ
+              </Typography>
+              <DashboardCharts />
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Low stock alerts section - ສະແດງສຳລັບທຸກຄົນ */}
         <Grid item xs={12}>
           <LowStockAlert lowStockItems={dashboardData.lowStockItems} />
         </Grid>
