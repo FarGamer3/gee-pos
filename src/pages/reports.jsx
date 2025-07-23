@@ -1402,8 +1402,53 @@ const renderImportsReport = () => {
   );
 };
 
-  // 11. ລາຍງານການນຳອອກ
-  const renderExportsReport = () => (
+ // 11. ລາຍງານການນຳອອກ - ປັບປຸງດ້ວຍສະຖານະພາສາລາວແລະສີ
+const renderExportsReport = () => {
+  // ຟັງຊັນແປງສະຖານະເປັນພາສາລາວ
+  const getStatusInLao = (status) => {
+    const statusMap = {
+      'Completed': 'ສຳເລັດ',
+      'Pending': 'ລໍຖ້າ',
+      'Processing': 'ກຳລັງດຳເນີນການ',
+      'Cancelled': 'ຍົກເລີກ',
+      'Approved': 'ອະນຸມັດແລ້ວ',
+      'Rejected': 'ປະຕິເສດ',
+      'Shipped': 'ຈັດສົ່ງແລ້ວ',
+      'Delivered': 'ສົ່ງມອບແລ້ວ'
+    };
+    return statusMap[status] || status || '-';
+  };
+
+  // ຟັງຊັນເລືອກສີຕາມສະຖານະ (ໃຊ້ສີ white ເພື່ອໃຫ້ແຈ້ງ)
+  const getStatusColor = (status) => {
+    // ໃຊ້ສີຂາວສຳລັບທຸກສະຖານະເພື່ອໃຫ້ເຫັນແຈ້ງ
+    return 'white';
+  };
+
+  // ຟັງຊັນເລືອກ background color ຂອງ Chip (ໃຊ້ສີເຂັ້ມເພື່ອໃຫ້ຕົວອັກສອນສີຂາວເຫັນແຈ້ງ)
+  const getStatusBgColor = (status) => {
+    const bgColorMap = {
+      'Completed': '#4caf50',         // ເຂຍວເຂັ້ມ
+      'ສຳເລັດ': '#4caf50',
+      'Pending': '#ff9800',           // ສີເຫຼືອງເຂັ້ມ  
+      'ລໍຖ້າ': '#ff9800',
+      'Processing': '#2196f3',        // ສີຟ້າເຂັ້ມ
+      'ກຳລັງດຳເນີນການ': '#2196f3',
+      'Cancelled': '#f44336',         // ແດງເຂັ້ມ
+      'ຍົກເລີກ': '#f44336',
+      'Approved': '#4caf50',          // ເຂຍວເຂັ້ມ
+      'ອະນຸມັດແລ້ວ': '#4caf50',
+      'Rejected': '#f44336',          // ແດງເຂັ້ມ
+      'ປະຕິເສດ': '#f44336',
+      'Shipped': '#9c27b0',           // ຜ່າແຮ່ງເຂັ້ມ
+      'ຈັດສົ່ງແລ້ວ': '#9c27b0',
+      'Delivered': '#607d8b',         // ສີເທົາອົມຟ້າ
+      'ສົ່ງມອບແລ້ວ': '#607d8b'
+    };
+    return bgColorMap[status] || '#9e9e9e'; // ເທົາເຂັ້ມສຳລັບສະຖານະທີ່ບໍ່ຮູ້ຈັກ
+  };
+
+  return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
@@ -1417,28 +1462,98 @@ const renderImportsReport = () => {
         </TableHead>
         <TableBody>
           {reportData.exports.length > 0 ? (
-            reportData.exports.map((exp, index) => (
-              <TableRow key={exp.export_id || exp.exp_id || index}>
-                <TableCell align="center">{index + 1}</TableCell>
-                <TableCell>{exp.export_id || exp.exp_id || '-'}</TableCell>
-                <TableCell>
-                  {formatDate(exp.export_date || exp.exp_date || '-')}
-                </TableCell>
-                <TableCell>{exp.emp_name || '-'}</TableCell>
-                <TableCell align="center">{exp.status || '-'}</TableCell>
-              </TableRow>
-            ))
+            reportData.exports.map((exp, index) => {
+              const statusInLao = getStatusInLao(exp.status);
+              const statusColor = getStatusColor(exp.status);
+              const statusBgColor = getStatusBgColor(exp.status);
+              
+              return (
+                <TableRow key={exp.export_id || exp.exp_id || index}>
+                  <TableCell align="center">
+                    <Typography variant="body2" color="primary.main" fontWeight="medium">
+                      {index + 1}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.primary">
+                      {exp.export_id || exp.exp_id || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {formatDate(exp.export_date || exp.exp_date || '-')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {exp.emp_name || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      label={statusInLao}
+                      size="small"
+                      sx={{
+                        bgcolor: statusBgColor,
+                        color: statusColor,
+                        fontWeight: 'bold',
+                        minWidth: '80px',
+                        fontSize: '0.75rem',
+                        '& .MuiChip-label': {
+                          px: 1.5
+                        }
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກສິນຄ້າ'}
+                <Typography variant="body2" color="text.secondary">
+                  {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກ'}
+                </Typography>
               </TableCell>
             </TableRow>
+          )}
+          
+          {/* ສະລຸບລວມຖ້າມີຂໍ້ມູນ */}
+          {reportData.exports.length > 0 && (
+            <>
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <Divider sx={{ my: 1 }} />
+                </TableCell>
+              </TableRow>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell colSpan={4} align="right">
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    ລວມທັງໝົດ ({reportData.exports.length} ລາຍການ):
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      {reportData.exports.filter(exp => 
+                        getStatusInLao(exp.status) === 'ສຳເລັດ'
+                      ).length} ສຳເລັດ
+                    </Typography>
+                    <Typography variant="body2" color="warning.main">
+                      {reportData.exports.filter(exp => 
+                        getStatusInLao(exp.status) === 'ລໍຖ້າ'
+                      ).length} ລໍຖ້າ
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </>
           )}
         </TableBody>
       </Table>
     </TableContainer>
   );
+};
 
   return (
     <Layout title="ລາຍງານ">

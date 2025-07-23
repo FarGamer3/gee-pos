@@ -25,7 +25,9 @@ import {
   CardContent,
   Divider,
   Badge,
-  Snackbar
+  Snackbar,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -65,6 +67,7 @@ function Buy() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
+  const [lowStockFilter, setLowStockFilter] = useState(false); // ເພີ່ມ state ສຳລັບກອງສິນຄ້າໃກ້ໜົດ
   
   // Order states
   const [orderItems, setOrderItems] = useState([]);
@@ -137,7 +140,7 @@ function Buy() {
     }
   };
 
-  // Filter products based on search term and filters
+  // Filter products based on search term and filters - ອັບເດດເພື່ອຮອງຮັບ lowStockFilter
   const filteredProducts = products.filter(product => {
     // Search term filter
     const matchesSearch = product.ProductName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,7 +152,11 @@ function Buy() {
     // Brand filter
     const matchesBrand = !brandFilter || product.brand === brandFilter;
     
-    return matchesSearch && matchesCategory && matchesBrand;
+    // Low stock filter - ເພີ່ມການກອງສິນຄ້າໃກ້ໜົດ
+    const isLowStock = product.qty <= product.qty_min;
+    const matchesLowStock = !lowStockFilter || isLowStock;
+    
+    return matchesSearch && matchesCategory && matchesBrand && matchesLowStock;
   });
 
   // Handle adding product to order
@@ -533,6 +540,27 @@ function Buy() {
                   </TextField>
                 </Grid>
               </Grid>
+
+              {/* ເພີ່ມ Low Stock Filter */}
+              <Box sx={{ mt: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={lowStockFilter}
+                      onChange={(e) => setLowStockFilter(e.target.checked)}
+                      color="warning"
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <WarningIcon color="warning" fontSize="small" />
+                      <Typography variant="body2">
+                        ສິນຄ້າໃກ້ໜົດ ({products.filter(p => p.qty <= p.qty_min).length})
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
             </Box>
 
             {/* Products table */}
@@ -560,32 +588,37 @@ function Buy() {
                     <TableBody>
                       {filteredProducts.length > 0 ? (
                         filteredProducts.map((product, index) => (
-                          <TableRow key={product.proid} hover>
+                          <TableRow key={product.proid} hover
+                            sx={{
+                              // ເພີ່ມການໄຮໄລຕ໌ສິນຄ້າໃກ້ໜົດ
+                              ...(product.qty <= product.qty_min && { 
+                                backgroundColor: 'warning.50',
+                                '&:hover': { backgroundColor: 'warning.100' }
+                              })
+                            }}
+                          >
                             <TableCell align="center">
                               <Typography 
                                 variant="body2" 
                                 fontWeight="bold"
-                                // sx={{ 
-                                //   backgroundColor: 'primary.light',
-                                //   color: 'primary.contrastText',
-                                //   borderRadius: '50%',
-                                //   width: 30,
-                                //   height: 30,
-                                //   display: 'flex',
-                                //   alignItems: 'center',
-                                //   justifyContent: 'center',
-                                //   margin: '0 auto'
-                                // }}
                               >
                                 {index + 1}
                               </Typography>
                             </TableCell>
                             <TableCell align="left">
-                              <Tooltip title={`${product.ProductName} - ${product.brand || ''}`}>
-                                <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {/* ສະແດງໄອຄອນເຕືອນສຳລັບສິນຄ້າໃກ້ໜົດ */}
+                                {product.qty <= product.qty_min && (
+                                  <WarningIcon color="warning" fontSize="small" />
+                                )}
+                                <Typography variant="body2" sx={{ 
+                                  wordBreak: 'break-word',
+                                  whiteSpace: 'normal',
+                                  lineHeight: 1.3
+                                }}>
                                   {product.ProductName}
                                 </Typography>
-                              </Tooltip>
+                              </Box>
                             </TableCell>
                             <TableCell align="center">
                               <Typography 
@@ -598,12 +631,20 @@ function Buy() {
                                   borderRadius: 1,
                                   px: 1,
                                   py: 0.5,
-                                  display: 'inline-block',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
                                   minWidth: '60px',
                                   textAlign: 'center'
                                 }}
                               >
                                 {formatNumber(product.qty)}
+                                {/* ສະແດງຂໍ້ຄວາມເຕືອນ */}
+                                {product.qty <= product.qty_min && (
+                                  <Typography component="span" variant="caption" color="warning.main">
+                                    (ໃກ້ໜົດ)
+                                  </Typography>
+                                )}
                               </Typography>
                             </TableCell>
                             <TableCell align="right">
