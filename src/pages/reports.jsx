@@ -118,7 +118,7 @@ function Reports() {
       roles: [ROLES.ADMIN, ROLES.USER1] },
     
     { value: 'purchases', label: 'ລາຍງານການສັ່ງຊື້', icon: <ShoppingCartIcon />, 
-      roles: [ROLES.ADMIN, ROLES.USER2] },
+      roles: [ROLES.ADMIN,] },
     
     { value: 'sales', label: 'ລາຍງານການຂາຍ', icon: <StoreIcon />, 
       roles: [ROLES.ADMIN, ROLES.USER1] },
