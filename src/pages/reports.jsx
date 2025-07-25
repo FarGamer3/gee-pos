@@ -1411,7 +1411,6 @@ const renderImportsReport = () => {
           <TableCell>ລະຫັດການນຳອອກ</TableCell>
           <TableCell>ວັນທີນຳອອກ</TableCell>
           <TableCell>ຜູ້ນຳອອກ</TableCell>
-          <TableCell align="center">ຈຳນວນລາຍການ</TableCell>
           <TableCell align="center">ສະຖານະ</TableCell>
         </TableRow>
       </TableHead>
@@ -1422,10 +1421,6 @@ const renderImportsReport = () => {
               <TableCell>{exp.id || exp.export_id || '-'}</TableCell>
               <TableCell>{formatDate(exp.date || exp.export_date)}</TableCell>
               <TableCell>{exp.emp_name || exp.exporter || '-'}</TableCell>
-              
-              <TableCell align="center">
-                {getItemCount(exp)}
-              </TableCell>
               <TableCell align="center">
                 <Chip 
                   label={getStatusInLao(exp.status)}
@@ -1438,7 +1433,7 @@ const renderImportsReport = () => {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={5} align="center">
+            <TableCell colSpan={4} align="center">
               <Typography color="text.secondary">
                 {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກ'}
               </Typography>
@@ -1446,16 +1441,16 @@ const renderImportsReport = () => {
           </TableRow>
         )}
         
-        {/* ສ່ວນສະຫລຸບທີ່ແກ້ໄຂແລ້ວ */}
+        {/* Summary section */}
         {reportData.exports && reportData.exports.length > 0 && (
           <>
             <TableRow>
-              <TableCell colSpan={5}>
+              <TableCell colSpan={4}>
                 <Divider sx={{ my: 1 }} />
               </TableCell>
             </TableRow>
             <TableRow sx={{ bgcolor: 'grey.50' }}>
-              <TableCell colSpan={4} align="right">
+              <TableCell colSpan={3} align="right">
                 <Typography variant="subtitle2" fontWeight="bold">
                   ສະຫລຸບລວມ ({reportData.exports.length} ລາຍການ):
                 </Typography>
@@ -1463,19 +1458,13 @@ const renderImportsReport = () => {
               <TableCell align="center">
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   <Typography variant="body2" color="success.main" fontWeight="medium">
-                    ອະນຸມັດແລ້ວ: {reportData.exports.filter(exp => 
-                      exp.status === 'approved' || getStatusInLao(exp.status) === 'ອະນຸມັດແລ້ວ'
-                    ).length}
+                    ອະນຸມັດແລ້ວ: {reportData.exports.filter(exp => exp.status === 'approved').length}
                   </Typography>
                   <Typography variant="body2" color="warning.main" fontWeight="medium">
-                    ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => 
-                      exp.status === 'pending' || getStatusInLao(exp.status) === 'ລໍຖ້າອະນຸມັດ'
-                    ).length}
+                    ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => exp.status === 'pending').length}
                   </Typography>
                   <Typography variant="body2" color="error.main" fontWeight="medium">
-                    ປະຕິເສດ: {reportData.exports.filter(exp => 
-                      exp.status === 'rejected' || getStatusInLao(exp.status) === 'ປະຕິເສດ'
-                    ).length}
+                    ປະຕິເສດ: {reportData.exports.filter(exp => exp.status === 'rejected').length}
                   </Typography>
                 </Box>
               </TableCell>
