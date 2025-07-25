@@ -1403,156 +1403,124 @@ const renderImportsReport = () => {
 };
 
  // 11. ລາຍງານການນຳອອກ - ປັບປຸງດ້ວຍສະຖານະພາສາລາວແລະສີ
-const renderExportsReport = () => {
-  // ຟັງຊັນແປງສະຖານະເປັນພາສາລາວ
-  const getStatusInLao = (status) => {
-    const statusMap = {
-      'Completed': 'ສຳເລັດ',
-      'Pending': 'ລໍຖ້າ',
-      'Processing': 'ກຳລັງດຳເນີນການ',
-      'Cancelled': 'ຍົກເລີກ',
-      'Approved': 'ອະນຸມັດແລ້ວ',
-      'Rejected': 'ປະຕິເສດ',
-      'Shipped': 'ຈັດສົ່ງແລ້ວ',
-      'Delivered': 'ສົ່ງມອບແລ້ວ'
-    };
-    return statusMap[status] || status || '-';
-  };
-
-  // ຟັງຊັນເລືອກສີຕາມສະຖານະ (ໃຊ້ສີ white ເພື່ອໃຫ້ແຈ້ງ)
-  const getStatusColor = (status) => {
-    // ໃຊ້ສີຂາວສຳລັບທຸກສະຖານະເພື່ອໃຫ້ເຫັນແຈ້ງ
-    return 'white';
-  };
-
-  // ຟັງຊັນເລືອກ background color ຂອງ Chip (ໃຊ້ສີເຂັ້ມເພື່ອໃຫ້ຕົວອັກສອນສີຂາວເຫັນແຈ້ງ)
-  const getStatusBgColor = (status) => {
-    const bgColorMap = {
-      'Completed': '#4caf50',         // ເຂຍວເຂັ້ມ
-      'ສຳເລັດ': '#4caf50',
-      'Pending': '#ff9800',           // ສີເຫຼືອງເຂັ້ມ  
-      'ລໍຖ້າ': '#ff9800',
-      'Processing': '#2196f3',        // ສີຟ້າເຂັ້ມ
-      'ກຳລັງດຳເນີນການ': '#2196f3',
-      'Cancelled': '#f44336',         // ແດງເຂັ້ມ
-      'ຍົກເລີກ': '#f44336',
-      'Approved': '#4caf50',          // ເຂຍວເຂັ້ມ
-      'ອະນຸມັດແລ້ວ': '#4caf50',
-      'Rejected': '#f44336',          // ແດງເຂັ້ມ
-      'ປະຕິເສດ': '#f44336',
-      'Shipped': '#9c27b0',           // ຜ່າແຮ່ງເຂັ້ມ
-      'ຈັດສົ່ງແລ້ວ': '#9c27b0',
-      'Delivered': '#607d8b',         // ສີເທົາອົມຟ້າ
-      'ສົ່ງມອບແລ້ວ': '#607d8b'
-    };
-    return bgColorMap[status] || '#9e9e9e'; // ເທົາເຂັ້ມສຳລັບສະຖານະທີ່ບໍ່ຮູ້ຈັກ
-  };
-
-  return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell align="center" width="10%">ລຳດັບ</TableCell>
-            <TableCell>ເລກທີ່</TableCell>
-            <TableCell>ວັນທີ່</TableCell>
-            <TableCell>ພະນັກງານ</TableCell>
-            <TableCell align="center">ສະຖານະ</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {reportData.exports.length > 0 ? (
-            reportData.exports.map((exp, index) => {
-              const statusInLao = getStatusInLao(exp.status);
-              const statusColor = getStatusColor(exp.status);
-              const statusBgColor = getStatusBgColor(exp.status);
+ const renderExportsReport = () => (
+  <TableContainer component={Paper}>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>ລະຫັດການນຳອອກ</TableCell>
+          <TableCell>ວັນທີນຳອອກ</TableCell>
+          <TableCell>ຜູ້ນຳອອກ</TableCell>
+          <TableCell align="center">ຈຳນວນລາຍການ</TableCell>
+          <TableCell align="center">ສະຖານະ</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {reportData.exports && reportData.exports.length > 0 ? (
+          reportData.exports.map((exp) => (
+            <TableRow key={exp.id || exp.export_id}>
+              <TableCell>{exp.id || exp.export_id || '-'}</TableCell>
+              <TableCell>{formatDate(exp.date || exp.export_date)}</TableCell>
+              <TableCell>{exp.emp_name || exp.exporter || '-'}</TableCell>
               
-              return (
-                <TableRow key={exp.export_id || exp.exp_id || index}>
-                  <TableCell align="center">
-                    <Typography variant="body2" color="primary.main" fontWeight="medium">
-                      {index + 1}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                      {exp.export_id || exp.exp_id || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {formatDate(exp.export_date || exp.exp_date || '-')}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {exp.emp_name || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={statusInLao}
-                      size="small"
-                      sx={{
-                        bgcolor: statusBgColor,
-                        color: statusColor,
-                        fontWeight: 'bold',
-                        minWidth: '80px',
-                        fontSize: '0.75rem',
-                        '& .MuiChip-label': {
-                          px: 1.5
-                        }
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          ) : (
-            <TableRow>
-              <TableCell colSpan={5} align="center">
-                <Typography variant="body2" color="text.secondary">
-                  {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກ'}
-                </Typography>
+              <TableCell align="center">
+                {getItemCount(exp)}
+              </TableCell>
+              <TableCell align="center">
+                <Chip 
+                  label={getStatusInLao(exp.status)}
+                  color={exp.status === 'approved' ? "success" : 
+                         exp.status === 'pending' ? "warning" : "default"}
+                  size="small"
+                />
               </TableCell>
             </TableRow>
-          )}
-          
-          {/* ສະລຸບລວມຖ້າມີຂໍ້ມູນ */}
-          {reportData.exports.length > 0 && (
-            <>
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Divider sx={{ my: 1 }} />
-                </TableCell>
-              </TableRow>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell colSpan={4} align="right">
-                  <Typography variant="subtitle2" fontWeight="bold">
-                    ລວມທັງໝົດ ({reportData.exports.length} ລາຍການ):
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={5} align="center">
+              <Typography color="text.secondary">
+                {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນ...' : 'ບໍ່ພົບຂໍ້ມູນການນຳອອກ'}
+              </Typography>
+            </TableCell>
+          </TableRow>
+        )}
+        
+        {/* ສ່ວນສະຫລຸບທີ່ແກ້ໄຂແລ້ວ */}
+        {reportData.exports && reportData.exports.length > 0 && (
+          <>
+            <TableRow>
+              <TableCell colSpan={5}>
+                <Divider sx={{ my: 1 }} />
+              </TableCell>
+            </TableRow>
+            <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableCell colSpan={4} align="right">
+                <Typography variant="subtitle2" fontWeight="bold">
+                  ສະຫລຸບລວມ ({reportData.exports.length} ລາຍການ):
+                </Typography>
+              </TableCell>
+              <TableCell align="center">
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography variant="body2" color="success.main" fontWeight="medium">
+                    ອະນຸມັດແລ້ວ: {reportData.exports.filter(exp => 
+                      exp.status === 'approved' || getStatusInLao(exp.status) === 'ອະນຸມັດແລ້ວ'
+                    ).length}
                   </Typography>
-                </TableCell>
-                <TableCell align="center">
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      {reportData.exports.filter(exp => 
-                        getStatusInLao(exp.status) === 'ສຳເລັດ'
-                      ).length} ສຳເລັດ
-                    </Typography>
-                    <Typography variant="body2" color="warning.main">
-                      {reportData.exports.filter(exp => 
-                        getStatusInLao(exp.status) === 'ລໍຖ້າ'
-                      ).length} ລໍຖ້າ
-                    </Typography>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            </>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
+                  <Typography variant="body2" color="warning.main" fontWeight="medium">
+                    ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => 
+                      exp.status === 'pending' || getStatusInLao(exp.status) === 'ລໍຖ້າອະນຸມັດ'
+                    ).length}
+                  </Typography>
+                  <Typography variant="body2" color="error.main" fontWeight="medium">
+                    ປະຕິເສດ: {reportData.exports.filter(exp => 
+                      exp.status === 'rejected' || getStatusInLao(exp.status) === 'ປະຕິເສດ'
+                    ).length}
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          </>
+        )}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+// ຟັງຊັນຊ່ວຍທີ່ຈຳເປັນ
+const getItemCount = (exportItem) => {
+  if (exportItem.items && Array.isArray(exportItem.items)) {
+    return exportItem.items.length;
+  }
+  
+  if (exportItem.export_details && Array.isArray(exportItem.export_details)) {
+    return exportItem.export_details.length;
+  }
+  
+  if (typeof exportItem.item_count === 'number') {
+    return exportItem.item_count;
+  }
+  
+  if (typeof exportItem.count === 'number') {
+    return exportItem.count;
+  }
+  
+  return "—";
+};
+
+const getStatusInLao = (status) => {
+  switch (status) {
+    case 'approved':
+      return 'ອະນຸມັດແລ້ວ';
+    case 'pending':
+      return 'ລໍຖ້າອະນຸມັດ';
+    case 'rejected':
+      return 'ປະຕິເສດ';
+    case 'completed':
+      return 'ສຳເລັດ';
+    default:
+      return status || 'ບໍ່ລະບຸ';
+  }
 };
 
   return (
