@@ -1463,9 +1463,8 @@ const renderImportsReport = () => {
                   <Typography variant="body2" color="warning.main" fontWeight="medium">
                     ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => exp.status === 'ລໍຖ້າອະນຸມັດ').length}
                   </Typography>
-                  <Typography variant="body2" color="error.main" fontWeight="medium">
-                    ປະຕິເສດ: {reportData.exports.filter(exp => exp.status === 'ປະຕິເສດ').length}
-                  </Typography>
+               
+             
                 </Box>
               </TableCell>
             </TableRow>
