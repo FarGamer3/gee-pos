@@ -1458,13 +1458,13 @@ const renderImportsReport = () => {
               <TableCell align="center">
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   <Typography variant="body2" color="success.main" fontWeight="medium">
-                    ອະນຸມັດແລ້ວ: {reportData.exports.filter(exp => exp.status === 'approved').length}
+                    ອະນຸມັດແລ້ວ: {reportData.exports.filter(exp => exp.status === 'ນຳອອກແລ້ວ').length}
                   </Typography>
                   <Typography variant="body2" color="warning.main" fontWeight="medium">
-                    ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => exp.status === 'pending').length}
+                    ລໍຖ້າອະນຸມັດ: {reportData.exports.filter(exp => exp.status === 'ລໍຖ້າອະນຸມັດ').length}
                   </Typography>
                   <Typography variant="body2" color="error.main" fontWeight="medium">
-                    ປະຕິເສດ: {reportData.exports.filter(exp => exp.status === 'rejected').length}
+                    ປະຕິເສດ: {reportData.exports.filter(exp => exp.status === 'ປະຕິເສດ').length}
                   </Typography>
                 </Box>
               </TableCell>
